@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --ink: #2b2118;
+    --cream: #f7f0e7;
+    --orange: #c87532;
+    --sage: #66735b;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    color: var(--ink);
+    background: var(--cream);
+    font-family: Georgia, 'Times New Roman', serif;
+}
+
+button {
+    font: inherit;
+}
