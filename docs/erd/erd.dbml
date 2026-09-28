@@ -1,0 +1,270 @@
+Project BrewLite {
+  database_type: 'PostgreSQL'
+  Note: '''
+  ERD thiết kế cho toàn bộ MVP BrewLite.
+  Sprint 1: menu, size, topping.
+  Sprint 2: tài khoản, đơn hàng.
+  Sprint 3: thanh toán, khuyến mãi, điểm thưởng.
+  ID dùng chuỗi để thống nhất với repository hiện tại.
+  Tiền lưu bằng số nguyên VND.
+  '''
+}
+
+Enum OrderStatus {
+  PENDING
+  PAYMENT_FAILED
+  PAID
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+Enum PaymentMethod {
+  WALLET
+  CARD
+}
+
+Enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+Enum DiscountType {
+  FIXED
+  PERCENT
+}
+
+// ============================================================
+// SPRINT 1 — DANH MỤC, SẢN PHẨM VÀ TÙY CHỌN
+// ============================================================
+
+Table Category {
+  id varchar [pk, not null, note: 'ID chuỗi; khi triển khai Prisma có thể dùng cuid()']
+  name varchar(100) [not null, unique]
+  isActive boolean [not null, default: true]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  Note: 'Một danh mục có nhiều sản phẩm.'
+}
+
+Table Product {
+  id varchar [pk, not null]
+  categoryId varchar [not null, ref: > Category.id]
+
+  name varchar(150) [not null, unique]
+  description text
+  price integer [not null, note: 'Giá gốc size S, VND; phải >= 0']
+  imageUrl varchar(500)
+  stock integer [not null, default: 0, note: 'Tồn kho của sản phẩm; phải >= 0']
+  version integer [not null, default: 0, note: 'Dùng khi xử lý optimistic locking ở Sprint 3']
+  isActive boolean [not null, default: true]
+
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    categoryId
+    (categoryId, isActive)
+  }
+
+  Note: '''
+  Mỗi sản phẩm thuộc đúng một danh mục.
+  price là giá gốc; các size khả dụng nằm ở ProductSize.
+  isActive = false nghĩa là ngừng bán, độc lập với stock.
+  '''
+}
+
+Table ProductSize {
+  productId varchar [not null, ref: > Product.id]
+  size varchar(1) [not null, note: 'S, M hoặc L']
+  extraPrice integer [not null, default: 0, note: 'Phụ thu so với Product.price; phải >= 0']
+
+  indexes {
+    (productId, size) [pk]
+  }
+
+  Note: '''
+  Có dòng tương ứng thì sản phẩm được bán size đó.
+  Không có dòng (productId, L) thì sản phẩm không có size L.
+  Theo quy tắc hiện tại: S +0, M +5000, L +10000 VND.
+  Mỗi sản phẩm đang bán cần có ít nhất một size khả dụng.
+  '''
+}
+
+Table Topping {
+  id varchar [pk, not null]
+  name varchar(100) [not null, unique]
+  price integer [not null, note: 'Giá một lần chọn topping, VND; phải >= 0']
+  isActive boolean [not null, default: true]
+
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table ProductTopping {
+  productId varchar [not null, ref: > Product.id]
+  toppingId varchar [not null, ref: > Topping.id]
+
+  indexes {
+    (productId, toppingId) [pk]
+    toppingId
+  }
+
+  Note: '''
+  Có dòng tương ứng thì sản phẩm cho phép chọn topping này.
+  Muốn hiển thị cho khách còn cần Topping.isActive = true.
+  Khóa chính kép ngăn gán trùng một topping cho cùng sản phẩm.
+  '''
+}
+
+// ============================================================
+// SPRINT 2 — TÀI KHOẢN VÀ ĐƠN HÀNG
+// ============================================================
+
+Table User {
+  id varchar [pk, not null]
+  email varchar(255) [not null, unique]
+  passwordHash varchar(255) [not null]
+  loyaltyPoints integer [not null, default: 0, note: 'Điểm hiện có; phải >= 0']
+
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table Order {
+  id varchar [pk, not null]
+  userId varchar [not null, ref: > User.id]
+  promotionId varchar [ref: > Promotion.id]
+
+  status OrderStatus [not null, default: 'PENDING']
+  subtotal integer [not null, note: 'Tổng tiền các OrderItem trước giảm giá']
+  discountAmount integer [not null, default: 0]
+  total integer [not null, note: 'subtotal - discountAmount']
+
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (userId, createdAt)
+    status
+    promotionId
+  }
+
+  Note: '''
+  Một User có nhiều Order.
+  Một Order có ít nhất một OrderItem theo quy tắc nghiệp vụ.
+  promotionId để trống nếu không dùng mã giảm giá.
+  '''
+}
+
+Table OrderItem {
+  id varchar [pk, not null]
+  orderId varchar [not null, ref: > Order.id]
+  productId varchar [not null, ref: > Product.id]
+
+  productName varchar(150) [not null, note: 'Tên món tại thời điểm đặt']
+  size varchar(1) [not null, note: 'Size khách đã chọn: S, M hoặc L']
+  basePrice integer [not null, note: 'Snapshot Product.price tại thời điểm đặt']
+  sizeExtra integer [not null, note: 'Snapshot phụ thu size tại thời điểm đặt']
+  unitPrice integer [not null, note: 'basePrice + sizeExtra + tổng giá topping']
+  qty integer [not null, note: 'Số lượng; phải > 0']
+  lineTotal integer [not null, note: 'unitPrice * qty']
+
+  indexes {
+    orderId
+    productId
+  }
+
+  Note: '''
+  ProductSize cho biết món được bán size nào.
+  OrderItem.size cho biết khách thực tế đã mua size nào.
+  Không đặt FK từ size đến ProductSize: nếu sau này cửa hàng bỏ
+  size L, lịch sử đơn cũ mua size L vẫn phải được giữ nguyên.
+  '''
+}
+
+Table OrderItemTopping {
+  orderItemId varchar [not null, ref: > OrderItem.id]
+  toppingId varchar [not null, ref: > Topping.id]
+
+  toppingName varchar(100) [not null, note: 'Tên topping tại thời điểm đặt']
+  price integer [not null, note: 'Giá topping tại thời điểm đặt']
+
+  indexes {
+    (orderItemId, toppingId) [pk]
+    toppingId
+  }
+
+  Note: '''
+  Một OrderItem được chọn 0 hoặc nhiều topping.
+  Lưu snapshot tên và giá vì menu có thể thay đổi sau khi đặt.
+  Không đặt FK đến ProductTopping: xóa lựa chọn trên menu
+  không được làm mất lịch sử topping của đơn cũ.
+  '''
+}
+
+// ============================================================
+// SPRINT 3 — THANH TOÁN VÀ NGHIỆP VỤ NÂNG CAO
+// ============================================================
+
+Table Payment {
+  id varchar [pk, not null]
+  orderId varchar [not null, ref: > Order.id]
+
+  idempotencyKey varchar(255) [not null, unique]
+  amount integer [not null, note: 'Số tiền thanh toán; phải > 0']
+  method PaymentMethod [not null]
+  status PaymentStatus [not null, default: 'PENDING']
+
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    orderId
+  }
+
+  Note: '''
+  Một đơn có thể có nhiều lần thử thanh toán.
+  Gửi lại cùng idempotencyKey phải dùng lại kết quả cũ,
+  không tạo Payment mới và không thanh toán hai lần.
+  '''
+}
+
+Table Promotion {
+  id varchar [pk, not null]
+  code varchar(50) [not null, unique]
+  type DiscountType [not null]
+  value integer [not null, note: 'Số VND nếu FIXED; phần trăm nếu PERCENT']
+  maxDiscount integer [note: 'Mức giảm tối đa khi giảm theo phần trăm']
+  minOrderAmount integer [not null, default: 0]
+
+  startsAt timestamp [not null]
+  endsAt timestamp [not null]
+  isActive boolean [not null, default: true]
+
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  Note: 'Một mã có thể được dùng ở nhiều đơn; mỗi đơn dùng tối đa một mã trong thiết kế này.'
+}
+
+Table LoyaltyTransaction {
+  id varchar [pk, not null]
+  userId varchar [not null, ref: > User.id]
+  orderId varchar [not null, unique, ref: > Order.id]
+
+  points integer [not null, note: 'Số điểm cộng; phải > 0']
+  createdAt timestamp [not null]
+
+  indexes {
+    userId
+  }
+
+  Note: '''
+  Ghi lại điểm được cộng sau khi đơn chuyển sang PAID.
+  orderId unique để một đơn không được cộng điểm hai lần.
+  '''
+}
