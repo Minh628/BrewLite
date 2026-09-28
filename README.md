@@ -13,16 +13,18 @@
 
 ```text
 BrewLite/
-├─ frontend/              # Next.js UI
-├─ backend/               # NestJS REST API
-│  ├─ prisma/              # schema và seed
+├─ frontend/                  # Next.js UI
+├─ backend/                   # NestJS REST API
+│  ├─ prisma/                  # schema và seed
 │  └─ src/
-├─ docker-compose.yml      # PostgreSQL + backend + frontend
-├─ package.json            # scripts dùng chung
+├─ docker-compose.yml          # production: PostgreSQL + backend + frontend
+├─ docker-compose.dev.yml      # dev: PostgreSQL 16 với credentials từ Neon.tech
+├─ .env.dev                    # credentials dev (git-ignored)
+├─ package.json                # scripts dùng chung
 └─ .env.example
 ```
 
-## Chạy local
+## Chạy local (không Docker)
 
 Yêu cầu: Node.js 20+, npm 10+, Docker Desktop.
 
@@ -41,7 +43,21 @@ npm run dev
 - Health check: http://localhost:3001/health
 - Menu: http://localhost:3001/products
 
-## Chạy toàn bộ bằng Docker
+## Chạy bằng Docker (dev)
+
+Yêu cầu: Docker Desktop, file `.env.dev` (tạo từ `.env.example`).
+
+```bash
+# Lần đầu: tạo file env
+cp .env.example .env.dev
+# Điền credentials vào .env.dev
+
+docker compose --env-file .env.dev -f docker-compose.dev.yml up --build
+```
+
+PostgreSQL dev chạy trên `localhost:5433` (tránh xung đột với port 5432 local).
+
+## Chạy bằng Docker (production)
 
 ```powershell
 Copy-Item .env.example .env
