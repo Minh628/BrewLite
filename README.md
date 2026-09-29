@@ -64,7 +64,6 @@ Copy-Item .env.example .env
 docker compose up --build
 ```
 
-
 ## Lộ trình API MVP
 
 - `GET /health`

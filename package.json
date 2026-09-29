@@ -1,23 +1,30 @@
 {
-    "name": "brewlite",
-    "version": "1.0.0",
-    "private": true,
-    "workspaces": [
-        "frontend",
-        "backend"
-    ],
-    "scripts": {
-        "dev": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
-        "dev:db": "docker compose up -d postgres",
-        "build": "npm run build --workspace backend && npm run build --workspace frontend",
-        "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
-        "db:generate": "npm run prisma:generate --workspace backend",
-        "db:migrate": "npm run prisma:migrate --workspace backend",
-        "db:seed": "npm run prisma:seed --workspace backend",
-        "docker:up": "docker compose up --build",
-        "docker:down": "docker compose down"
-    },
-    "devDependencies": {
-        "concurrently": "^9.1.2"
-    }
+  "name": "brewlite",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
+    "dev:db": "docker compose up -d postgres",
+    "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
+    "lint:fix": "npm run lint:fix --workspace backend && npm run lint:fix --workspace frontend",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "npm run prisma:generate --workspace backend",
+    "db:migrate": "npm run prisma:migrate --workspace backend",
+    "db:seed": "npm run prisma:seed --workspace backend",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.9"
+  }
 }
