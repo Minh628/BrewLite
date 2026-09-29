@@ -1,10 +1,15 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { getProducts, type Product } from '@/lib/api';
+import { useProducts } from '@/hooks/useProducts';
+import { formatVND } from '@/lib/format';
+import type { Product } from '@/lib/api';
 import { useCart } from '@/store/cart';
 
-const formatPrice = (price: number) => new Intl.NumberFormat('vi-VN').format(price) + 'd';
+function categoryEmoji(categoryName: string) {
+  if (categoryName === 'Trà') return '🍑';
+  if (categoryName === 'Đá xay') return '🥤';
+  return '☕';
+}
 
 function ProductCard({ product }: { product: Product }) {
   const add = useCart((state) => state.add);
@@ -14,13 +19,13 @@ function ProductCard({ product }: { product: Product }) {
         className="flex h-52 items-center justify-center bg-[#e9dccb] text-7xl transition group-hover:bg-[#dfc8ac]"
         aria-hidden="true"
       >
-        {product.name.includes('Tra') ? '🍑' : '☕'}
+        {categoryEmoji(product.category.name)}
       </div>
       <div className="space-y-3 p-5">
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-xl font-bold">{product.name}</h2>
           <span className="whitespace-nowrap text-sm font-bold text-[#a65721]">
-            {formatPrice(product.price)}
+            {formatVND(product.price)}
           </span>
         </div>
         <p className="text-sm text-[#75675a]">Pha mới theo lựa chọn của bạn</p>
@@ -36,7 +41,7 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 export default function Home() {
-  const { data, isLoading, isError } = useQuery({ queryKey: ['products'], queryFn: getProducts });
+  const { data, isLoading, isError } = useProducts();
   const lines = useCart((state) => state.lines);
   const total = useCart((state) => state.total());
 
@@ -54,7 +59,7 @@ export default function Home() {
           </h1>
         </div>
         <div className="rounded-full border border-[#d9c9b6] bg-white/60 px-4 py-2 text-sm font-bold">
-          Giỏ hàng ({lines.length}) · {formatPrice(total)}
+          Giỏ hàng ({lines.length}) · {formatVND(total)}
         </div>
       </header>
       <section className="mx-auto max-w-6xl px-6 pb-16 lg:px-10">

@@ -6,7 +6,7 @@ type CartLine = Product & { quantity: number };
 type CartState = {
   lines: CartLine[];
   add: (product: Product) => void;
-  remove: (productId: string) => void;
+  remove: (productId: number) => void;
   total: () => number;
 };
 
