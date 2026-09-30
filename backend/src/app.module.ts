@@ -4,7 +4,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AppController } from './app.controller';
 
 @Module({
-    imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule],
-    controllers: [AppController]
+  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule],
+  controllers: [AppController],
 })
-export class AppModule { }
+export class AppModule {}

@@ -8,11 +8,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brewlite}
       POSTGRES_DB: ${POSTGRES_DB:-brewlite}
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - brewlite-postgres:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U brewlite -d brewlite" ]
+      test: ['CMD-SHELL', 'pg_isready -U brewlite -d brewlite']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,7 +24,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-this-in-development}
       PORT: 3001
     ports:
-      - "3001:3001"
+      - '3001:3001'
     depends_on:
       postgres:
         condition: service_healthy
@@ -34,7 +34,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3001
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       - backend
 
