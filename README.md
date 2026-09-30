@@ -15,13 +15,40 @@
 BrewLite/
 ├─ frontend/                  # Next.js UI
 ├─ backend/                   # NestJS REST API
-│  ├─ prisma/                  # schema và seed
+│  ├─ prisma/                 # schema và seed
 │  └─ src/
+│     ├─ common/              # Global filters, pipes, interceptors
+│     │  └─ filters/
+│     │     └─ http-exception.filter.ts
+│     ├─ prisma/              # PrismaService & PrismaModule
+│     ├─ app.controller.ts
+│     ├─ app.module.ts
+│     └─ main.ts
 ├─ docker-compose.yml          # production: PostgreSQL + backend + frontend
 ├─ docker-compose.dev.yml      # dev: PostgreSQL 16 với credentials từ Neon.tech
 ├─ .env.dev                    # credentials dev (git-ignored)
 ├─ package.json                # scripts dùng chung
 └─ .env.example
+```
+
+## Thay đổi gần đây
+
+- **PB-14 (Sub-task 14.1 & 14.2): Nền tảng API & Chuẩn hóa lỗi**
+  - Kích hoạt `ValidationPipe` toàn cục với `whitelist: true`, `transform: true`, `forbidNonWhitelisted: true`, `enableImplicitConversion: true` để validate dữ liệu chặt chẽ và từ chối field lạ (400 Bad Request).
+  - Tích hợp `HttpExceptionFilter` toàn cục chuẩn hóa cấu trúc phản hồi lỗi thống nhất cho mọi API.
+
+## Chuẩn hóa lỗi API
+
+Mọi lỗi từ hệ thống (client error 4xx hoặc server error 5xx) đều tuân theo cấu trúc JSON:
+
+```json
+{
+  "statusCode": 400,
+  "message": ["tên trường không hợp lệ"],
+  "error": "Bad Request",
+  "path": "/api/v1/endpoint",
+  "timestamp": "2026-09-30T13:30:00.000Z"
+}
 ```
 
 ## Chạy local (không Docker)
