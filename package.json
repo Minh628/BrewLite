@@ -7,16 +7,16 @@
     "backend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
+    "dev": "concurrently \"npm run dev --workspace @brewlite/backend\" \"npm run dev --workspace @brewlite/frontend\"",
     "dev:db": "docker compose up -d postgres",
-    "build": "npm run build --workspace backend && npm run build --workspace frontend",
-    "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
-    "lint:fix": "npm run lint:fix --workspace backend && npm run lint:fix --workspace frontend",
+    "build": "npm run build --workspace @brewlite/backend && npm run build --workspace @brewlite/frontend",
+    "lint": "npm run lint --workspace @brewlite/backend && npm run lint --workspace @brewlite/frontend",
+    "lint:fix": "npm run lint:fix --workspace @brewlite/backend && npm run lint:fix --workspace @brewlite/frontend",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:generate": "npm run prisma:generate --workspace backend",
-    "db:migrate": "npm run prisma:migrate --workspace backend",
-    "db:seed": "npm run prisma:seed --workspace backend",
+    "db:generate": "npm run prisma:generate --workspace @brewlite/backend",
+    "db:migrate": "npm run prisma:migrate --workspace @brewlite/backend",
+    "db:seed": "npm run prisma:seed --workspace @brewlite/backend",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
     "prepare": "husky"
