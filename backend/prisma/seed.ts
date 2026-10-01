@@ -48,10 +48,38 @@ async function main() {
   ];
 
   for (const product of products) {
-    await prisma.product.upsert({
+    const savedProduct = await prisma.product.upsert({
       where: { name: product.name },
       update: product,
       create: product,
+    });
+
+    for (const [size, extraPrice] of [
+      ['S', 0],
+      ['M', 5000],
+      ['L', 10000],
+    ] as const) {
+      await prisma.productSize.upsert({
+        where: { productId_size: { productId: savedProduct.id, size } },
+        update: { extraPrice },
+        create: { productId: savedProduct.id, size, extraPrice },
+      });
+    }
+  }
+
+  const toppings = [
+    { name: 'Trân châu đen', price: 5000 },
+    { name: 'Trân châu trắng', price: 7000 },
+    { name: 'Thạch trái cây', price: 6000 },
+    { name: 'Pudding trứng', price: 8000 },
+    { name: 'Kem Cheese', price: 10000 },
+  ];
+
+  for (const topping of toppings) {
+    await prisma.topping.upsert({
+      where: { name: topping.name },
+      update: topping,
+      create: topping,
     });
   }
 }
