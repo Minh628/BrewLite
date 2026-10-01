@@ -23,14 +23,28 @@ enum PaymentMethod {
 }
 
 model Product {
-  id        String      @id @default(cuid())
-  name      String      @unique
-  price     Int
-  imageUrl  String?
-  stock     Int         @default(0)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id         String      @id @default(cuid())
+  categoryId String
+  name       String      @unique
+  price      Int
+  imageUrl   String?
+  stock      Int         @default(0)
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  category   Category    @relation(fields: [categoryId], references: [id])
   orderItems OrderItem[]
+
+  @@index([categoryId, isActive])
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
 }
 
 model User {
