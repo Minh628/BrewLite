@@ -1,5 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import { ProductDetailDto, ProductDto, ToppingDto } from './dto/product.dto';
+import { ProductDetailDto, ProductDto } from './dto/product.dto';
 import { ProductsService } from './products.service';
 
 @Controller('products')
@@ -9,11 +9,6 @@ export class ProductsController {
   @Get()
   findAll(): Promise<ProductDto[]> {
     return this.productsService.findAll();
-  }
-
-  @Get('toppings')
-  findAllToppings(): Promise<ToppingDto[]> {
-    return this.productsService.findAllToppings();
   }
 
   @Get(':id')
