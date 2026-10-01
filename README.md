@@ -24,12 +24,21 @@ BrewLite/
 │     ├─ app.controller.ts
 │     ├─ app.module.ts
 │     └─ main.ts
+├─ docs/                      # Tài liệu kỹ thuật
+│  ├─ architecture.md         # Kiến trúc 3 lớp, ADR & thiết kế module
+│  ├─ erd/                    # Sơ đồ CSDL, DBML & ERD
+│  └─ ui/                     # Thiết kế giao diện & luồng UI
 ├─ docker-compose.yml          # production: PostgreSQL + backend + frontend
 ├─ docker-compose.dev.yml      # dev: PostgreSQL 16 với credentials từ Neon.tech
 ├─ .env.dev                    # credentials dev (git-ignored)
 ├─ package.json                # scripts dùng chung
 └─ .env.example
 ```
+
+## Tài liệu dự án
+
+- **Kiến trúc hệ thống (Architecture):** [`docs/architecture.md`](./docs/architecture.md) (Sơ đồ 3 lớp, ADR-001 đến 005, cấu trúc module)
+- **Thiết kế CSDL (ERD):** [`docs/erd/erd.md`](./docs/erd/erd.md)
 
 ## Thay đổi gần đây
 
