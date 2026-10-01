@@ -17,7 +17,7 @@ body {
   margin: 0;
   color: var(--ink);
   background: var(--cream);
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Times New Roman', Georgia, serif;
 }
 
 button {
