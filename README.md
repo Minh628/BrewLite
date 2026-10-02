@@ -39,12 +39,19 @@ BrewLite/
 
 - **Kiến trúc hệ thống (Architecture):** [`docs/architecture.md`](./docs/architecture.md) (Sơ đồ 3 lớp, ADR-001 đến 005, cấu trúc module)
 - **Thiết kế CSDL (ERD):** [`docs/erd/erd.md`](./docs/erd/erd.md)
+- **Quy ước API (API Conventions):** [`docs/api-conventions.md`](./docs/api-conventions.md)
 
 ## Thay đổi gần đây
 
 - **PB-14 (Sub-task 14.1 & 14.2): Nền tảng API & Chuẩn hóa lỗi**
   - Kích hoạt `ValidationPipe` toàn cục với `whitelist: true`, `transform: true`, `forbidNonWhitelisted: true`, `enableImplicitConversion: true` để validate dữ liệu chặt chẽ và từ chối field lạ (400 Bad Request).
   - Tích hợp `HttpExceptionFilter` toàn cục chuẩn hóa cấu trúc phản hồi lỗi thống nhất cho mọi API.
+- **PB-14 (Sub-task 14.3): CORS, Health Check & Quy ước API**
+  - Cấu hình CORS linh hoạt theo biến môi trường `CORS_ORIGIN`, bật credentials và mở các header quan trọng như `Idempotency-Key`.
+  - Triển khai endpoint `GET /health` trả về mã HTTP 200 kèm uptime và trạng thái service.
+  - Ban hành tài liệu quy ước API chi tiết tại [`docs/api-conventions.md`](./docs/api-conventions.md).
+- **PB-4 (Sub-task 4.5): Unit Test hàm tính đơn giá calcUnitPrice**
+  - Cài đặt Vitest cho frontend, xây dựng bộ 11 ca kiểm thử bao phủ toàn bộ size (S, M, L), nhiều topping, không topping, làm tròn số thực và ngoại lệ đầu vào.
 
 ## Chuẩn hóa lỗi API
 

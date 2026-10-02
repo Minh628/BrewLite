@@ -52,6 +52,11 @@ describe('Products API (e2e)', () => {
     await app.init();
   });
 
+  afterAll(async () => {
+    // Đóng ứng dụng Nest để giải phóng các port và handles
+    await app.close();
+  });
+
   beforeEach(() => {
     prismaMock.product.findMany.mockReset().mockResolvedValue([product]);
     prismaMock.product.findFirst.mockReset().mockResolvedValue(detailedProduct);

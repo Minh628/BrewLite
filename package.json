@@ -10,6 +10,7 @@
     "dev": "concurrently \"npm run dev --workspace @brewlite/backend\" \"npm run dev --workspace @brewlite/frontend\"",
     "dev:db": "docker compose up -d postgres",
     "build": "npm run build --workspace @brewlite/backend && npm run build --workspace @brewlite/frontend",
+    "test": "npm run test --workspace @brewlite/backend && npm run test --workspace @brewlite/frontend",
     "lint": "npm run lint --workspace @brewlite/backend && npm run lint --workspace @brewlite/frontend",
     "lint:fix": "npm run lint:fix --workspace @brewlite/backend && npm run lint:fix --workspace @brewlite/frontend",
     "format": "prettier --write .",
