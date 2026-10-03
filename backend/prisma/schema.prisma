@@ -23,14 +23,60 @@ enum PaymentMethod {
 }
 
 model Product {
-  id        String      @id @default(cuid())
-  name      String      @unique
-  price     Int
-  imageUrl  String?
-  stock     Int         @default(0)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id         String      @id @default(cuid())
+  categoryId String
+  name       String      @unique
+  description String?
+  price      Int
+  imageUrl   String?
+  stock      Int         @default(0)
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  category   Category    @relation(fields: [categoryId], references: [id])
+  sizes      ProductSize[]
+  toppings   ProductTopping[]
   orderItems OrderItem[]
+
+  @@index([categoryId, isActive])
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model ProductSize {
+  productId  String
+  size       String
+  extraPrice Int      @default(0)
+  product    Product  @relation(fields: [productId], references: [id])
+
+  @@id([productId, size])
+}
+
+model Topping {
+  id        String           @id @default(cuid())
+  name      String           @unique
+  price     Int
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  products  ProductTopping[]
+}
+
+model ProductTopping {
+  productId String
+  toppingId String
+  product   Product @relation(fields: [productId], references: [id])
+  topping   Topping @relation(fields: [toppingId], references: [id])
+
+  @@id([productId, toppingId])
+  @@index([toppingId])
 }
 
 model User {

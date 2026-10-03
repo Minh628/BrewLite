@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
+import { AppController } from './app.controller';
 import { ProductsModule } from './products/products.module';
-import { HealthController } from './health.controller';
 
 @Module({
-    imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, ProductsModule],
-    controllers: [HealthController]
+  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, ProductsModule],
+  controllers: [AppController],
 })
-export class AppModule { }
+export class AppModule {}

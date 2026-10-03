@@ -8,11 +8,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5433:5432"
+      - '5433:5432'
     volumes:
       - brewlite-postgres-dev:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -27,7 +27,7 @@ services:
       PORT: 3001
       NODE_ENV: development
     ports:
-      - "3001:3001"
+      - '3001:3001'
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,7 +39,7 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:3001
       NODE_ENV: development
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       - backend
 

@@ -9,3 +9,5 @@ coverage/
 npm-debug.log*
 prisma/*.db
 .DS_Store
+.vscode/
+.agents/
