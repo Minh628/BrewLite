@@ -17,20 +17,22 @@ export const TOPPING_OPTIONS: ToppingOption[] = [
 ];
 
 interface ToppingSelectorProps {
+  toppings?: ToppingOption[];
   selectedToppings: string[];
   onChangeToppings: (toppingIds: string[]) => void;
 }
 
 export default function ToppingSelector({
+  toppings = TOPPING_OPTIONS,
   selectedToppings,
   onChangeToppings,
 }: ToppingSelectorProps) {
   const handleToggleTopping = (id: string) => {
     if (selectedToppings.includes(id)) {
-      // Nếu đã có thì loại bỏ ra khỏi mảng
-      onChangeToppings(selectedToppings.filter((item) => item !== id));
+      onChangeToppings(
+        selectedToppings.filter((item) => item !== id),
+      );
     } else {
-      // Nếu chưa có thì thêm vào mảng
       onChangeToppings([...selectedToppings, id]);
     }
   };
@@ -40,9 +42,11 @@ export default function ToppingSelector({
       <label className="text-sm font-semibold text-gray-700 block">
         Chọn Topping (Không bắt buộc)
       </label>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-        {TOPPING_OPTIONS.map((topping) => {
+        {toppings.map((topping) => {
           const isChecked = selectedToppings.includes(topping.id);
+
           return (
             <div
               key={topping.id}
@@ -58,11 +62,14 @@ export default function ToppingSelector({
                   type="checkbox"
                   checked={isChecked}
                   onChange={() => handleToggleTopping(topping.id)}
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                  onClick={(event) => event.stopPropagation()}
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer shrink-0"
                 />
+
                 <span>{topping.name}</span>
               </div>
-              <span className="text-xs text-gray-500 font-normal">
+
+              <span className="text-xs text-gray-500 font-normal whitespace-nowrap ml-2">
                 +{topping.price.toLocaleString('vi-VN')}đ
               </span>
             </div>
