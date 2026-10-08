@@ -4,6 +4,7 @@
 > **Người thực hiện:** M2 (Software Architect / Tech Lead)  
 > **Định dạng nguồn:** [`docs/erd/erd.dbml`](./erd.dbml) (sử dụng được trên [dbdocs.io](https://dbdocs.io) hoặc [dbdiagram.io](https://dbdiagram.io))  
 > **Sơ đồ xuất PDF:** [`docs/erd/ERD.pdf`](./ERD.pdf)  
+> **Phiên bản mới nhất:** [`docs/erd/erd_v2.md`](./erd_v2.md) (ERD v2 cho Sprint 2 – Sub-task E.1)  
 > **Hệ quản trị CSDL mục tiêu:** PostgreSQL 16+
 
 ---
