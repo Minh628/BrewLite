@@ -1,8 +1,9 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { AuthService } from '../../src/auth/auth.service';
+import { LocalStrategy } from '../../src/auth/strategies/local.strategy';
 import { PrismaService } from '../../src/prisma/prisma.service';
 
 describe('AuthService', () => {
@@ -203,6 +204,49 @@ describe('AuthService', () => {
           email: 'test@brewlite.vn',
         },
       });
+    });
+
+    it('ném lỗi UnauthorizedException (401) khi user context rỗng hoặc không hợp lệ', async () => {
+      await expect(service.login(null as unknown as { id: string; email: string })).rejects.toThrow(
+        new UnauthorizedException('Invalid credentials'),
+      );
+
+      await expect(service.login({ id: '', email: '' })).rejects.toThrow(
+        new UnauthorizedException('Invalid credentials'),
+      );
+    });
+  });
+
+  describe('LocalStrategy', () => {
+    let localStrategy: LocalStrategy;
+
+    beforeEach(() => {
+      localStrategy = new LocalStrategy(service);
+    });
+
+    it('xác thực thành công và trả về user khi thông tin đăng nhập đúng', async () => {
+      const mockUser = { id: 'user-cuid-123', email: 'test@brewlite.vn' };
+      jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser);
+
+      const result = await localStrategy.validate('test@brewlite.vn', 'password123');
+      expect(result).toEqual(mockUser);
+    });
+
+    it('ném lỗi UnauthorizedException (401) khi email hoặc password bị rỗng', async () => {
+      await expect(localStrategy.validate('', 'password123')).rejects.toThrow(
+        new UnauthorizedException('Invalid credentials'),
+      );
+      await expect(localStrategy.validate('test@brewlite.vn', '')).rejects.toThrow(
+        new UnauthorizedException('Invalid credentials'),
+      );
+    });
+
+    it('ném lỗi UnauthorizedException (401) khi validateUser trả về null (sai email/password)', async () => {
+      jest.spyOn(service, 'validateUser').mockResolvedValue(null);
+
+      await expect(localStrategy.validate('test@brewlite.vn', 'wrongpassword')).rejects.toThrow(
+        new UnauthorizedException('Invalid credentials'),
+      );
     });
   });
 });

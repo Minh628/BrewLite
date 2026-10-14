@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
@@ -126,6 +126,10 @@ export class AuthService {
     expiresIn: number;
     user: { id: string; email: string };
   }> {
+    if (!user || !user.id || !user.email) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     const payload = {
       sub: user.id,
       email: user.email,
