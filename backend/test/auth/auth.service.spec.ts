@@ -129,4 +129,80 @@ describe('AuthService', () => {
       await expect(service.register(registerDto)).rejects.toThrow('Database connection failed');
     });
   });
+
+  describe('validateUser', () => {
+    it('trả về user context khi email và mật khẩu chính xác', async () => {
+      const mockUser = {
+        id: 'user-cuid-123',
+        email: 'test@brewlite.vn',
+        passwordHash: '$2b$10$hashedpassword',
+      };
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+      jest.spyOn(bcrypt, 'compare').mockImplementation(() => Promise.resolve(true));
+
+      const result = await service.validateUser('test@brewlite.vn', 'password123');
+
+      expect(result).toEqual({
+        id: 'user-cuid-123',
+        email: 'test@brewlite.vn',
+      });
+      expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
+        where: { email: 'test@brewlite.vn' },
+        select: { id: true, email: true, passwordHash: true },
+      });
+    });
+
+    it('trả về null và thực hiện dummy compare khi không tìm thấy email (chống Timing Attack)', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      const compareSpy = jest
+        .spyOn(bcrypt, 'compare')
+        .mockImplementation(() => Promise.resolve(false));
+
+      const result = await service.validateUser('notfound@brewlite.vn', 'password123');
+
+      expect(result).toBeNull();
+      // Đảm bảo bcrypt.compare vẫn được gọi để tránh timing attack
+      expect(compareSpy).toHaveBeenCalled();
+    });
+
+    it('trả về null khi mật khẩu không khớp', async () => {
+      const mockUser = {
+        id: 'user-cuid-123',
+        email: 'test@brewlite.vn',
+        passwordHash: '$2b$10$hashedpassword',
+      };
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+      jest.spyOn(bcrypt, 'compare').mockImplementation(() => Promise.resolve(false));
+
+      const result = await service.validateUser('test@brewlite.vn', 'wrongpassword');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('login', () => {
+    it('phát hành accessToken JWT và trả về đúng JSON contract', async () => {
+      jwtServiceMock.signAsync.mockResolvedValue('jwt-mock-access-token');
+
+      const user = {
+        id: 'user-cuid-123',
+        email: 'test@brewlite.vn',
+      };
+
+      const result = await service.login(user);
+
+      expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
+        sub: 'user-cuid-123',
+        email: 'test@brewlite.vn',
+      });
+      expect(result).toEqual({
+        accessToken: 'jwt-mock-access-token',
+        expiresIn: 3600,
+        user: {
+          id: 'user-cuid-123',
+          email: 'test@brewlite.vn',
+        },
+      });
+    });
+  });
 });

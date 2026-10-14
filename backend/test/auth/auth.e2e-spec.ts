@@ -1,5 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import bcrypt from 'bcrypt';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { HttpExceptionFilter } from '../../src/common/filters/http-exception.filter';
@@ -146,6 +147,71 @@ describe('Auth API (e2e)', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.message).toContain('property role should not exist');
+    });
+  });
+
+  describe('POST /auth/login', () => {
+    it('trả về 200 OK cùng accessToken và expiresIn khi thông tin đăng nhập chính xác', async () => {
+      const passwordHash = await bcrypt.hash('securepassword123', 10);
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-cuid-uuid',
+        email: 'customer@brewlite.vn',
+        passwordHash,
+      });
+
+      const response = await request(app.getHttpServer()).post('/auth/login').send({
+        email: 'customer@brewlite.vn',
+        password: 'securepassword123',
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        accessToken: expect.any(String),
+        expiresIn: 3600,
+        user: {
+          id: 'user-cuid-uuid',
+          email: 'customer@brewlite.vn',
+        },
+      });
+    });
+
+    it('trả về 401 Unauthorized khi email không tồn tại trong hệ thống', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      const response = await request(app.getHttpServer()).post('/auth/login').send({
+        email: 'unknown@brewlite.vn',
+        password: 'securepassword123',
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe('Invalid credentials');
+    });
+
+    it('trả về 401 Unauthorized khi mật khẩu không chính xác', async () => {
+      const passwordHash = await bcrypt.hash('securepassword123', 10);
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-cuid-uuid',
+        email: 'customer@brewlite.vn',
+        passwordHash,
+      });
+
+      const response = await request(app.getHttpServer()).post('/auth/login').send({
+        email: 'customer@brewlite.vn',
+        password: 'wrongpassword',
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe('Invalid credentials');
+    });
+
+    it('trả về 401 Unauthorized khi thiếu trường email hoặc password', async () => {
+      const response = await request(app.getHttpServer()).post('/auth/login').send({
+        email: '',
+        password: '',
+      });
+
+      expect(response.status).toBe(401);
+      expect(['Unauthorized', 'Invalid credentials']).toContain(response.body.message);
     });
   });
 });
