@@ -17,10 +17,17 @@ BrewLite/
 ├─ backend/                   # NestJS REST API
 │  ├─ prisma/                 # schema và seed
 │  └─ src/
+│     ├─ auth/                # AuthModule: Đăng ký, đăng nhập & JWT
+│     │  ├─ dto/              # Data Transfer Objects (RegisterDto)
+│     │  ├─ auth.controller.ts
+│     │  ├─ auth.service.ts
+│     │  └─ auth.module.ts
 │     ├─ common/              # Global filters, pipes, interceptors
 │     │  └─ filters/
 │     │     └─ http-exception.filter.ts
+│     ├─ pricing/             # PricingService & logic tính giá
 │     ├─ prisma/              # PrismaService & PrismaModule
+│     ├─ products/            # ProductsModule & catalog API
 │     ├─ app.controller.ts
 │     ├─ app.module.ts
 │     └─ main.ts
@@ -43,6 +50,9 @@ BrewLite/
 
 ## Thay đổi gần đây
 
+- **PB-07 (Sub-task 7.2): AuthModule - API Đăng ký (`POST /auth/register`)**
+  - Xây dựng API đăng ký người dùng với mật khẩu băm bcrypt (salt rounds = 10) và tự động ký phát hành JWT accessToken.
+  - Triển khai cơ chế chống race condition (bắt lỗi Prisma P2002 và ném HTTP 409 Conflict), Fast Pre-check tối ưu hóa CPU và Data Whitelisting (loại trừ tuyệt đối `passwordHash`).
 - **PB-14 (Sub-task 14.1 & 14.2): Nền tảng API & Chuẩn hóa lỗi**
   - Kích hoạt `ValidationPipe` toàn cục với `whitelist: true`, `transform: true`, `forbidNonWhitelisted: true`, `enableImplicitConversion: true` để validate dữ liệu chặt chẽ và từ chối field lạ (400 Bad Request).
   - Tích hợp `HttpExceptionFilter` toàn cục chuẩn hóa cấu trúc phản hồi lỗi thống nhất cho mọi API.
@@ -52,6 +62,33 @@ BrewLite/
   - Ban hành tài liệu quy ước API chi tiết tại [`docs/api-conventions.md`](./docs/api-conventions.md).
 - **PB-4 (Sub-task 4.5): Unit Test hàm tính đơn giá calcUnitPrice**
   - Cài đặt Vitest cho frontend, xây dựng bộ 11 ca kiểm thử bao phủ toàn bộ size (S, M, L), nhiều topping, không topping, làm tròn số thực và ngoại lệ đầu vào.
+
+## API / Function
+
+### `POST /auth/register`
+
+- **Mô tả:** Đăng ký tài khoản người dùng mới và cấp phát token JWT.
+- **Request Body:**
+  ```json
+  {
+    "email": "user@brewlite.vn",
+    "password": "securepassword123"
+  }
+  ```
+  _(Email tự động được chuẩn hóa trim/lowercase; Mật khẩu tối thiểu 8 ký tự)._
+- **Response Success (HTTP 201 Created):**
+  ```json
+  {
+    "user": {
+      "id": "cuid_string",
+      "email": "user@brewlite.vn"
+    },
+    "accessToken": "jwt_token_string"
+  }
+  ```
+- **Response Errors:**
+  - `400 Bad Request`: Thiếu trường, email không đúng định dạng, mật khẩu < 8 ký tự, hoặc chứa trường không cho phép.
+  - `409 Conflict`: Email đã tồn tại trong hệ thống (`"message": "Email already registered"`).
 
 ## Chuẩn hóa lỗi API
 
