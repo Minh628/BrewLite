@@ -146,4 +146,42 @@ export class AuthService {
       },
     };
   }
+
+  /**
+   * Lấy thông tin hồ sơ người dùng theo userId
+   * - Truy vấn Prisma chỉ chọn các trường an toàn (id, email, loyaltyPoints, createdAt)
+   * - Tuyệt đối không nạp passwordHash vào bộ nhớ để đảm bảo tính an toàn dữ liệu và tối ưu RAM
+   * - Ném UnauthorizedException nếu không tìm thấy bản ghi user trong CSDL
+   * @param userId Định danh người dùng
+   * @returns Thông tin profile chuẩn hóa của người dùng
+   */
+  async getProfile(userId: string): Promise<{
+    id: string;
+    email: string;
+    loyaltyPoints: number;
+    role: string;
+    createdAt: Date;
+  }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        loyaltyPoints: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      loyaltyPoints: user.loyaltyPoints,
+      role: 'CUSTOMER',
+      createdAt: user.createdAt,
+    };
+  }
 }

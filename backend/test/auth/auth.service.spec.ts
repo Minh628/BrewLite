@@ -217,6 +217,50 @@ describe('AuthService', () => {
     });
   });
 
+  describe('getProfile', () => {
+    it('trả về thông tin profile thành công và không chứa passwordHash', async () => {
+      const mockCreatedAt = new Date('2026-10-16T00:00:00.000Z');
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-cuid-123',
+        email: 'an@brewlite.vn',
+        loyaltyPoints: 100,
+        createdAt: mockCreatedAt,
+      });
+
+      const profile = await service.getProfile('user-cuid-123');
+
+      expect(profile).toEqual({
+        id: 'user-cuid-123',
+        email: 'an@brewlite.vn',
+        loyaltyPoints: 100,
+        role: 'CUSTOMER',
+        createdAt: mockCreatedAt,
+      });
+
+      // Bảo mật: Đảm bảo không tồn tại passwordHash trong profile
+      expect(profile).not.toHaveProperty('passwordHash');
+
+      // Đảm bảo truy vấn findUnique chỉ định select an toàn để tiết kiệm RAM
+      expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
+        where: { id: 'user-cuid-123' },
+        select: {
+          id: true,
+          email: true,
+          loyaltyPoints: true,
+          createdAt: true,
+        },
+      });
+    });
+
+    it('ném lỗi UnauthorizedException khi userId không tồn tại trong CSDL', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.getProfile('non-existent-user-id')).rejects.toThrow(
+        new UnauthorizedException('User not found'),
+      );
+    });
+  });
+
   describe('LocalStrategy', () => {
     let localStrategy: LocalStrategy;
 

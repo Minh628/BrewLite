@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import bcrypt from 'bcrypt';
 import request from 'supertest';
@@ -8,6 +9,7 @@ import { PrismaService } from '../../src/prisma/prisma.service';
 
 describe('Auth API (e2e)', () => {
   let app: INestApplication;
+  let jwtService: JwtService;
 
   const prismaMock = {
     user: {
@@ -35,6 +37,7 @@ describe('Auth API (e2e)', () => {
     );
     app.useGlobalFilters(new HttpExceptionFilter());
     await app.init();
+    jwtService = app.get<JwtService>(JwtService);
   });
 
   beforeEach(() => {
@@ -212,6 +215,72 @@ describe('Auth API (e2e)', () => {
 
       expect(response.status).toBe(401);
       expect(['Unauthorized', 'Invalid credentials']).toContain(response.body.message);
+    });
+  });
+
+  describe('GET /auth/me', () => {
+    it('trả về 200 OK và profile người dùng khi có Bearer token hợp lệ', async () => {
+      const token = await jwtService.signAsync({
+        sub: 'user-cuid-uuid',
+        email: 'customer@brewlite.vn',
+      });
+
+      const mockCreatedAt = new Date('2026-10-16T00:00:00.000Z');
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-cuid-uuid',
+        email: 'customer@brewlite.vn',
+        loyaltyPoints: 10,
+        createdAt: mockCreatedAt,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        id: 'user-cuid-uuid',
+        email: 'customer@brewlite.vn',
+        loyaltyPoints: 10,
+        role: 'CUSTOMER',
+        createdAt: mockCreatedAt.toISOString(),
+      });
+
+      // Bảo mật: Đảm bảo không bao giờ để lộ passwordHash
+      expect(response.body).not.toHaveProperty('passwordHash');
+    });
+
+    it('trả về 401 Unauthorized khi không gửi Authorization header (thiếu token)', async () => {
+      const response = await request(app.getHttpServer()).get('/auth/me');
+
+      expect(response.status).toBe(401);
+      expect(response.body.statusCode).toBe(401);
+      expect(response.body.message).toBe('Unauthorized');
+    });
+
+    it('trả về 401 Unauthorized khi gửi Bearer token không hợp lệ (sai signature/format)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', 'Bearer invalid-token-xyz');
+
+      expect(response.status).toBe(401);
+      expect(response.body.statusCode).toBe(401);
+      expect(response.body.message).toBe('Token không hợp lệ');
+    });
+
+    it('trả về 401 Unauthorized khi token đã hết hạn', async () => {
+      const expiredToken = await jwtService.signAsync(
+        { sub: 'user-cuid-uuid', email: 'customer@brewlite.vn' },
+        { expiresIn: '-1s' },
+      );
+
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${expiredToken}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.statusCode).toBe(401);
+      expect(response.body.message).toBe('Token đã hết hạn');
     });
   });
 });

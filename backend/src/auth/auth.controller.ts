@@ -1,7 +1,18 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { CurrentUser, CurrentUserPayload } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 
 /**
@@ -45,5 +56,18 @@ export class AuthController {
     user: { id: string; email: string };
   }> {
     return this.authService.login(req.user);
+  }
+
+  /**
+   * Endpoint lấy thông tin profile của người dùng hiện tại
+   * @route GET /auth/me
+   * @param user Thông tin user trích xuất từ JWT Bearer token qua @CurrentUser() decorator
+   * @returns HTTP 200 OK cùng thông tin an toàn (id, email, loyaltyPoints, role, createdAt)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  async getProfile(@CurrentUser() user: CurrentUserPayload) {
+    return this.authService.getProfile(user.id);
   }
 }
