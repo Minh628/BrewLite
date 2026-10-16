@@ -8,6 +8,7 @@
     "start:dev": "nest start --watch",
     "start": "node dist/main.js",
     "test": "jest --runInBand",
+    "test:cov": "jest --coverage",
     "test:e2e": "jest --runInBand \"e2e-spec\"",
     "test:watch": "jest --watch",
     "lint": "eslint \"{src,test}/**/*.ts\"",
@@ -58,7 +59,7 @@
   },
   "jest": {
     "rootDir": ".",
-    "testRegex": "test/.*\\.(e2e-)?spec\\.ts$",
+    "testRegex": "(src|test)/.*\\.(e2e-)?spec\\.ts$",
     "transform": {
       "^.+\\.ts$": [
         "ts-jest",
