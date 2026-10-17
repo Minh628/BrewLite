@@ -1,9 +1,17 @@
+
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import SizeSelector, { SizeCode } from '@/components/SizeSelector';
-import ToppingSelector, { TOPPING_OPTIONS } from '@/components/ToppingSelector';
+import ToppingSelector, {
+  TOPPING_OPTIONS,
+  ToppingOption,
+} from '@/components/ToppingSelector';
+import { getToppings } from '@/lib/api';
+import { calcUnitPrice } from '@/lib/pricing';
+import { useCart } from '@/store/cart';
 
 interface Product {
   id: number | string;
@@ -24,85 +32,160 @@ const SIZE_PRICES: Record<SizeCode, number> = {
   L: 10000,
 };
 
-export default function ProductDetailClient({ product }: ProductDetailClientProps) {
+export default function ProductDetailClient({
+  product,
+}: ProductDetailClientProps) {
+  const add = useCart((state) => state.add);
+
   const [selectedSize, setSelectedSize] = useState<SizeCode>('S');
   const [selectedToppings, setSelectedToppings] = useState<string[]>([]);
+  const [toppings, setToppings] =
+    useState<ToppingOption[]>(TOPPING_OPTIONS);
+  const [toast, setToast] = useState<string | null>(null);
 
-  const extraSizePrice = SIZE_PRICES[selectedSize] || 0;
+  useEffect(() => {
+    let cancelled = false;
 
-  const extraToppingPrice = selectedToppings.reduce((total, id) => {
-    const topping = TOPPING_OPTIONS.find((item) => item.id === id);
-    return total + (topping ? topping.price : 0);
-  }, 0);
+    async function loadToppings() {
+      try {
+        const data = await getToppings();
 
-  const totalPrice = (product?.price || 0) + extraSizePrice + extraToppingPrice;
+        if (cancelled) return;
+
+        setToppings(
+          data.map((topping) => ({
+            id: String(topping.id),
+            name: topping.name,
+            price: topping.price,
+          })),
+        );
+      } catch {
+        // Giữ topping mẫu nếu API chưa khả dụng.
+      }
+    }
+
+    loadToppings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedToppingObjects = selectedToppings
+    .map((id) => toppings.find((topping) => topping.id === id))
+    .filter((topping): topping is ToppingOption => Boolean(topping));
+
+  const unitPrice = calcUnitPrice(
+    product.price,
+    {
+      size: selectedSize,
+      extraPrice: SIZE_PRICES[selectedSize],
+    },
+    selectedToppingObjects.map((topping) => ({
+      price: topping.price,
+    })),
+  );
+
+  function handleAddToCart() {
+    add({
+      product: {
+        id: Number(product.id),
+        name: product.title,
+        price: product.price,
+        imageUrl: product.image ?? '/placeholder.png',
+        category: {
+          id: 0,
+          name: product.category ?? '',
+        },
+        isAvailable: true,
+      },
+      size: selectedSize,
+      sizeExtra: SIZE_PRICES[selectedSize],
+      toppings: selectedToppingObjects,
+    });
+
+    setToast('Đã thêm món vào giỏ hàng');
+
+    window.setTimeout(() => {
+      setToast(null);
+    }, 2500);
+  }
+
+  const imageSrc = product.image || '/placeholder.png';
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start font-sans">
-      {/* Hình ảnh sản phẩm */}
-      <div className="w-full h-80 bg-gray-50 rounded-lg overflow-hidden flex items-center justify-center p-4 border relative">
-        <img
-          src={product?.image || '/placeholder.png'}
-          alt={product?.title || 'Product'}
-          className="max-h-full max-w-full object-contain p-2"
+    <div className="grid grid-cols-1 items-start gap-8 font-sans md:grid-cols-2">
+      <div className="relative flex h-80 w-full items-center justify-center overflow-hidden rounded-lg border bg-gray-50 p-4">
+        <Image
+          src={imageSrc}
+          alt={product.title || 'Product'}
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-contain p-6"
+          unoptimized
         />
       </div>
 
-      {/* Thông tin & Tùy chọn */}
       <div className="flex flex-col justify-between space-y-6">
         <div>
-          {product?.category && (
-            <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full uppercase tracking-wider mb-2">
+          {product.category && (
+            <span className="mb-2 inline-block rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-blue-800">
               {product.category}
             </span>
           )}
-          <h1 className="text-2xl font-bold text-gray-900 mb-2 leading-snug">{product?.title}</h1>
-          
-          <p className="text-3xl font-bold text-blue-600 mb-4 tracking-tight">
-            {totalPrice.toLocaleString('vi-VN')} đ
+
+          <h1 className="mb-2 text-2xl font-bold leading-snug text-gray-900">
+            {product.title}
+          </h1>
+
+          <p className="mb-4 text-3xl font-bold tracking-tight text-blue-600">
+            {unitPrice.toLocaleString('vi-VN')} đ
           </p>
-          
-          <p className="text-gray-600 text-sm leading-relaxed mb-6">
-            {product?.description}
+
+          <p className="mb-6 text-sm leading-relaxed text-gray-600">
+            {product.description}
           </p>
 
           <hr className="my-4 border-gray-200" />
 
-          {/* Sub-task 4.2: Bộ chọn Size */}
           <SizeSelector
             selectedSize={selectedSize}
-            onChangeSize={(size) => setSelectedSize(size)}
+            onChangeSize={setSelectedSize}
           />
 
-          {/* Sub-task 4.3: Bộ chọn Topping */}
           <ToppingSelector
             selectedToppings={selectedToppings}
-            onChangeToppings={(toppings) => setSelectedToppings(toppings)}
+            onChangeToppings={setSelectedToppings}
           />
         </div>
 
-        {/* Nút hành động */}
-        <div className="pt-4 flex gap-4">
+        <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:gap-4">
           <button
-            onClick={() => {
-              alert(
-                `Đã thêm vào giỏ:\n- Món: ${product?.title}\n- Size: ${selectedSize}\n- Topping: ${
-                  selectedToppings.length > 0 ? selectedToppings.length + ' loại' : 'Không'
-                }\n- Tổng tiền: ${totalPrice.toLocaleString('vi-VN')}đ`
-              );
-            }}
-            className="flex-1 bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition shadow-md"
+            type="button"
+            onClick={handleAddToCart}
+            className="flex-1 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white shadow-md transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
           >
             Thêm vào giỏ hàng
           </button>
+
           <Link
             href="/products"
-            className="px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition flex items-center justify-center"
+            className="flex items-center justify-center rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-700 transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
           >
             Quay lại
           </Link>
         </div>
       </div>
+
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 right-4 z-50 rounded-lg bg-gray-900 px-5 py-3 text-sm font-medium text-white shadow-lg sm:right-6"
+        >
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
