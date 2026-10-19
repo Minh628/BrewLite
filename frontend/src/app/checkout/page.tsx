@@ -1,18 +1,41 @@
+
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { useCart } from '@/store/cart';
-import { formatVND } from '@/lib/format';
-import { Button } from '@/components/Button';
-import { EmptyState } from '@/components/EmptyState';
-import Link from 'next/link';
+import { createOrder } from '@/lib/api';
+
+function formatPrice(price: number) {
+  return `${price.toLocaleString('vi-VN')} ₫`;
+}
+
+function isValidVietnamPhone(phone: string) {
+  // Cho phép khoảng trắng, dấu chấm và dấu gạch ngang.
+  const normalized = phone.replace(/[\s.-]/g, '');
+
+  // Số di động Việt Nam gồm 10 chữ số bắt đầu bằng 0,
+  // hoặc mã quốc gia +84 theo sau bởi 9 chữ số.
+  return /^(0[35789]\d{8}|\+84[35789]\d{8})$/.test(normalized);
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
-  const { lines, total, clear } = useCart();
+  const isAuthenticated = useAuth((state) => state.isAuthenticated);
+  const lines = useCart((state) => state.lines);
+  const total = useCart((state) => state.total());
+  const clear = useCart((state) => state.clear);
+
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [note, setNote] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -20,101 +43,274 @@ export default function CheckoutPage() {
     }
   }, [isAuthenticated, router]);
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-  const handlePlaceOrder = async () => {
-    if (lines.length === 0) return;
+    if (!isValidVietnamPhone(phone)) {
+      setPhoneError(
+        'Số điện thoại chưa hợp lệ. Hãy nhập số di động Việt Nam, ví dụ 0912345678 hoặc +84912345678.',
+      );
+      setMessage('');
+      return;
+    }
+
+    setPhoneError('');
+    setSubmitting(true);
 
     try {
-      const { createOrder } = await import('@/lib/api');
-      const items = lines.map((line) => ({
-        productId: line.id,
-        size: (line as any).size ?? 'S',
-        quantity: line.quantity,
-        toppingIds: (line as any).toppings?.map((t: any) => t.id) ?? [],
-      }));
-      const result = await createOrder(items);
+      const result = await createOrder(
+        lines.map((line) => ({
+          productId: line.id,
+          size: line.size,
+          quantity: line.quantity,
+          toppingIds: line.toppings.map((topping) => topping.id),
+        })),
+      );
       clear();
       router.push(`/order/${result.orderId}`);
-      router.refresh();
-    } catch (err) {
-      console.error('Failed to create order:', err);
-      alert('Đặt hàng thất bại. Vui lòng thử lại.');
+    } catch {
+      setMessage('Đặt hàng thất bại. Vui lòng thử lại.');
+      setSubmitting(false);
     }
-  };
+  }
+
+  if (!isAuthenticated) return null;
+
+  if (lines.length === 0) {
+    return (
+      <main className="min-h-screen bg-crema px-4 py-10 text-espresso sm:px-6">
+        <div className="mx-auto max-w-2xl rounded-2xl border border-espresso/10 bg-white p-8 text-center">
+          <h1 className="text-2xl font-black">Giỏ hàng đang trống</h1>
+
+          <p className="mt-3 text-sm text-espresso/60">
+            Hãy chọn món trước khi thanh toán nhé!
+          </p>
+
+          <Link
+            href="/products"
+            className="mt-6 inline-flex rounded-full bg-espresso px-6 py-3 font-bold text-crema hover:opacity-90"
+          >
+            Khám phá menu
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="flex-1 py-8 px-4">
-      <div className="mx-auto max-w-3xl">
-        <header className="mb-8">
-          <h1 className="text-2xl font-black text-espresso">Đặt hàng</h1>
-          <p className="text-espresso/60 mt-1">Xác nhận đơn hàng của bạn</p>
-        </header>
+    <main className="min-h-screen bg-crema px-4 py-10 text-espresso sm:px-6 lg:px-10">
+      <div className="mx-auto max-w-5xl">
+        <Link
+          href="/cart"
+          className="text-sm font-medium text-espresso/70 hover:text-espresso"
+        >
+          ← Quay lại giỏ hàng
+        </Link>
 
-        {lines.length === 0 ? (
-          <EmptyState
-            icon="🛍️"
-            title="Giỏ hàng trống"
-            description="Bạn chưa có món nào trong giỏ hàng"
-            actionLabel="Về menu chọn món"
-            actionHref="/"
-          />
-        ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-espresso/10 overflow-hidden">
-            <div className="divide-y divide-espresso/10">
-              {lines.map((line, index) => (
-                <div key={`${line.id}-${index}`} className="flex gap-4 p-4">
-                  <img
-                    src={line.imageUrl}
-                    alt={line.name}
-                    className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-espresso truncate">{line.name}</h3>
-                    <p className="text-sm text-espresso/60 mt-0.5">
-                      Size: {(line as any).size ?? 'S'}
-                      {(line as any).toppings?.length && (
-                        <>
-                          {' · '}
-                          Topping: {(line as any).toppings.map((t: any) => t.name).join(', ')}
-                        </>
-                      )}
+        <h1 className="mt-4 text-3xl font-black">Thanh toán</h1>
+
+        <p className="mt-2 text-sm text-espresso/60">
+          Điền thông tin nhận hàng để tiếp tục.
+        </p>
+
+        <form
+          onSubmit={handleSubmit}
+          className="mt-8 grid gap-6 lg:grid-cols-[1fr_340px]"
+        >
+          <section className="space-y-5 rounded-2xl border border-espresso/10 bg-white p-5 sm:p-7">
+            <h2 className="text-xl font-bold">Thông tin nhận hàng</h2>
+
+            <div>
+              <label
+                htmlFor="name"
+                className="mb-2 block text-sm font-semibold"
+              >
+                Họ và tên
+              </label>
+
+              <input
+                id="name"
+                name="name"
+                autoComplete="name"
+                required
+                maxLength={100}
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  setMessage('');
+                }}
+                className="w-full rounded-xl border border-espresso/20 px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-espresso"
+                placeholder="Nhập họ và tên"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="phone"
+                className="mb-2 block text-sm font-semibold"
+              >
+                Số điện thoại
+              </label>
+
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                required
+                maxLength={20}
+                value={phone}
+                onChange={(event) => {
+                  setPhone(event.target.value);
+                  setPhoneError('');
+                  setMessage('');
+                }}
+                aria-invalid={Boolean(phoneError)}
+                aria-describedby={
+                  phoneError ? 'phone-error' : 'phone-hint'
+                }
+                className={`w-full rounded-xl border px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-espresso ${
+                  phoneError ? 'border-red-600' : 'border-espresso/20'
+                }`}
+                placeholder="0912345678"
+              />
+
+              {phoneError ? (
+                <p
+                  id="phone-error"
+                  role="alert"
+                  className="mt-2 text-sm text-red-600"
+                >
+                  {phoneError}
+                </p>
+              ) : (
+                <p
+                  id="phone-hint"
+                  className="mt-2 text-xs text-espresso/60"
+                >
+                  Nhập số di động Việt Nam, ví dụ 0912345678.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="address"
+                className="mb-2 block text-sm font-semibold"
+              >
+                Địa chỉ giao hàng
+              </label>
+
+              <textarea
+                id="address"
+                name="address"
+                autoComplete="street-address"
+                required
+                maxLength={300}
+                rows={3}
+                value={address}
+                onChange={(event) => {
+                  setAddress(event.target.value);
+                  setMessage('');
+                }}
+                className="w-full resize-y rounded-xl border border-espresso/20 px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-espresso"
+                placeholder="Số nhà, đường, phường/xã..."
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="note"
+                className="mb-2 block text-sm font-semibold"
+              >
+                Ghi chú (không bắt buộc)
+              </label>
+
+              <textarea
+                id="note"
+                name="note"
+                maxLength={500}
+                rows={2}
+                value={note}
+                onChange={(event) => {
+                  setNote(event.target.value);
+                  setMessage('');
+                }}
+                className="w-full resize-y rounded-xl border border-espresso/20 px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-espresso"
+                placeholder="Ghi chú cho đơn hàng..."
+              />
+            </div>
+          </section>
+
+          <aside
+            aria-label="Tóm tắt đơn hàng"
+            className="h-fit rounded-2xl border border-espresso/10 bg-white p-5 sm:p-6"
+          >
+            <h2 className="text-xl font-bold">Đơn hàng của bạn</h2>
+
+            <ul className="mt-5 space-y-4">
+              {lines.map((line) => (
+                <li
+                  key={line.cartId}
+                  className="flex justify-between gap-4 border-b border-espresso/10 pb-4"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold">{line.name}</p>
+
+                    <p className="mt-1 text-sm text-espresso/60">
+                      Size {line.size} · SL: {line.quantity}
                     </p>
-                    <p className="text-sm text-espresso/60 mt-0.5">Số lượng: {line.quantity}</p>
-                    <p className="font-medium text-caramel mt-1">
-                      {formatVND((line as any).unitPrice ?? line.price * line.quantity)}
-                    </p>
+
+                    {line.toppings.length > 0 && (
+                      <p className="mt-1 text-sm text-espresso/60">
+                        Topping:{' '}
+                        {line.toppings
+                          .map((item) => item.name)
+                          .join(', ')}
+                      </p>
+                    )}
                   </div>
-                </div>
+
+                  <span className="shrink-0 text-right text-sm font-bold">
+                    {formatPrice(line.unitPrice * line.quantity)}
+                  </span>
+                </li>
               ))}
+            </ul>
+
+            <div className="mt-5 flex items-center justify-between gap-3">
+              <span className="font-bold">Tổng cộng</span>
+
+              <span className="text-xl font-black">
+                {formatPrice(total)}
+              </span>
             </div>
 
-            <div className="p-4 bg-espresso/5 border-t border-espresso/10">
-              <div className="flex justify-between text-lg font-semibold text-espresso">
-                <span>Tổng cộng</span>
-                <span>{formatVND(total())}</span>
-              </div>
-            </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="mt-6 w-full rounded-full bg-espresso px-5 py-3 font-bold text-crema transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting ? 'Đang đặt hàng...' : 'Đặt hàng'}
+            </button>
 
-            <div className="p-4 border-t border-espresso/10">
-              <p className="text-sm text-espresso/60 mb-4">
-                Đơn hàng sẽ được tạo với trạng thái PENDING. Sau khi thanh toán thành công, đơn sẽ
-                chuyển sang PAID.
+            <p className="mt-3 text-xs leading-5 text-espresso/50">
+              Đơn hàng được tạo với trạng thái PENDING. Giá được máy chủ tính
+              lại khi đặt hàng.
+            </p>
+
+            {message && (
+              <p
+                role="status"
+                aria-live="polite"
+                className="mt-4 rounded-xl bg-crema p-3 text-sm leading-5"
+              >
+                {message}
               </p>
-              <Button onClick={handlePlaceOrder} className="w-full" size="lg">
-                Đặt hàng
-              </Button>
-              <p className="text-center text-sm text-espresso/50 mt-3">
-                Hoặc{' '}
-                <Link href="/" className="text-caramel hover:underline">
-                  tiếp tục chọn món
-                </Link>
-              </p>
-            </div>
-          </div>
-        )}
+            )}
+          </aside>
+        </form>
       </div>
     </main>
   );

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { Product } from '@/lib/api';
 import { formatVND } from '@/lib/format';
+import { useCart } from '@/store/cart';
 
 function categoryEmoji(categoryName: string) {
   if (categoryName === 'Trà') return '🍑';
@@ -11,6 +12,8 @@ function categoryEmoji(categoryName: string) {
 }
 
 export function ProductCard({ product }: { product: Product }) {
+  const add = useCart((state) => state.add);
+
   return (
     <article className="group overflow-hidden rounded-[2rem] border border-espresso/15 bg-white/70 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
       <Link href={`/products/${product.id}`} className="block">
@@ -30,6 +33,15 @@ export function ProductCard({ product }: { product: Product }) {
           <p className="text-sm text-sage">Pha mới theo lựa chọn của bạn</p>
         </div>
       </Link>
+      <div className="px-5 pb-5">
+        <button
+          type="button"
+          onClick={() => add({ product, size: 'S', sizeExtra: 0, toppings: [] })}
+          className="w-full rounded-full bg-espresso px-4 py-3 text-sm font-bold text-crema transition hover:bg-caramel"
+        >
+          Thêm vào giỏ
+        </button>
+      </div>
     </article>
   );
 }

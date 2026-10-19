@@ -4,12 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
 import { useCart } from '@/store/cart';
-import { formatVND } from '@/lib/format';
-import { Button } from '@/components/Button';
 
 export function Header() {
   const { user, isAuthenticated, clearAuth } = useAuth();
-  const { lines, total } = useCart();
+  const { lines } = useCart();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleLogout = () => {

@@ -1,79 +1,185 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import {
+  persist,
+  createJSONStorage,
+  type StateStorage,
+} from 'zustand/middleware';
 import type { Product } from '@/lib/api';
+import { CartStorageSchema } from './cart-schema';
+
+export type CartTopping = {
+  id: number;
+  name: string;
+  price: number;
+};
 
 export type CartLine = Product & {
-  quantity: number;
+  cartId: string;
   size: 'S' | 'M' | 'L';
-  toppings: Array<{ id: number; name: string; price: number }>;
+  sizeExtra: number;
+  toppings: CartTopping[];
+  quantity: number;
   unitPrice: number;
+};
+
+export type CartItemInput = {
+  product: Product;
+  size: 'S' | 'M' | 'L';
+  sizeExtra: number;
+  toppings: CartTopping[];
 };
 
 type CartState = {
   lines: CartLine[];
-  add: (line: Omit<CartLine, 'quantity'>) => void;
-  updateQty: (
-    productId: number,
-    size: 'S' | 'M' | 'L',
-    toppings: CartLine['toppings'],
-    qty: number,
-  ) => void;
-  remove: (productId: number, size: 'S' | 'M' | 'L', toppings: CartLine['toppings']) => void;
+  add: (item: CartItemInput) => void;
+  increase: (cartId: string) => void;
+  decrease: (cartId: string) => void;
+  remove: (cartId: string) => void;
   clear: () => void;
   total: () => number;
   count: () => number;
 };
 
-function cartKey(line: Omit<CartLine, 'quantity'>): string {
-  const toppingIds = line.toppings
-    .map((t) => t.id)
+const CART_VERSION = 1;
+
+function getCartId(item: CartItemInput) {
+  const toppingIds = item.toppings
+    .map((topping) => topping.id)
     .sort()
     .join(',');
-  return `${line.id}-${line.size}-${toppingIds}`;
+
+  return `${item.product.id}-${item.size}-${toppingIds}`;
 }
+
+// Kiểm tra JSON và schema trước khi Zustand đọc dữ liệu.
+const safeCartStorage: StateStorage = {
+  getItem: (name) => {
+    try {
+      const raw = localStorage.getItem(name);
+      if (raw === null) return null;
+
+      const parsed: unknown = JSON.parse(raw);
+      const result = CartStorageSchema.safeParse(parsed);
+
+      if (!result.success || result.data.version !== CART_VERSION) {
+        localStorage.removeItem(name);
+        return null;
+      }
+
+      return raw;
+    } catch {
+      try {
+        localStorage.removeItem(name);
+      } catch {
+        // Bỏ qua lỗi truy cập storage.
+      }
+      return null;
+    }
+  },
+
+  setItem: (name, value) => {
+    try {
+      localStorage.setItem(name, value);
+    } catch {
+      // Không để lỗi storage làm ứng dụng bị crash.
+    }
+  },
+
+  removeItem: (name) => {
+    try {
+      localStorage.removeItem(name);
+    } catch {
+      // Bỏ qua lỗi truy cập storage.
+    }
+  },
+};
 
 export const useCart = create<CartState>()(
   persist(
     (set, get) => ({
       lines: [],
-      add: (line) =>
+
+      add: (item) =>
         set((state) => {
-          const key = cartKey(line);
-          const existingIndex = state.lines.findIndex((l) => cartKey(l) === key);
-          if (existingIndex >= 0) {
+          const cartId = getCartId(item);
+          const existing = state.lines.find(
+            (line) => line.cartId === cartId,
+          );
+
+          if (existing) {
+            if (existing.quantity >= 20) return state;
+
             return {
-              lines: state.lines.map((l, i) =>
-                i === existingIndex ? { ...l, quantity: Math.min(l.quantity + 1, 20) } : l,
+              lines: state.lines.map((line) =>
+                line.cartId === cartId
+                  ? { ...line, quantity: line.quantity + 1 }
+                  : line,
               ),
             };
           }
-          return { lines: [...state.lines, { ...line, quantity: 1 }] };
-        }),
-      updateQty: (productId, size, toppings, qty) =>
-        set((state) => {
-          const key = cartKey({ id: productId, size, toppings } as Omit<CartLine, 'quantity'>);
-          if (qty <= 0) {
-            return { lines: state.lines.filter((l) => cartKey(l) !== key) };
-          }
+
+          const toppings = [...item.toppings];
+          const unitPrice =
+            item.product.price +
+            item.sizeExtra +
+            toppings.reduce((sum, topping) => sum + topping.price, 0);
+
           return {
-            lines: state.lines.map((l) =>
-              cartKey(l) === key ? { ...l, quantity: Math.min(qty, 20) } : l,
-            ),
+            lines: [
+              ...state.lines,
+              {
+                ...item.product,
+                cartId,
+                size: item.size,
+                sizeExtra: item.sizeExtra,
+                toppings,
+                quantity: 1,
+                unitPrice,
+              },
+            ],
           };
         }),
-      remove: (productId, size, toppings) =>
-        set((state) => {
-          const key = cartKey({ id: productId, size, toppings } as Omit<CartLine, 'quantity'>);
-          return { lines: state.lines.filter((l) => cartKey(l) !== key) };
-        }),
+
+      increase: (cartId) =>
+        set((state) => ({
+          lines: state.lines.map((line) =>
+            line.cartId === cartId && line.quantity < 20
+              ? { ...line, quantity: line.quantity + 1 }
+              : line,
+          ),
+        })),
+
+      decrease: (cartId) =>
+        set((state) => ({
+          lines: state.lines
+            .map((line) =>
+              line.cartId === cartId
+                ? { ...line, quantity: line.quantity - 1 }
+                : line,
+            )
+            .filter((line) => line.quantity > 0),
+        })),
+
+      remove: (cartId) =>
+        set((state) => ({
+          lines: state.lines.filter((line) => line.cartId !== cartId),
+        })),
+
       clear: () => set({ lines: [] }),
-      total: () => get().lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0),
-      count: () => get().lines.reduce((sum, line) => sum + line.quantity, 0),
+
+      total: () =>
+        get().lines.reduce(
+          (sum, line) => sum + line.unitPrice * line.quantity,
+          0,
+        ),
+
+      count: () =>
+        get().lines.reduce((sum, line) => sum + line.quantity, 0),
     }),
     {
       name: 'brewlite-cart',
-      storage: createJSONStorage(() => localStorage),
-      version: 1,
+      version: CART_VERSION,
+      storage: createJSONStorage(() => safeCartStorage),
       partialize: (state) => ({ lines: state.lines }),
     },
   ),

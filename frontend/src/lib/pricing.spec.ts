@@ -44,9 +44,9 @@ describe('calcUnitPrice', () => {
   it('tính đúng khi chọn nhiều loại topping khác nhau', () => {
     const sizeS: AvailableSize = { size: 'S', extraPrice: 0 };
     const multiToppings: SelectedTopping[] = [
-      { price: 5000 }, // Trân châu đen
-      { price: 7000 }, // Trân châu trắng
-      { price: 10000 }, // Kem cheese
+      { id: 0, name: '', price: 5000 }, // Trân châu đen
+      { id: 0, name: '', price: 7000 }, // Trân châu trắng
+      { id: 0, name: '', price: 10000 }, // Kem cheese
     ];
 
     const result = calcUnitPrice(basePrice, sizeS, multiToppings);
@@ -68,7 +68,7 @@ describe('calcUnitPrice', () => {
   // Ca 7: Kết hợp toàn diện: Size L + nhiều topping + giá lẻ làm tròn
   it('tính đúng khi kết hợp size L, nhiều topping và làm tròn số', () => {
     const sizeL: AvailableSize = { size: 'L', extraPrice: 10000 };
-    const toppings: SelectedTopping[] = [{ price: 5000.3 }, { price: 7000.4 }];
+    const toppings: SelectedTopping[] = [{ id: 0, name: '', price: 5000.3 }, { id: 0, name: '', price: 7000.4 }];
 
     // 45000.2 + 10000 + (5000.3 + 7000.4) = 67000.9 -> làm tròn thành 67001
     const result = calcUnitPrice(45000.2, sizeL, toppings);
@@ -95,7 +95,7 @@ describe('calcUnitPrice', () => {
     });
 
     it('ném lỗi RangeError khi giá topping âm', () => {
-      expect(() => calcUnitPrice(basePrice, validSize, [{ price: -1000 }])).toThrow(RangeError);
+      expect(() => calcUnitPrice(basePrice, validSize, [{ id: 0, name: '', price: -1000 }])).toThrow(RangeError);
     });
   });
 });
