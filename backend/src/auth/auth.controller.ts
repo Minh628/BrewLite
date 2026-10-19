@@ -8,6 +8,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { CurrentUser, CurrentUserPayload } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/login.dto';
@@ -39,11 +40,13 @@ export class AuthController {
 
   /**
    * Endpoint Đăng nhập người dùng và cấp JWT accessToken
+   * Giới hạn rate-limit chống brute-force: tối đa 5 requests trong 60 giây (AT-22)
    * @route POST /auth/login
    * @param req Request chứa user context do LocalStrategy xác thực
    * @param _loginDto Payload đăng nhập để ValidationPipe kiểm tra định dạng
    * @returns HTTP 200 OK cùng accessToken, expiresIn và thông tin user
    */
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)

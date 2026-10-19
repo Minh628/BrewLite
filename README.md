@@ -60,8 +60,11 @@ BrewLite/
   - Cấu hình CORS linh hoạt theo biến môi trường `CORS_ORIGIN`, bật credentials và mở các header quan trọng như `Idempotency-Key`.
   - Triển khai endpoint `GET /health` trả về mã HTTP 200 kèm uptime và trạng thái service.
   - Ban hành tài liệu quy ước API chi tiết tại [`docs/api-conventions.md`](./docs/api-conventions.md).
-- **PB-4 (Sub-task 4.5): Unit Test hàm tính đơn giá calcUnitPrice**
-  - Cài đặt Vitest cho frontend, xây dựng bộ 11 ca kiểm thử bao phủ toàn bộ size (S, M, L), nhiều topping, không topping, làm tròn số thực và ngoại lệ đầu vào.
+- **PB-22 (Sub-task 22.1 & 22.2): Bảo mật API, Helmet, Rate-limiting & Che giấu Stack Trace**
+  - Tích hợp `helmet` tại `main.ts` cấu hình các HTTP security headers tiêu chuẩn (`X-Content-Type-Options`, `X-Frame-Options`,...).
+  - Cấu hình `@nestjs/throttler` chống brute-force cho route `POST /auth/login`: tối đa 5 requests/phút (request thứ 6 trả về HTTP 429 Too Many Requests theo tiêu chí AT-22).
+  - Hoàn thiện CORS Whitelist dựa trên biến môi trường `CORS_ORIGIN` với `credentials: true`.
+  - Ẩn toàn bộ stack trace và chi tiết schema/database ở môi trường Production (`NODE_ENV=production`) tại `HttpExceptionFilter`, tự động gán và trả về `X-Request-Id` hỗ trợ đối chiếu log.
 
 ## API / Function
 
@@ -103,6 +106,55 @@ Mọi lỗi từ hệ thống (client error 4xx hoặc server error 5xx) đều 
   "timestamp": "2026-09-30T13:30:00.000Z"
 }
 ```
+
+Ở môi trường Production (`NODE_ENV=production`), khi gặp lỗi nội bộ máy chủ (HTTP 500), response được làm sạch tối đa nhằm ngăn chặn rò rỉ stack trace hoặc chi tiết CSDL:
+
+```json
+{
+  "statusCode": 500,
+  "message": "Internal server error",
+  "requestId": "uuid_string",
+  "timestamp": "2026-10-19T20:00:00.000Z"
+}
+```
+
+## Bảo mật (Security Configuration)
+
+### 1. Biến môi trường bảo mật
+
+| Tên biến         | Kiểu dữ liệu                   | Mặc định                | Mô tả                                                                          |
+| :--------------- | :----------------------------- | :---------------------- | :----------------------------------------------------------------------------- |
+| `CORS_ORIGIN`    | Chuỗi (phân tách bởi dấu phẩy) | `http://localhost:3000` | Whitelist domain frontend được phép truy cập API kèm `credentials: true`.      |
+| `THROTTLE_TTL`   | Số nguyên (giây)               | `60`                    | Chu kỳ thời gian theo dõi tần suất gửi request (Rate-limiting).                |
+| `THROTTLE_LIMIT` | Số nguyên                      | `100`                   | Số lượng request tối đa được phép trong mỗi chu kỳ cho các route thông thường. |
+
+### 2. Giới hạn tần suất (Rate Limiting) chống Brute-force
+
+- **Quy tắc endpoint nhạy cảm:** Endpoint `POST /auth/login` được cấu hình chặt chẽ tối đa **5 lần / 60 giây (1 phút)** trên mỗi địa chỉ IP (theo tiêu chí nghiệm thu AT-22).
+- **Phản hồi khi vượt ngưỡng (HTTP 429 Too Many Requests):**
+  - Khi gửi request thứ 6 trong vòng 1 phút, server lập tức từ chối và phản hồi:
+  ```json
+  {
+    "statusCode": 429,
+    "message": "Too Many Requests",
+    "error": "Too Many Requests",
+    "path": "/auth/login",
+    "timestamp": "2026-10-19T20:00:00.000Z"
+  }
+  ```
+  - Đi kèm header `Retry-After` thông báo số giây cần chờ trước khi được phép thử lại.
+
+### 3. Tra cứu log qua `X-Request-Id` khi gặp lỗi 500
+
+- Mọi phản hồi API đều mang header `X-Request-Id`. Nếu client hoặc API Gateway gửi lên header `X-Request-Id`, hệ thống sẽ kế thừa; nếu không, hệ thống sẽ tự sinh UUIDv4.
+- Khi gặp mã lỗi `500 Internal Server Error`, client nhận được `requestId` trong thân JSON để báo cáo sự cố.
+- **Cách tra cứu:**
+  1. Trích xuất mã `requestId` từ response lỗi của người dùng hoặc tab Network.
+  2. Tìm kiếm log chi tiết trên server theo mã requestId:
+     ```bash
+     docker compose logs backend | grep "requestId_can_tim"
+     ```
+  3. Server log sẽ hiển thị đầy đủ thông tin stack trace và ngữ cảnh lỗi mà không bị rò rỉ ra bên ngoài.
 
 ## Chạy local (không Docker)
 

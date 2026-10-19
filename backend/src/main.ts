@@ -1,10 +1,14 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Kích hoạt Helmet để thiết lập các HTTP headers bảo mật tiêu chuẩn (X-Content-Type-Options, X-Frame-Options, CSP,...)
+  app.use(helmet());
 
   // Cấu hình CORS động: hỗ trợ domain theo env, cho phép máy local (localhost/127.0.0.1 mọi port)
   // và các công cụ gọi trực tiếp không có header origin (Postman, curl, server-to-server)
@@ -39,8 +43,8 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'Accept'],
-    exposedHeaders: ['Idempotency-Key'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'Accept', 'X-Request-Id'],
+    exposedHeaders: ['Idempotency-Key', 'X-Request-Id'],
   });
 
   // Cấu hình ValidationPipe toàn cục: whitelist, transform, và từ chối field lạ (forbidNonWhitelisted)
