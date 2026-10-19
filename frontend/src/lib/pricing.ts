@@ -6,14 +6,11 @@ export type AvailableSize = {
 };
 
 export type SelectedTopping = {
+  id: number;
+  name: string;
   price: number;
 };
 
-/**
- * Tính đơn giá một sản phẩm, chưa nhân số lượng.
- * base là Product.price (giá gốc size S).
- * size lấy từ ProductSize của sản phẩm đó.
- */
 export function calcUnitPrice(
   base: number,
   size: AvailableSize,
@@ -48,6 +45,6 @@ import { calcUnitPrice } from '@/lib/pricing';
 const unitPrice = calcUnitPrice(
     45_000,
     { size: 'L', extraPrice: 10_000 },
-    [{ price: 5_000 }, { price: 7_000 }],
+    [{ id: 1, name: 'Trân châu', price: 5_000 }, { id: 2, name: 'Kem cheese', price: 7_000 }],
 );
- */
+*/

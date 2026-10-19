@@ -1,3 +1,5 @@
+// Nạp biến môi trường từ file .env vào process.env khi chạy script
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();

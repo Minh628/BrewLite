@@ -1,5 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
+import bcrypt from 'bcrypt';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { HttpExceptionFilter } from '../../src/common/filters/http-exception.filter';
@@ -7,6 +9,7 @@ import { PrismaService } from '../../src/prisma/prisma.service';
 
 describe('Auth API (e2e)', () => {
   let app: INestApplication;
+  let jwtService: JwtService;
 
   const prismaMock = {
     user: {
@@ -34,6 +37,7 @@ describe('Auth API (e2e)', () => {
     );
     app.useGlobalFilters(new HttpExceptionFilter());
     await app.init();
+    jwtService = app.get<JwtService>(JwtService);
   });
 
   beforeEach(() => {
@@ -146,6 +150,137 @@ describe('Auth API (e2e)', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.message).toContain('property role should not exist');
+    });
+  });
+
+  describe('POST /auth/login', () => {
+    it('trả về 200 OK cùng accessToken và expiresIn khi thông tin đăng nhập chính xác', async () => {
+      const passwordHash = await bcrypt.hash('securepassword123', 10);
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-cuid-uuid',
+        email: 'customer@brewlite.vn',
+        passwordHash,
+      });
+
+      const response = await request(app.getHttpServer()).post('/auth/login').send({
+        email: 'customer@brewlite.vn',
+        password: 'securepassword123',
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        accessToken: expect.any(String),
+        expiresIn: 3600,
+        user: {
+          id: 'user-cuid-uuid',
+          email: 'customer@brewlite.vn',
+        },
+      });
+    });
+
+    it('trả về 401 Unauthorized khi email không tồn tại trong hệ thống', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      const response = await request(app.getHttpServer()).post('/auth/login').send({
+        email: 'unknown@brewlite.vn',
+        password: 'securepassword123',
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe('Invalid credentials');
+    });
+
+    it('trả về 401 Unauthorized khi mật khẩu không chính xác', async () => {
+      const passwordHash = await bcrypt.hash('securepassword123', 10);
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-cuid-uuid',
+        email: 'customer@brewlite.vn',
+        passwordHash,
+      });
+
+      const response = await request(app.getHttpServer()).post('/auth/login').send({
+        email: 'customer@brewlite.vn',
+        password: 'wrongpassword',
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe('Invalid credentials');
+    });
+
+    it('trả về 401 Unauthorized khi thiếu trường email hoặc password', async () => {
+      const response = await request(app.getHttpServer()).post('/auth/login').send({
+        email: '',
+        password: '',
+      });
+
+      expect(response.status).toBe(401);
+      expect(['Unauthorized', 'Invalid credentials']).toContain(response.body.message);
+    });
+  });
+
+  describe('GET /auth/me', () => {
+    it('trả về 200 OK và profile người dùng khi có Bearer token hợp lệ', async () => {
+      const token = await jwtService.signAsync({
+        sub: 'user-cuid-uuid',
+        email: 'customer@brewlite.vn',
+      });
+
+      const mockCreatedAt = new Date('2026-10-16T00:00:00.000Z');
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-cuid-uuid',
+        email: 'customer@brewlite.vn',
+        loyaltyPoints: 10,
+        createdAt: mockCreatedAt,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        id: 'user-cuid-uuid',
+        email: 'customer@brewlite.vn',
+        loyaltyPoints: 10,
+        role: 'CUSTOMER',
+        createdAt: mockCreatedAt.toISOString(),
+      });
+
+      // Bảo mật: Đảm bảo không bao giờ để lộ passwordHash
+      expect(response.body).not.toHaveProperty('passwordHash');
+    });
+
+    it('trả về 401 Unauthorized khi không gửi Authorization header (thiếu token)', async () => {
+      const response = await request(app.getHttpServer()).get('/auth/me');
+
+      expect(response.status).toBe(401);
+      expect(response.body.statusCode).toBe(401);
+      expect(response.body.message).toBe('Unauthorized');
+    });
+
+    it('trả về 401 Unauthorized khi gửi Bearer token không hợp lệ (sai signature/format)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', 'Bearer invalid-token-xyz');
+
+      expect(response.status).toBe(401);
+      expect(response.body.statusCode).toBe(401);
+      expect(response.body.message).toBe('Token không hợp lệ');
+    });
+
+    it('trả về 401 Unauthorized khi token đã hết hạn', async () => {
+      const expiredToken = await jwtService.signAsync(
+        { sub: 'user-cuid-uuid', email: 'customer@brewlite.vn' },
+        { expiresIn: '-1s' },
+      );
+
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${expiredToken}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.statusCode).toBe(401);
+      expect(response.body.message).toBe('Token đã hết hạn');
     });
   });
 });

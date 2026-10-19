@@ -1,68 +1,69 @@
 'use client';
 
 import React from 'react';
+import type { Topping } from '@/lib/api';
 
 export interface ToppingOption {
-  id: string;
+  id: number;
   name: string;
   price: number;
 }
 
-export const TOPPING_OPTIONS: ToppingOption[] = [
-  { id: 't1', name: 'Trân châu đen', price: 5000 },
-  { id: 't2', name: 'Trân châu trắng', price: 7000 },
-  { id: 't3', name: 'Thạch trái cây', price: 6000 },
-  { id: 't4', name: 'Pudding trứng', price: 8000 },
-  { id: 't5', name: 'Kem Cheese', price: 10000 },
-];
-
 interface ToppingSelectorProps {
-  selectedToppings: string[];
-  onChangeToppings: (toppingIds: string[]) => void;
+  toppings: ToppingOption[];
+  selectedToppings: ToppingOption[];
+  onChangeToppings: (toppings: ToppingOption[]) => void;
 }
 
-export default function ToppingSelector({
+export function ToppingSelector({
+  toppings,
   selectedToppings,
   onChangeToppings,
 }: ToppingSelectorProps) {
-  const handleToggleTopping = (id: string) => {
-    if (selectedToppings.includes(id)) {
-      // Nếu đã có thì loại bỏ ra khỏi mảng
-      onChangeToppings(selectedToppings.filter((item) => item !== id));
+  const handleToggleTopping = (topping: ToppingOption) => {
+    if (selectedToppings.some((t) => t.id === topping.id)) {
+      onChangeToppings(selectedToppings.filter((t) => t.id !== topping.id));
     } else {
-      // Nếu chưa có thì thêm vào mảng
-      onChangeToppings([...selectedToppings, id]);
+      onChangeToppings([...selectedToppings, topping]);
     }
   };
 
+  if (!toppings.length) {
+    return (
+      <div className="space-y-2 mt-4">
+        <p className="text-sm text-espresso/60">Sản phẩm này không có topping</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2 mt-4">
-      <label className="text-sm font-semibold text-gray-700 block">
+      <label className="text-sm font-semibold text-espresso block">
         Chọn Topping (Không bắt buộc)
       </label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-        {TOPPING_OPTIONS.map((topping) => {
-          const isChecked = selectedToppings.includes(topping.id);
+        {toppings.map((topping) => {
+          const isChecked = selectedToppings.some((t) => t.id === topping.id);
           return (
             <div
               key={topping.id}
-              onClick={() => handleToggleTopping(topping.id)}
+              onClick={() => handleToggleTopping(topping)}
               className={`flex items-center justify-between p-3 rounded-lg border text-sm font-medium cursor-pointer transition select-none ${
                 isChecked
-                  ? 'border-blue-600 bg-blue-50 text-blue-800 shadow-sm'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  ? 'border-caramel bg-caramel/10 text-caramel shadow-sm'
+                  : 'border-espresso/20 bg-white text-espresso hover:bg-espresso/5'
               }`}
             >
               <div className="flex items-center gap-2.5">
                 <input
                   type="checkbox"
                   checked={isChecked}
-                  onChange={() => handleToggleTopping(topping.id)}
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                  onChange={() => handleToggleTopping(topping)}
+                  className="w-4 h-4 text-caramel rounded border-espresso/30 focus:ring-caramel/50 cursor-pointer"
                 />
                 <span>{topping.name}</span>
               </div>
-              <span className="text-xs text-gray-500 font-normal">
+              <span className="text-xs text-espresso/50 font-normal">
                 +{topping.price.toLocaleString('vi-VN')}đ
               </span>
             </div>

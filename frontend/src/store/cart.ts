@@ -8,7 +8,7 @@ import type { Product } from '@/lib/api';
 import { CartStorageSchema } from './cart-schema';
 
 export type CartTopping = {
-  id: string;
+  id: number;
   name: string;
   price: number;
 };
@@ -35,6 +35,7 @@ type CartState = {
   increase: (cartId: string) => void;
   decrease: (cartId: string) => void;
   remove: (cartId: string) => void;
+  clear: () => void;
   total: () => number;
   count: () => number;
 };
@@ -163,6 +164,8 @@ export const useCart = create<CartState>()(
         set((state) => ({
           lines: state.lines.filter((line) => line.cartId !== cartId),
         })),
+
+      clear: () => set({ lines: [] }),
 
       total: () =>
         get().lines.reduce(

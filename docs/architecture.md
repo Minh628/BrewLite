@@ -114,14 +114,29 @@ graph TD
   - _So với Microservices:_ Dự án ở giai đoạn MVP, Microservices sẽ gây quá tải hạ tầng (overhead), phức tạp hóa việc deploy và phân tán transaction. Modular Monolith của NestJS gom các domain vào các module độc lập (`ProductsModule`, `OrdersModule`), khi cần tách microservice trong tương lai chỉ cần trích xuất module tương ứng.
 - **Hệ quả:** Yêu cầu các thành viên nắm vững Typescript Decorators và luồng Dependency Injection.
 
-### ADR-002: Lựa chọn Next.js App Router kết hợp TanStack Query & Zustand
+### ADR-002: Cơ chế lưu trữ Token xác thực ở Frontend và biện pháp giảm thiểu rủi ro bảo mật
 
-- **Bối cảnh:** Giao diện cần tải nhanh, hỗ trợ Server-Side Rendering (SEO/Menu ban đầu) và tính năng tương tác mượt mà phía Client (Giỏ hàng, tùy chọn Topping, theo dõi trạng thái đơn).
-- **Quyết định:** Sử dụng **Next.js 14+ (App Router)** + **TanStack Query (React Query)** cho server state + **Zustand** cho client state (giỏ hàng, modal).
-- **Lý do & So sánh:**
-  - _TanStack Query:_ Tự động cache danh mục món, invalidate cache khi có thay đổi, quản lý loading/error state sạch sẽ mà không cần viết reducer thủ công.
-  - _Zustand so với Redux:_ Zustand cực nhẹ (<3KB), không có boilerplate lặp đi lặp lại như Redux Toolkit, hỗ trợ persist giỏ hàng vào `localStorage` dễ dàng.
-- **Hệ quả:** Cần phân định rõ Server Components (RSC) cho hiển thị tĩnh và Client Components (`'use client'`) cho phần tương tác tương thích.
+- **Trạng thái:** Accepted (Đã thống nhất trong nhóm)
+- **Bối cảnh (Context):**
+  - Ứng dụng Next.js (App Router) giao tiếp API NestJS độc lập domain/port qua giao thức REST và định danh JWT Bearer Token.
+  - Cần cơ chế lưu trữ `accessToken` sau khi người dùng đăng ký/đăng nhập thành công để tự động gắn kèm Header `Authorization: Bearer <token>` cho các request được bảo vệ (ví dụ: `POST /orders`, `GET /auth/me`).
+  - **So sánh 2 phương án lưu trữ:**
+    1. _HttpOnly Cookie:_
+       - _Ưu điểm:_ Miễn nhiễm hoàn toàn với tấn công XSS do mã JavaScript độc hại phía client không thể đọc được nội dung Cookie.
+       - _Nhược điểm:_ Đòi hỏi cấu hình CORS phức tạp (`credentials: true`, `SameSite=None`, `Secure`), gặp trở ngại lớn khi chạy local cross-origin giữa port 3000 (Frontend) và port 3001 (Backend) nếu chưa có HTTPS hoặc custom domain; tiềm ẩn rủi ro tấn công CSRF (Cross-Site Request Forgery) nếu không triển khai thêm CSRF token.
+    2. _localStorage (thông qua Zustand Auth Store):_
+       - _Ưu điểm:_ Đơn giản, hoàn toàn độc lập domain/port, dễ dàng trích xuất để gắn vào Authorization Header, tương thích hoàn hảo với môi trường phát triển và demo MVP.
+       - _Nhược điểm:_ Có nguy cơ bị đánh cắp nếu ứng dụng tồn tại lỗ hổng XSS (Cross-Site Scripting).
+- **Quyết định (Decision):**
+  - Thống nhất lựa chọn lưu trữ token tại **`localStorage`** (thông qua Zustand Auth Store với middleware persist) cho giai đoạn **MVP Sprint 2**.
+  - **Lý do:** Đơn giản hóa tối đa việc giao tiếp cross-origin giữa `localhost:3000` và `localhost:3001`, tăng tốc độ phát triển và đảm bảo tính ổn định khi kiểm thử/demo mà không gặp rào cản chính sách Cookie của trình duyệt.
+  - **Biện pháp giảm thiểu rủi ro bảo mật (XSS Mitigation):**
+    1. _Thời hạn sống của Token ngắn:_ AccessToken được cấu hình hết hạn sau 1 giờ (`expiresIn: 3600s`), thu hẹp tối đa khoảng thời gian kẻ tấn công có thể lợi dụng nếu token bị rò rỉ.
+    2. _Bảo vệ tầng mạng và Header HTTP:_ Backend kích hoạt Helmet để thiết lập Content Security Policy (CSP), X-XSS-Protection và CORS whitelist nghiêm ngặt chỉ cho phép domain Frontend được cấu hình.
+    3. _Kiểm soát mã nguồn Frontend:_ Tuyệt đối không sử dụng `dangerouslySetInnerHTML`, không chèn HTML thô từ dữ liệu người dùng nhập vào DOM; React/Next.js mặc định tự động sanitize và escape mọi output.
+    4. _Cơ chế tự động hủy Token (Auto-revocation on 401):_ Interceptor ở tầng API Client (`apiFetch`) tự động xóa sạch token khỏi `localStorage` và redirect về trang `/login` ngay khi Backend trả về mã lỗi HTTP 401 Unauthorized, cũng như khi người dùng bấm Đăng xuất.
+- **Hướng nâng cấp tương lai (Future Evolution):**
+  - Khi triển khai lên hạ tầng Production với domain chính thức (ví dụ: `brewlite.vn` và `api.brewlite.vn`), hệ thống sẽ chuyển dịch sang cơ chế **HttpOnly Cookie** kết hợp cặp đôi **AccessToken (ngắn hạn 15m) + Refresh Token (dài hạn 7d)** và áp dụng kiến trúc **BFF (Backend-for-Frontend)** thông qua Next.js Route Handlers để đạt chuẩn bảo mật cấp doanh nghiệp.
 
 ### ADR-003: Lựa chọn PostgreSQL 16 & Prisma ORM
 
@@ -366,6 +381,84 @@ Khi nhiều người đặt cùng một sản phẩm cùng thời điểm:
    });
    ```
 2. **Khóa mức CSDL:** Ràng buộc `CHECK (stock >= 0)` trong schema PostgreSQL nhằm đảm bảo tồn kho không bao giờ bị âm ngay cả khi có xung đột luồng xử lý.
+
+### 5.4. Sơ đồ tuần tự Xác thực & Phân quyền (Authentication Sequence Diagrams)
+
+#### 5.4.1. Luồng Đăng nhập & Tạo đơn hàng có xác thực (Login & Authenticated Order Flow)
+
+Chu trình thể hiện quy trình khép kín: Khách hàng đăng nhập -> Nhận JWT AccessToken (hạn 1 giờ) -> Lưu vào `localStorage` qua Zustand Auth Store -> Gửi kèm Header `Authorization: Bearer <token>` khi tạo đơn hàng -> `JwtAuthGuard` giải mã xác thực và chuyển tiếp đến `OrdersController`/`PricingService` để lưu đơn hàng `PENDING`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as Khách hàng (User)
+    participant FE as Frontend (Next.js App)
+    participant AuthCtrl as AuthController
+    participant Guard as JwtAuthGuard
+    participant OrderCtrl as OrdersController
+    participant Pricing as PricingService
+    participant DB as PostgreSQL (Prisma)
+
+    %% Giai đoạn 1: Đăng nhập
+    Note over Customer,AuthCtrl: 1. Đăng nhập & Cấp phát JWT Access Token
+    Customer->>FE: Nhập email & mật khẩu, bấm "Đăng nhập"
+    FE->>AuthCtrl: POST /auth/login { email, password }
+    activate AuthCtrl
+    AuthCtrl->>DB: validateUser (So khớp bcrypt hash)
+    DB-->>AuthCtrl: Thông tin user hợp lệ
+    AuthCtrl-->>FE: HTTP 200 OK { accessToken, expiresIn: 3600, user: { id, email } }
+    deactivate AuthCtrl
+    FE->>FE: useAuth: Lưu accessToken & user vào Auth Store (localStorage)
+
+    %% Giai đoạn 2: Tạo đơn hàng
+    Note over Customer,DB: 2. Tạo đơn hàng với Header Authorization: Bearer <token>
+    Customer->>FE: Chọn đồ uống vào giỏ, bấm "Đặt hàng"
+    FE->>FE: Lấy accessToken từ localStorage gắn vào Request Header
+    FE->>Guard: POST /orders (Header: Authorization: Bearer <token>, Body: { items })
+    activate Guard
+    Note over Guard: Xác thực chữ ký HS256 & thời hạn hiệu lực
+    Guard->>OrderCtrl: Cho phép request đi tiếp (req.user = { id, email })
+    deactivate Guard
+    activate OrderCtrl
+    OrderCtrl->>Pricing: calculateOrderTotal(items)
+    activate Pricing
+    Pricing->>DB: Lấy giá gốc & phụ thu (Size, Topping)
+    DB-->>Pricing: Dữ liệu giá hợp lệ
+    Pricing-->>OrderCtrl: Tính toán tổng tiền chính xác
+    deactivate Pricing
+    OrderCtrl->>DB: prisma.$transaction: Tạo Order (status=PENDING, userId) & OrderItems
+    DB-->>OrderCtrl: Bản ghi Order đã tạo thành công
+    OrderCtrl-->>FE: HTTP 201 Created { orderId, total, status: "PENDING" }
+    deactivate OrderCtrl
+    FE-->>Customer: Chuyển hướng đến màn hình xác nhận đơn & thanh toán
+```
+
+#### 5.4.2. Luồng Xử lý Token hết hạn / Lỗi 401 Unauthorized (Token Expiration & 401 Interception)
+
+Cơ chế phòng vệ tự động ở tầng Frontend: Khi AccessToken hết hạn sau 1 giờ hoặc không hợp lệ, `JwtAuthGuard` từ chối truy cập với HTTP 401 Unauthorized. Hàm gọi API ở tầng Client (`apiFetch` / interceptor) lập tức bắt lỗi, xóa sạch dữ liệu phiên trong `localStorage` và điều hướng người dùng về trang Đăng nhập kèm tham số `returnUrl`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as Khách hàng (User)
+    participant FE as Frontend (Next.js UI)
+    participant Interceptor as API Client (apiFetch / Interceptor)
+    participant Guard as Backend (JwtAuthGuard)
+
+    Customer->>FE: Thao tác yêu cầu xác thực (Xem Profile / Đặt món)
+    FE->>Interceptor: Gọi apiFetch(endpoint)
+    Interceptor->>Guard: Gửi HTTP Request (Header: Authorization: Bearer <token_hết_hạn>)
+    activate Guard
+    Note over Guard: handleRequest: Phát hiện TokenExpiredError
+    Guard-->>Interceptor: HTTP 401 Unauthorized { "statusCode": 401, "message": "Token đã hết hạn" }
+    deactivate Guard
+    activate Interceptor
+    Note over Interceptor: Bắt mã lỗi response.status === 401
+    Interceptor->>Interceptor: useAuth.getState().clearAuth()<br/>(Xóa sạch accessToken & user khỏi localStorage / Cookie)
+    Interceptor->>FE: Điều hướng window.location.href = /login?returnUrl=/cart
+    deactivate Interceptor
+    FE-->>Customer: Hiển thị trang Đăng nhập kèm thông báo phiên làm việc hết hạn
+```
 
 ---
 

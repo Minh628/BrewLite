@@ -1,10 +1,13 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/store/auth';
 import { useCart } from '@/store/cart';
+import { createOrder } from '@/lib/api';
 
 function formatPrice(price: number) {
   return `${price.toLocaleString('vi-VN')} ₫`;
@@ -20,8 +23,11 @@ function isValidVietnamPhone(phone: string) {
 }
 
 export default function CheckoutPage() {
+  const router = useRouter();
+  const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const lines = useCart((state) => state.lines);
   const total = useCart((state) => state.total());
+  const clear = useCart((state) => state.clear);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -29,8 +35,15 @@ export default function CheckoutPage() {
   const [note, setNote] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push(`/login?returnUrl=${encodeURIComponent('/checkout')}`);
+    }
+  }, [isAuthenticated, router]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!isValidVietnamPhone(phone)) {
@@ -42,10 +55,26 @@ export default function CheckoutPage() {
     }
 
     setPhoneError('');
-    setMessage(
-      'Thông tin hợp lệ trên giao diện. Chức năng gửi đơn sẽ được kết nối sau khi có API checkout.',
-    );
+    setSubmitting(true);
+
+    try {
+      const result = await createOrder(
+        lines.map((line) => ({
+          productId: line.id,
+          size: line.size,
+          quantity: line.quantity,
+          toppingIds: line.toppings.map((topping) => topping.id),
+        })),
+      );
+      clear();
+      router.push(`/order/${result.orderId}`);
+    } catch {
+      setMessage('Đặt hàng thất bại. Vui lòng thử lại.');
+      setSubmitting(false);
+    }
   }
+
+  if (!isAuthenticated) return null;
 
   if (lines.length === 0) {
     return (
@@ -260,14 +289,15 @@ export default function CheckoutPage() {
 
             <button
               type="submit"
-              className="mt-6 w-full rounded-full bg-espresso px-5 py-3 font-bold text-crema transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2"
+              disabled={submitting}
+              className="mt-6 w-full rounded-full bg-espresso px-5 py-3 font-bold text-crema transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Kiểm tra thông tin
+              {submitting ? 'Đang đặt hàng...' : 'Đặt hàng'}
             </button>
 
             <p className="mt-3 text-xs leading-5 text-espresso/50">
-              Trang hiện chưa gửi đơn hàng thật. API checkout sẽ được kết nối
-              sau.
+              Đơn hàng được tạo với trạng thái PENDING. Giá được máy chủ tính
+              lại khi đặt hàng.
             </p>
 
             {message && (

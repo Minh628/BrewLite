@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
@@ -77,6 +77,111 @@ export class AuthService {
         email: user.email,
       },
       accessToken,
+    };
+  }
+
+  /**
+   * So khớp email và mật khẩu của người dùng:
+   * - Sử dụng bcrypt.compare để xác minh mật khẩu
+   * - Cơ chế Dummy Compare: chạy so sánh băm giả khi không tìm thấy user nhằm
+   *   phòng ngừa tấn công đo thời gian (Timing Attack / User Enumeration)
+   * @param email Email đăng nhập
+   * @param pass Mật khẩu chưa băm
+   * @returns Thông tin user context an toàn nếu khớp, ngược lại trả về null
+   */
+  async validateUser(email: string, pass: string): Promise<{ id: string; email: string } | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+      },
+    });
+
+    if (!user) {
+      // Chạy băm giả để độ trễ ngang bằng trường hợp có user (chống timing attack)
+      await bcrypt.compare(pass, '$2b$10$e8k57v6K1wK4b0m1V4E.5O1b1e8k57v6K1wK4b0m1V4E.5O1b1e8k');
+      return null;
+    }
+
+    const isMatch = await bcrypt.compare(pass, user.passwordHash);
+    if (!isMatch) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+    };
+  }
+
+  /**
+   * Phát hành JWT access token khi người dùng đăng nhập thành công
+   * @param user Thông tin user đã được xác thực qua LocalStrategy
+   * @returns Đối tượng chứa accessToken, expiresIn (3600s) và user context
+   */
+  async login(user: { id: string; email: string }): Promise<{
+    accessToken: string;
+    expiresIn: number;
+    user: { id: string; email: string };
+  }> {
+    if (!user || !user.id || !user.email) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const payload = {
+      sub: user.id,
+      email: user.email,
+    };
+
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    return {
+      accessToken,
+      expiresIn: 3600,
+      user: {
+        id: user.id,
+        email: user.email,
+      },
+    };
+  }
+
+  /**
+   * Lấy thông tin hồ sơ người dùng theo userId
+   * - Truy vấn Prisma chỉ chọn các trường an toàn (id, email, loyaltyPoints, createdAt)
+   * - Tuyệt đối không nạp passwordHash vào bộ nhớ để đảm bảo tính an toàn dữ liệu và tối ưu RAM
+   * - Ném UnauthorizedException nếu không tìm thấy bản ghi user trong CSDL
+   * @param userId Định danh người dùng
+   * @returns Thông tin profile chuẩn hóa của người dùng
+   */
+  async getProfile(userId: string): Promise<{
+    id: string;
+    email: string;
+    loyaltyPoints: number;
+    role: string;
+    createdAt: Date;
+  }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        loyaltyPoints: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      loyaltyPoints: user.loyaltyPoints,
+      role: 'CUSTOMER',
+      createdAt: user.createdAt,
     };
   }
 }

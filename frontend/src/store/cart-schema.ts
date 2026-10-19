@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const CartToppingSchema = z.object({
-  id: z.string(),
+  id: z.number().int(),
   name: z.string(),
   price: z.number().finite().nonnegative(),
 });
