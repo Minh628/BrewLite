@@ -2,8 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import SizeSelector, { SizeCode } from '@/components/SizeSelector';
-import ToppingSelector, { TOPPING_OPTIONS } from '@/components/ToppingSelector';
+import { useToastActions } from '@/hooks/useToast';
+import SizeSelector from '@/components/SizeSelector';
+import { ToppingSelector } from '@/components/ToppingSelector';
+import { calcUnitPrice, type AvailableSize, type SelectedTopping } from '@/lib/pricing';
+import { formatVND } from '@/lib/format';
+import { useCart } from '@/store/cart';
+import { Button } from '@/components/Button';
 
 interface Product {
   id: number | string;
@@ -12,30 +17,42 @@ interface Product {
   description: string;
   category?: string;
   image?: string;
+  sizes?: AvailableSize[];
+  toppings?: SelectedTopping[];
 }
 
 interface ProductDetailClientProps {
   product: Product;
 }
 
-const SIZE_PRICES: Record<SizeCode, number> = {
-  S: 0,
-  M: 5000,
-  L: 10000,
-};
-
 export default function ProductDetailClient({ product }: ProductDetailClientProps) {
-  const [selectedSize, setSelectedSize] = useState<SizeCode>('S');
-  const [selectedToppings, setSelectedToppings] = useState<string[]>([]);
+  const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L'>('S');
+  const [selectedToppings, setSelectedToppings] = useState<SelectedTopping[]>([]);
+  const { add } = useCart();
+  const { show: toast } = useToastActions();
 
-  const extraSizePrice = SIZE_PRICES[selectedSize] || 0;
+  const sizeOption = product.sizes?.find((s) => s.size === selectedSize) ?? {
+    size: 'S',
+    extraPrice: 0,
+  };
 
-  const extraToppingPrice = selectedToppings.reduce((total, id) => {
-    const topping = TOPPING_OPTIONS.find((item) => item.id === id);
-    return total + (topping ? topping.price : 0);
-  }, 0);
+  const unitPrice = calcUnitPrice(product.price, sizeOption, selectedToppings);
 
-  const totalPrice = (product?.price || 0) + extraSizePrice + extraToppingPrice;
+  const handleAddToCart = () => {
+    const line = {
+      id: Number(product.id),
+      name: product.title,
+      price: product.price,
+      imageUrl: product.image ?? '',
+      category: { id: 0, name: product.category ?? '' },
+      isAvailable: true,
+      size: selectedSize,
+      toppings: selectedToppings.map((t) => ({ id: 0, name: '', price: t.price })),
+      unitPrice,
+    };
+    add(line);
+    toast(`Đã thêm "${product.title}" (${selectedSize}) vào giỏ hàng`);
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start font-sans">
@@ -57,25 +74,31 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
             </span>
           )}
           <h1 className="text-2xl font-bold text-gray-900 mb-2 leading-snug">{product?.title}</h1>
-          
+
           <p className="text-3xl font-bold text-blue-600 mb-4 tracking-tight">
-            {totalPrice.toLocaleString('vi-VN')} đ
+            {formatVND(unitPrice)}
           </p>
-          
-          <p className="text-gray-600 text-sm leading-relaxed mb-6">
-            {product?.description}
-          </p>
+
+          <p className="text-gray-600 text-sm leading-relaxed mb-6">{product?.description}</p>
 
           <hr className="my-4 border-gray-200" />
 
           {/* Sub-task 4.2: Bộ chọn Size */}
           <SizeSelector
+            sizes={
+              product.sizes ?? [
+                { size: 'S', extraPrice: 0 },
+                { size: 'M', extraPrice: 5000 },
+                { size: 'L', extraPrice: 10000 },
+              ]
+            }
             selectedSize={selectedSize}
             onChangeSize={(size) => setSelectedSize(size)}
           />
 
           {/* Sub-task 4.3: Bộ chọn Topping */}
           <ToppingSelector
+            toppings={product.toppings ?? []}
             selectedToppings={selectedToppings}
             onChangeToppings={(toppings) => setSelectedToppings(toppings)}
           />
@@ -83,18 +106,9 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
         {/* Nút hành động */}
         <div className="pt-4 flex gap-4">
-          <button
-            onClick={() => {
-              alert(
-                `Đã thêm vào giỏ:\n- Món: ${product?.title}\n- Size: ${selectedSize}\n- Topping: ${
-                  selectedToppings.length > 0 ? selectedToppings.length + ' loại' : 'Không'
-                }\n- Tổng tiền: ${totalPrice.toLocaleString('vi-VN')}đ`
-              );
-            }}
-            className="flex-1 bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition shadow-md"
-          >
+          <Button onClick={handleAddToCart} className="flex-1" size="lg">
             Thêm vào giỏ hàng
-          </button>
+          </Button>
           <Link
             href="/products"
             className="px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition flex items-center justify-center"
