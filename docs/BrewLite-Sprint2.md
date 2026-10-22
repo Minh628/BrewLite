@@ -308,7 +308,7 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 - [x] **20.3** · Trang /register: validate email, mật khẩu ≥ 8 ký tự, xác nhận mật khẩu; lỗi 409 · **M4** · 3h · N3–N4 · phụ thuộc 20.2 · ⇒ Đăng ký rồi tự đăng nhập
 - [x] **20.4** · Route guard (middleware) cho /checkout, lưu returnUrl và quay lại sau khi đăng nhập · **M4** · 2,5h · N4 · phụ thuộc 20.2 · ⇒ Chưa đăng nhập bị chuyển `/login?returnUrl=...`
 - [x] **20.5** · Header: menu người dùng (email), nút Đăng xuất · **M4** · 1,5h · N4–N5 · phụ thuộc 20.1 · ⇒ Đăng xuất xóa token, về trang chủ
-- [ ] **20.6** · Test FE: schema zod của form, auth store; tích hợp với API thật (pair M2 + M4) · **M4** · 3,5h · N5–N6 · phụ thuộc 20.3, 7.4 · ⇒ Test xanh; đăng nhập/đăng ký chạy với API thật
+- [x] **20.6** · Test FE: schema zod của form, auth store; tích hợp với API thật (pair M2 + M4) · **M4** · 3,5h · N5–N6 · phụ thuộc 20.3, 7.4 · ⇒ Test xanh; đăng nhập/đăng ký chạy với API thật
 
 ---
 
