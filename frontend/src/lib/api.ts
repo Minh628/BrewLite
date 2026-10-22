@@ -20,6 +20,10 @@ export function setAuthTokenGetter(getter: () => string | null) {
   getAccessToken = getter;
 }
 
+export function getApiBaseUrl(): string {
+  return API_URL;
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAccessToken();
   const headers: HeadersInit = {
