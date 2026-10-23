@@ -7,13 +7,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  CUSTOMER
+  BARISTA
+  ADMIN
+}
+
+enum Size {
+  S
+  M
+  L
+}
+
 enum OrderStatus {
   PENDING
   PAID
+  PAYMENT_FAILED
   PREPARING
   READY
   COMPLETED
-  PAYMENT_FAILED
   CANCELLED
 }
 
@@ -22,27 +34,8 @@ enum PaymentMethod {
   CARD
 }
 
-model Product {
-  id         String      @id @default(cuid())
-  categoryId String
-  name       String      @unique
-  description String?
-  price      Int
-  imageUrl   String?
-  stock      Int         @default(0)
-  isActive   Boolean     @default(true)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  category   Category    @relation(fields: [categoryId], references: [id])
-  sizes      ProductSize[]
-  toppings   ProductTopping[]
-  orderItems OrderItem[]
-
-  @@index([categoryId, isActive])
-}
-
 model Category {
-  id        String    @id @default(cuid())
+  id        Int       @id @default(autoincrement())
   name      String    @unique
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
@@ -50,28 +43,48 @@ model Category {
   products  Product[]
 }
 
+model Product {
+  id          Int              @id @default(autoincrement())
+  categoryId  Int
+  name        String           @unique
+  description String?
+  price       Int
+  imageUrl    String?
+  stock       Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  category    Category         @relation(fields: [categoryId], references: [id])
+  sizes       ProductSize[]
+  toppings    ProductTopping[]
+  orderItems  OrderItem[]
+
+  @@index([categoryId, isActive])
+}
+
 model ProductSize {
-  productId  String
+  productId  Int
   size       String
-  extraPrice Int      @default(0)
-  product    Product  @relation(fields: [productId], references: [id])
+  extraPrice Int     @default(0)
+  product    Product @relation(fields: [productId], references: [id])
 
   @@id([productId, size])
 }
 
 model Topping {
-  id        String           @id @default(cuid())
-  name      String           @unique
-  price     Int
-  isActive  Boolean          @default(true)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  products  ProductTopping[]
+  id                Int                @id @default(autoincrement())
+  name              String             @unique
+  price             Int
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  products          ProductTopping[]
+  orderItemToppings OrderItemTopping[]
 }
 
 model ProductTopping {
-  productId String
-  toppingId String
+  productId Int
+  toppingId Int
   product   Product @relation(fields: [productId], references: [id])
   topping   Topping @relation(fields: [toppingId], references: [id])
 
@@ -80,41 +93,54 @@ model ProductTopping {
 }
 
 model User {
-  id            String   @id @default(cuid())
+  id            Int      @id @default(autoincrement())
   email         String   @unique
   passwordHash  String
   loyaltyPoints Int      @default(0)
+  role          Role     @default(CUSTOMER)
   createdAt     DateTime @default(now())
   orders        Order[]
 }
 
 model Order {
-  id        String      @id @default(cuid())
-  userId    String
-  status    OrderStatus @default(PENDING)
-  total     Int
-  createdAt DateTime    @default(now())
+  id        Int         @id @default(autoincrement())
+  userId    Int
   user      User        @relation(fields: [userId], references: [id])
+  status    OrderStatus @default(PENDING)
+  total     Int // Đơn vị VND, do server tính toán
+  createdAt DateTime    @default(now())
   items     OrderItem[]
   payments  Payment[]
+
   @@index([userId, createdAt])
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
-  orderId   String
-  productId String
-  size      String
-  topping   String?
+  id        Int                @id @default(autoincrement())
+  orderId   Int
+  order     Order              @relation(fields: [orderId], references: [id])
+  productId Int
+  product   Product            @relation(fields: [productId], references: [id])
+  size      Size
   qty       Int
+  unitPrice Int
   lineTotal Int
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  toppings  OrderItemTopping[]
+}
+
+model OrderItemTopping {
+  orderItemId Int
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  toppingId   Int
+  topping     Topping   @relation(fields: [toppingId], references: [id])
+  price       Int // Giá topping tại thời điểm tạo đơn
+
+  @@id([orderItemId, toppingId])
 }
 
 model Payment {
   idempotencyKey String        @id
-  orderId        String
+  orderId        Int
   amount         Int
   method         PaymentMethod
   status         String
