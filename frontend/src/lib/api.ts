@@ -83,7 +83,7 @@ export async function register(
   email: string,
   password: string,
 ): Promise<{
-  user: { id: string; email: string };
+  user: { id: number; email: string };
   accessToken: string;
 }> {
   return apiFetch('/auth/register', {
@@ -98,7 +98,7 @@ export async function login(
 ): Promise<{
   accessToken: string;
   expiresIn: number;
-  user: { id: string; email: string };
+  user: { id: number; email: string };
 }> {
   return apiFetch('/auth/login', {
     method: 'POST',
@@ -114,7 +114,7 @@ export type CreateOrderItem = {
 };
 
 export async function createOrder(items: CreateOrderItem[]): Promise<{
-  orderId: string;
+  orderId: number;
   code: string;
   status: string;
   total: number;

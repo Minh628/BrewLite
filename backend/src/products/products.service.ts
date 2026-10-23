@@ -31,7 +31,7 @@ export class ProductsService {
     }));
   }
 
-  async findOne(id: string): Promise<ProductDetailDto> {
+  async findOne(id: number): Promise<ProductDetailDto> {
     const product = await this.prisma.product.findFirst({
       where: {
         id,

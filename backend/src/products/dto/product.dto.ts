@@ -1,10 +1,10 @@
 export class ProductCategoryDto {
-  id!: string;
+  id!: number;
   name!: string;
 }
 
 export class ProductDto {
-  id!: string;
+  id!: number;
   name!: string;
   price!: number;
   imageUrl!: string | null;
@@ -23,7 +23,7 @@ export class ProductDetailDto extends ProductDto {
 }
 
 export class ToppingDto {
-  id!: string;
+  id!: number;
   name!: string;
   price!: number;
 }

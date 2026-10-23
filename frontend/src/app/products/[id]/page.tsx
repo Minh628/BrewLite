@@ -34,7 +34,7 @@ interface ProductPageProps {
   params: Promise<{ id: string }>;
 }
 
-async function getProduct(id: string): Promise<Product | null> {
+async function getProduct(id: number): Promise<Product | null> {
   let isBackendServerDown = false;
 
   try {

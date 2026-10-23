@@ -8,12 +8,12 @@ import { PrismaService } from '../../src/prisma/prisma.service';
 
 describe('Products API (e2e)', () => {
   const product = {
-    id: 'product-1',
+    id: 1,
     name: 'Americano',
     price: 40000,
     imageUrl: '/americano.svg',
     isActive: true,
-    category: { id: 'category-coffee', name: 'Cà phê' },
+    category: { id: 1, name: 'Cà phê' },
   };
   const detailedProduct = {
     ...product,
@@ -62,7 +62,7 @@ describe('Products API (e2e)', () => {
     prismaMock.product.findFirst.mockReset().mockResolvedValue(detailedProduct);
     prismaMock.topping.findMany
       .mockReset()
-      .mockResolvedValue([{ id: 'topping-1', name: 'Trân châu đen', price: 5000 }]);
+      .mockResolvedValue([{ id: 1, name: 'Trân châu đen', price: 5000 }]);
   });
 
   afterAll(async () => {
@@ -89,7 +89,7 @@ describe('Products API (e2e)', () => {
 
   it('GET /products/:id responds with product details in under 500 ms', async () => {
     const startedAt = performance.now();
-    const response = await request(app.getHttpServer()).get('/products/product-1').expect(200);
+    const response = await request(app.getHttpServer()).get('/products/1').expect(200);
     const responseTimeMs = performance.now() - startedAt;
 
     expect(responseTimeMs).toBeLessThan(500);
@@ -111,12 +111,12 @@ describe('Products API (e2e)', () => {
     const responseTimeMs = performance.now() - startedAt;
 
     expect(responseTimeMs).toBeLessThan(500);
-    expect(response.body).toEqual([{ id: 'topping-1', name: 'Trân châu đen', price: 5000 }]);
+    expect(response.body).toEqual([{ id: 1, name: 'Trân châu đen', price: 5000 }]);
   });
 
   it('returns 404 for a product ID that does not exist', async () => {
     prismaMock.product.findFirst.mockResolvedValueOnce(null);
 
-    await request(app.getHttpServer()).get('/products/missing-product').expect(404);
+    await request(app.getHttpServer()).get('/products/999999').expect(404);
   });
 });

@@ -32,7 +32,7 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() registerDto: RegisterDto): Promise<{
-    user: { id: string; email: string };
+    user: { id: number; email: string };
     accessToken: string;
   }> {
     return this.authService.register(registerDto);
@@ -51,12 +51,12 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
-    @Request() req: { user: { id: string; email: string } },
+    @Request() req: { user: { id: number; email: string } },
     @Body() _loginDto: LoginDto,
   ): Promise<{
     accessToken: string;
     expiresIn: number;
-    user: { id: string; email: string };
+    user: { id: number; email: string };
   }> {
     return this.authService.login(req.user);
   }

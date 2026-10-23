@@ -22,23 +22,23 @@ describe('ProductsService', () => {
   it('returns active products when the menu has data', async () => {
     const products = [
       {
-        id: 'product-1',
+        id: 1,
         name: 'Americano',
         price: 40000,
         imageUrl: '/americano.svg',
         isActive: true,
-        category: { id: 'category-coffee', name: 'Cà phê' },
+        category: { id: 1, name: 'Cà phê' },
       },
     ];
     prisma.product.findMany.mockResolvedValue(products);
 
     await expect(service.findAll()).resolves.toEqual([
       {
-        id: 'product-1',
+        id: 1,
         name: 'Americano',
         price: 40000,
         imageUrl: '/americano.svg',
-        category: { id: 'category-coffee', name: 'Cà phê' },
+        category: { id: 1, name: 'Cà phê' },
         isAvailable: true,
       },
     ]);
@@ -57,13 +57,13 @@ describe('ProductsService', () => {
 
   it('returns a product for a valid ID with sizes sorted by code', async () => {
     prisma.product.findFirst.mockResolvedValue({
-      id: 'product-1',
+      id: 1,
       name: 'Americano',
       description: 'Cà phê đen pha loãng',
       price: 40000,
       imageUrl: '/americano.svg',
       isActive: true,
-      category: { id: 'category-coffee', name: 'Cà phê' },
+      category: { id: 1, name: 'Cà phê' },
       sizes: [
         { size: 'L', extraPrice: 10000 },
         { size: 'S', extraPrice: 0 },
@@ -71,13 +71,13 @@ describe('ProductsService', () => {
       ],
     });
 
-    await expect(service.findOne('product-1')).resolves.toEqual({
-      id: 'product-1',
+    await expect(service.findOne(1)).resolves.toEqual({
+      id: 1,
       name: 'Americano',
       description: 'Cà phê đen pha loãng',
       price: 40000,
       imageUrl: '/americano.svg',
-      category: { id: 'category-coffee', name: 'Cà phê' },
+      category: { id: 1, name: 'Cà phê' },
       isAvailable: true,
       sizes: [
         { code: 'S', extra: 0 },
@@ -87,7 +87,7 @@ describe('ProductsService', () => {
     });
     expect(prisma.product.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'product-1', isActive: true, category: { isActive: true } },
+        where: { id: 1, isActive: true, category: { isActive: true } },
       }),
     );
   });
@@ -95,6 +95,6 @@ describe('ProductsService', () => {
   it('throws 404 when the requested product ID does not exist', async () => {
     prisma.product.findFirst.mockResolvedValue(null);
 
-    await expect(service.findOne('missing-product')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.findOne(999999)).rejects.toBeInstanceOf(NotFoundException);
   });
 });

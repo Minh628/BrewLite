@@ -42,7 +42,7 @@ describe('AuthService (Unit Test)', () => {
 
       // Mock: Tạo user thành công trong DB
       const createdUser = {
-        id: 'user-cuid-123',
+        id: 3,
         email: 'test@brewlite.vn',
       };
       prismaMock.user.create.mockResolvedValue(createdUser);
@@ -72,14 +72,14 @@ describe('AuthService (Unit Test)', () => {
 
       // Đảm bảo ký JWT với payload sub và email
       expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
-        sub: 'user-cuid-123',
+        sub: '3',
         email: 'test@brewlite.vn',
       });
 
       // Kiểm tra dữ liệu trả về chuẩn format
       expect(result).toEqual({
         user: {
-          id: 'user-cuid-123',
+          id: 3,
           email: 'test@brewlite.vn',
         },
         accessToken: 'jwt-mock-token-xyz',
@@ -92,7 +92,7 @@ describe('AuthService (Unit Test)', () => {
 
     it('ném ConflictException (409) với message "Email already registered" khi email đã tồn tại ở bước Fast Pre-check', async () => {
       // Giả lập tìm thấy user trùng email
-      prismaMock.user.findUnique.mockResolvedValue({ id: 'existing-user-id' });
+      prismaMock.user.findUnique.mockResolvedValue({ id: 3 });
       const hashSpy = jest.spyOn(bcrypt, 'hash');
 
       await expect(service.register(registerDto)).rejects.toThrow(
@@ -139,7 +139,7 @@ describe('AuthService (Unit Test)', () => {
     it('trả về user context an toàn khi email và mật khẩu chính xác', async () => {
       const hashedPassword = await bcrypt.hash(rawPassword, 10);
       prismaMock.user.findUnique.mockResolvedValue({
-        id: 'user-cuid-123',
+        id: 3,
         email: 'test@brewlite.vn',
         passwordHash: hashedPassword,
       });
@@ -147,7 +147,7 @@ describe('AuthService (Unit Test)', () => {
       const user = await service.validateUser('test@brewlite.vn', rawPassword);
 
       expect(user).toEqual({
-        id: 'user-cuid-123',
+        id: 3,
         email: 'test@brewlite.vn',
       });
       expect(user).not.toHaveProperty('passwordHash');
@@ -167,7 +167,7 @@ describe('AuthService (Unit Test)', () => {
     it('trả về null khi mật khẩu không khớp', async () => {
       const hashedPassword = await bcrypt.hash('correctPassword123', 10);
       prismaMock.user.findUnique.mockResolvedValue({
-        id: 'user-cuid-123',
+        id: 3,
         email: 'test@brewlite.vn',
         passwordHash: hashedPassword,
       });
@@ -180,7 +180,7 @@ describe('AuthService (Unit Test)', () => {
 
   describe('login', () => {
     const validUserContext = {
-      id: 'user-cuid-123',
+      id: 3,
       email: 'test@brewlite.vn',
     };
 
@@ -190,7 +190,7 @@ describe('AuthService (Unit Test)', () => {
       const result = await service.login(validUserContext);
 
       expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
-        sub: 'user-cuid-123',
+        sub: '3',
         email: 'test@brewlite.vn',
       });
 
@@ -198,26 +198,26 @@ describe('AuthService (Unit Test)', () => {
         accessToken: 'jwt-login-access-token',
         expiresIn: 3600,
         user: {
-          id: 'user-cuid-123',
+          id: 3,
           email: 'test@brewlite.vn',
         },
       });
     });
 
     it('đăng nhập thất bại: ném UnauthorizedException (401) với message chung "Invalid credentials" khi user context null hoặc rỗng', async () => {
-      await expect(service.login(null as unknown as { id: string; email: string })).rejects.toThrow(
+      await expect(service.login(null as unknown as { id: number; email: string })).rejects.toThrow(
         new UnauthorizedException('Invalid credentials'),
       );
 
-      await expect(service.login({ id: '', email: '' })).rejects.toThrow(
+      await expect(service.login({ id: 0, email: '' })).rejects.toThrow(
         new UnauthorizedException('Invalid credentials'),
       );
 
-      await expect(service.login({ id: 'user-123', email: '' })).rejects.toThrow(
+      await expect(service.login({ id: 3, email: '' })).rejects.toThrow(
         new UnauthorizedException('Invalid credentials'),
       );
 
-      await expect(service.login({ id: '', email: 'test@brewlite.vn' })).rejects.toThrow(
+      await expect(service.login({ id: 0, email: 'test@brewlite.vn' })).rejects.toThrow(
         new UnauthorizedException('Invalid credentials'),
       );
     });
@@ -227,16 +227,16 @@ describe('AuthService (Unit Test)', () => {
     it('lấy profile thành công: trả về thông tin user (id, email, loyaltyPoints, role, createdAt) và không bao giờ chứa passwordHash', async () => {
       const mockCreatedAt = new Date('2026-10-16T00:00:00.000Z');
       prismaMock.user.findUnique.mockResolvedValue({
-        id: 'user-cuid-123',
+        id: 3,
         email: 'an@brewlite.vn',
         loyaltyPoints: 100,
         createdAt: mockCreatedAt,
       });
 
-      const profile = await service.getProfile('user-cuid-123');
+      const profile = await service.getProfile(3);
 
       expect(profile).toEqual({
-        id: 'user-cuid-123',
+        id: 3,
         email: 'an@brewlite.vn',
         loyaltyPoints: 100,
         role: 'CUSTOMER',
@@ -248,7 +248,7 @@ describe('AuthService (Unit Test)', () => {
 
       // Đảm bảo sử dụng Prisma select whitelisting để tiết kiệm RAM
       expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 'user-cuid-123' },
+        where: { id: 3 },
         select: {
           id: true,
           email: true,
@@ -261,7 +261,7 @@ describe('AuthService (Unit Test)', () => {
     it('ném UnauthorizedException (401) với message "User not found" khi userId không tồn tại trong CSDL', async () => {
       prismaMock.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getProfile('non-existent-user-id')).rejects.toThrow(
+      await expect(service.getProfile(999999)).rejects.toThrow(
         new UnauthorizedException('User not found'),
       );
     });
