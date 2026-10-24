@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
@@ -10,6 +11,7 @@ const emptyToUndefined = (raw: unknown): unknown =>
  */
 export class ProductsQueryDto {
   /** Mã danh mục cần lọc */
+  @ApiPropertyOptional({ description: 'Mã danh mục (GET /categories)', example: 1, minimum: 1 })
   @IsOptional()
   @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) => {
     const raw = emptyToUndefined(obj[key]);
@@ -20,6 +22,11 @@ export class ProductsQueryDto {
   category?: number;
 
   /** Từ khóa tìm theo tên, không phân biệt hoa/thường và dấu tiếng Việt */
+  @ApiPropertyOptional({
+    description: 'Tìm theo tên, không phân biệt hoa/thường và dấu ("ca phe" khớp "Cà phê")',
+    example: 'ca phe',
+    maxLength: 100,
+  })
   @IsOptional()
   @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) => {
     const raw = emptyToUndefined(obj[key]);

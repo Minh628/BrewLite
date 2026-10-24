@@ -353,8 +353,8 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 
 **Sub-tasks:**
 
-- [ ] **23.1** · LoggingInterceptor: method, url, status, thời gian; gắn requestId (header X-Request-Id) vào log lỗi · **M1** · 3,5h · N2–N3 · ⇒ Log có requestId
-- [ ] **23.2** · Test interceptor + ghi hướng dẫn đọc log vào README · **M1** · 1h · N3 · phụ thuộc 23.1 · ⇒ Test xanh
+- [x] **23.1** · LoggingInterceptor: method, url, status, thời gian; gắn requestId (header X-Request-Id) vào log lỗi · **M1** · 3,5h · N2–N3 · ⇒ Log có requestId
+- [x] **23.2** · Test interceptor + ghi hướng dẫn đọc log vào README · **M1** · 1h · N3 · phụ thuộc 23.1 · ⇒ Test xanh
 
 ---
 
@@ -368,7 +368,7 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 
 **Sub-tasks:**
 
-- [ ] **16.1** · Swagger /api-docs cho products, categories, auth, orders; nút Authorize (Bearer) · ~~M3~~ **M1** · 3h · N9–N10 · phụ thuộc 6.4, 18.1 · ⇒ /api-docs gọi thử được cả route có JWT
+- [x] **16.1** · Swagger /api-docs cho products, categories, auth, orders; nút Authorize (Bearer) · ~~M3~~ **M1** · 3h · N9–N10 · phụ thuộc 6.4, 18.1 · ⇒ /api-docs gọi thử được cả route có JWT
 
 ---
 
@@ -396,8 +396,8 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 
 **Sub-tasks:**
 
-- [ ] **29.1** · Kịch bản autocannon cho GET /products và POST /orders (có token) với dữ liệu mẫu · **M1** · 3h · N6–N7 · phụ thuộc 6.4 · ⇒ `scripts/perf/*.js`
-- [ ] **29.2** · Báo cáo p95 (< 500 ms), đề xuất tối ưu nếu vượt · **M1** · 1h · N8 · phụ thuộc 29.1 · ⇒ `docs/perf-report.md`
+- [x] **29.1** · Kịch bản autocannon cho GET /products và POST /orders (có token) với dữ liệu mẫu · **M1** · 3h · N6–N7 · phụ thuộc 6.4 · ⇒ `scripts/perf/*.js`
+- [x] **29.2** · Báo cáo p95 (< 500 ms), đề xuất tối ưu nếu vượt · **M1** · 1h · N8 · phụ thuộc 29.1 · ⇒ `docs/perf-report.md`
 
 ---
 
