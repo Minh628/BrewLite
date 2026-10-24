@@ -337,8 +337,8 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 
 **Sub-tasks:**
 
-- [ ] **18.1** · GET /products?category=&q= (tìm không phân biệt dấu: "ca phe" khớp "Cà phê") + GET /categories · ~~M3~~ **M1** · 3,5h · N6–N7 · phụ thuộc C.1 · ⇒ Query đúng contract v2
-- [ ] **18.2** · Test truy vấn lọc/tìm (có dấu, không dấu, rỗng, danh mục sai) · ~~M3~~ **M1** · 1,5h · N8–N9 · phụ thuộc 18.1 · ⇒ Test xanh
+- [x] **18.1** · GET /products?category=&q= (tìm không phân biệt dấu: "ca phe" khớp "Cà phê") + GET /categories · ~~M3~~ **M1** · 3,5h · N6–N7 · phụ thuộc C.1 · ⇒ Query đúng contract v2
+- [x] **18.2** · Test truy vấn lọc/tìm (có dấu, không dấu, rỗng, danh mục sai) · ~~M3~~ **M1** · 1,5h · N8–N9 · phụ thuộc 18.1 · ⇒ Test xanh
 - [ ] **18.3** · UI: tab danh mục + ô tìm kiếm (debounce 300 ms), đồng bộ query lên URL, empty state khi không có kết quả · **M4** · 4h · N8–N9 · phụ thuộc 18.1 · ⇒ Lọc/tìm trên trang Menu
 
 ---
