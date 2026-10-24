@@ -17,6 +17,18 @@ services:
       timeout: 5s
       retries: 10
 
+  adminer:
+    image: adminer:latest
+    container_name: brewlite-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - '8080:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend:
     build: ./backend
     environment:

@@ -28,8 +28,8 @@ BrewLite/
 │  ├─ architecture.md         # Kiến trúc 3 lớp, ADR & thiết kế module
 │  ├─ erd/                    # Sơ đồ CSDL, DBML & ERD
 │  └─ ui/                     # Thiết kế giao diện & luồng UI
-├─ docker-compose.yml          # production: PostgreSQL + backend + frontend
-├─ docker-compose.dev.yml      # dev: PostgreSQL 16 với credentials từ Neon.tech
+├─ docker-compose.yml          # production: PostgreSQL + Adminer + backend + frontend
+├─ docker-compose.dev.yml      # dev: PostgreSQL 16 + Adminer + backend + frontend
 ├─ .env.dev                    # credentials dev (git-ignored)
 ├─ package.json                # scripts dùng chung
 └─ .env.example
@@ -85,6 +85,7 @@ npm run dev
 - Backend: http://localhost:3001
 - Health check: http://localhost:3001/health
 - Menu: http://localhost:3001/products
+- Swagger UI: http://localhost:3001/docs (JSON: `/docs-json`)
 
 ## Chạy bằng Docker (dev)
 
@@ -106,6 +107,38 @@ PostgreSQL dev chạy trên `localhost:5433` (tránh xung đột với port 5432
 Copy-Item .env.example .env
 docker compose up --build
 ```
+
+## Quản lý cơ sở dữ liệu (Adminer)
+
+Cả hai file compose đều có service `adminer` (giao diện web quản trị PostgreSQL), mở tại **http://localhost:8080**.
+
+Đăng nhập:
+
+| Trường   | Giá trị                                                               |
+| -------- | --------------------------------------------------------------------- |
+| System   | PostgreSQL                                                            |
+| Server   | `postgres` (tên service trong Docker network, không dùng `localhost`) |
+| Username | `POSTGRES_USER` (mặc định `brewlite`)                                 |
+| Password | `POSTGRES_PASSWORD` (mặc định `brewlite`)                             |
+| Database | `POSTGRES_DB` (mặc định `brewlite`)                                   |
+
+Khởi động riêng DB và Adminer:
+
+```bash
+# Local / production compose
+docker compose up -d postgres adminer
+
+# Dev compose
+docker compose --env-file .env.dev -f docker-compose.dev.yml up -d postgres adminer
+```
+
+Kết nối từ công cụ ngoài (DBeaver, psql, WebStorm...): host `localhost`, port `5432` (compose thường) hoặc `5433` (compose dev).
+
+```bash
+psql "postgresql://brewlite:brewlite@localhost:5433/brewlite"   # dev
+```
+
+Lưu ý: Adminer chỉ dành cho môi trường phát triển; không public cổng 8080 ra internet khi triển khai thật.
 
 ## Lộ trình API MVP
 
