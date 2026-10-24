@@ -281,13 +281,13 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 
 **Sub-tasks:**
 
-- [ ] **C.1** · Chốt API contract v2: /auth/\*, POST /orders, GET /products?category&q, GET /categories (JSON mẫu, mã lỗi) · ~~M3~~ **M1** · 1,5h · N1 · ⇒ docs/api-contract.md v2 được M2, M4, M5 duyệt
-- [ ] **6.1** · CreateOrderDto: items ≥ 1, ValidateNested, size ∈ {S,M,L}, qty 1–20, toppingIds là mảng số · ~~M3~~ **M1** · 2,5h · N2–N3 · phụ thuộc C.1, 7.1 · ⇒ DTO sai → 400 đúng định dạng lỗi chung
-- [ ] **6.2** · Kiểm tra productId/toppingId tồn tại và đang bán; ánh xạ lỗi Prisma (P2002, P2003) sang HTTP · ~~M3~~ **M1** · 2,5h · N3 · phụ thuộc 6.1 · ⇒ Sản phẩm không tồn tại → 400 rõ ràng
-- [ ] **6.3** · OrdersService.create: một transaction lưu Order + OrderItem + OrderItemTopping, giá do PricingService tính, trạng thái PENDING · ~~M3~~ **M1** (pair M2) · 3,5h · N4 · phụ thuộc 6.2, 21.1 · ⇒ Đơn lưu đúng trong DB
-- [ ] **6.4** · POST /orders gắn JwtAuthGuard, trả 201 `{orderId, code, status: PENDING, total}` · ~~M3~~ **M1** · 1h · N5 · phụ thuộc 6.3, 7.4 · ⇒ Endpoint đúng contract v2
-- [ ] **6.5** · Unit test OrdersService (tính tổng, transaction rollback khi lỗi) · ~~M3~~ **M1 hoặc M2** · 3h · N5–N6 · phụ thuộc 6.3 · ⇒ Test xanh
-- [ ] **6.6** · e2e POST /orders: 401 khi thiếu token, 400 khi sai DTO, 201 khi giá hợp lệ, giá giả bị bỏ qua · ~~M3~~ **M1 hoặc M2** · 3h · N7–N8 · phụ thuộc 6.4 · ⇒ Test xanh trong CI
+- [x] **C.1** · Chốt API contract v2: /auth/\*, POST /orders, GET /products?category&q, GET /categories (JSON mẫu, mã lỗi) · ~~M3~~ **M1** · 1,5h · N1 · ⇒ docs/api-contract.md v2 được M2, M4, M5 duyệt
+- [x] **6.1** · CreateOrderDto: items ≥ 1, ValidateNested, size ∈ {S,M,L}, qty 1–20, toppingIds là mảng số · ~~M3~~ **M1** · 2,5h · N2–N3 · phụ thuộc C.1, 7.1 · ⇒ DTO sai → 400 đúng định dạng lỗi chung
+- [x] **6.2** · Kiểm tra productId/toppingId tồn tại và đang bán; ánh xạ lỗi Prisma (P2002, P2003) sang HTTP · ~~M3~~ **M1** · 2,5h · N3 · phụ thuộc 6.1 · ⇒ Sản phẩm không tồn tại → 400 rõ ràng
+- [x] **6.3** · OrdersService.create: một transaction lưu Order + OrderItem + OrderItemTopping, giá do PricingService tính, trạng thái PENDING · ~~M3~~ **M1** (pair M2) · 3,5h · N4 · phụ thuộc 6.2, 21.1 · ⇒ Đơn lưu đúng trong DB
+- [x] **6.4** · POST /orders gắn JwtAuthGuard, trả 201 `{orderId, code, status: PENDING, total}` · ~~M3~~ **M1** · 1h · N5 · phụ thuộc 6.3, 7.4 · ⇒ Endpoint đúng contract v2
+- [x] **6.5** · Unit test OrdersService (tính tổng, transaction rollback khi lỗi) · ~~M3~~ **M1 hoặc M2** · 3h · N5–N6 · phụ thuộc 6.3 · ⇒ Test xanh
+- [x] **6.6** · e2e POST /orders: 401 khi thiếu token, 400 khi sai DTO, 201 khi giá hợp lệ, giá giả bị bỏ qua · ~~M3~~ **M1 hoặc M2** · 3h · N7–N8 · phụ thuộc 6.4 · ⇒ Test xanh trong CI
 - [ ] **6.7** · Màn hình đặt đơn từ giỏ: nút "Đặt hàng" → (chưa đăng nhập thì /login) → POST /orders → trang "Đã tạo đơn #mã – PENDING", xóa giỏ khi thành công · **M5** · 4h · N6–N7 · phụ thuộc 5.4, 6.4, 20.4 · ⇒ Luồng tạo đơn chạy trên UI
 - [ ] **6.8** · Tích hợp và sửa lỗi luồng đăng nhập ↔ đặt đơn (pair M1 + M5) · ~~M3~~ **M1** · 1,5h · N8 · phụ thuộc 6.7 · ⇒ Luồng chạy với API thật, không lỗi CORS/401 sai
 
