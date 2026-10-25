@@ -11,7 +11,7 @@ import { useCart } from '@/store/cart';
 import { Button } from '@/components/Button';
 
 interface Product {
-  id: number | string;
+  id: number;
   title: string;
   price: number;
   description: string;

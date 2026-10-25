@@ -4,25 +4,12 @@ import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import Link from 'next/link';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { register } from '@/lib/api';
+import { registerSchema, type RegisterForm } from '@/lib/auth-schemas';
 import { useAuth } from '@/store/auth';
-
-const registerSchema = z
-  .object({
-    email: z.string().email('Email không đúng định dạng').min(1, 'Email không được để trống'),
-    password: z.string().min(8, 'Mật khẩu phải có độ dài tối thiểu 8 ký tự'),
-    confirmPassword: z.string().min(1, 'Vui lòng xác nhận mật khẩu'),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Mật khẩu xác nhận không khớp',
-    path: ['confirmPassword'],
-  });
-
-type RegisterForm = z.infer<typeof registerSchema>;
 
 function RegisterContent() {
   const router = useRouter();

@@ -4,7 +4,7 @@ import { createParamDecorator, ExecutionContext } from '@nestjs/common';
  * Interface định nghĩa dữ liệu user gắn trong request sau khi JwtStrategy xác thực
  */
 export interface CurrentUserPayload {
-  id: string;
+  id: number;
   email: string;
   [key: string]: any;
 }
@@ -14,7 +14,7 @@ export interface CurrentUserPayload {
  *
  * Hỗ trợ:
  * - @CurrentUser() user: Lấy toàn bộ user context ({ id, email })
- * - @CurrentUser('id') userId: string: Chỉ lấy thuộc tính id
+ * - @CurrentUser('id') userId: number: Chỉ lấy thuộc tính id
  * - @CurrentUser('email') email: string: Chỉ lấy thuộc tính email
  */
 export const CurrentUser = createParamDecorator(

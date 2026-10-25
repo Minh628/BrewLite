@@ -4,19 +4,12 @@ import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import Link from 'next/link';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { login } from '@/lib/api';
+import { loginSchema, type LoginForm } from '@/lib/auth-schemas';
 import { useAuth } from '@/store/auth';
-
-const loginSchema = z.object({
-  email: z.string().email('Email không đúng định dạng').min(1, 'Email không được để trống'),
-  password: z.string().min(1, 'Mật khẩu không được để trống'),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
 
 function LoginContent() {
   const router = useRouter();
