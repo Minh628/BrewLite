@@ -87,22 +87,23 @@
 - GET /products?category={id}&q={keyword}
   - Quyền hạn: Public
   - Query Parameters:
-    - category: Number (tùy chọn - lọc theo danh mục)
-    - q: String (tùy chọn - tìm kiếm không phân biệt hoa/thường, không phân biệt dấu tiếng Việt)
+    - category: Number (tùy chọn - lọc theo danh mục; số nguyên dương; `category=` rỗng coi như không lọc)
+    - q: String (tùy chọn - tìm theo tên, không phân biệt hoa/thường, không phân biệt dấu tiếng Việt: "ca phe" khớp "Cà phê"; tối đa 100 ký tự; rỗng coi như không tìm)
   - Thành công (200 OK):
     ```json
     [
       {
         "id": 1,
         "name": "Cappuccino",
-        "description": "Espresso, sữa nóng, lớp bọt mịn",
         "price": 45000,
         "imageUrl": "https://...",
-        "categoryId": 1,
+        "category": { "id": 1, "name": "Cà phê" },
         "isAvailable": true
       }
     ]
     ```
+  - Không có kết quả hoặc danh mục không tồn tại: 200 OK với `[]` (FE hiển thị empty state)
+  - Lỗi: 400 Bad Request (category không phải số nguyên dương, q dài quá 100 ký tự, tham số lạ ngoài category/q)
 
 ### 3. Phân hệ Đơn hàng (Orders)
 
