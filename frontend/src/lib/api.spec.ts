@@ -73,7 +73,7 @@ describe('api client', () => {
   });
 
   it('trả ApiError 401 kèm thông điệp từ server và xóa phiên', async () => {
-    useAuth.getState().setAuth('old-token', { id: 'u1', email: 'a@b.com' });
+    useAuth.getState().setAuth('old-token', { id: 1, email: 'a@b.com' });
     mockFetch(401, { statusCode: 401, message: 'Invalid email or password' });
 
     await expect(login('a@b.com', 'sai-mat-khau')).rejects.toMatchObject({

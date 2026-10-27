@@ -2,13 +2,15 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { getProducts } from '@/lib/api';
-import { fetchMockProducts } from '@/lib/mock/products';
 
-const USE_MOCK = true;
+export type ProductQuery = {
+  category?: number;
+  q?: string;
+};
 
-export function useProducts() {
+export function useProducts(query: ProductQuery = {}) {
   return useQuery({
-    queryKey: ['products'],
-    queryFn: USE_MOCK ? fetchMockProducts : getProducts,
+    queryKey: ['products', query.category ?? null, query.q ?? ''],
+    queryFn: () => getProducts(query),
   });
 }

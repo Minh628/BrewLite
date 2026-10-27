@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useAuth } from './auth';
 
-const TEST_USER = { id: 'user-1', email: 'test@brewlite.com' };
+const TEST_USER = { id: 1, email: 'test@brewlite.com' };
 const TEST_TOKEN = 'header.payload.signature';
 
 function readCookie(name: string): string | null {

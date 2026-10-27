@@ -8,7 +8,13 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      colors: { espresso: '#2b2118', crema: '#f7f0e7', caramel: '#c87532', sage: '#66735b' },
+      colors: {
+        espresso: '#2b2118',
+        crema: '#f7f0e7',
+        caramel: '#a55a1f',
+        'caramel-strong': '#c87532',
+        sage: '#59654f',
+      },
     },
   },
   plugins: [],

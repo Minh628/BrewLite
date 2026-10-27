@@ -339,7 +339,7 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 
 - [x] **18.1** · GET /products?category=&q= (tìm không phân biệt dấu: "ca phe" khớp "Cà phê") + GET /categories · ~~M3~~ **M1** · 3,5h · N6–N7 · phụ thuộc C.1 · ⇒ Query đúng contract v2
 - [x] **18.2** · Test truy vấn lọc/tìm (có dấu, không dấu, rỗng, danh mục sai) · ~~M3~~ **M1** · 1,5h · N8–N9 · phụ thuộc 18.1 · ⇒ Test xanh
-- [ ] **18.3** · UI: tab danh mục + ô tìm kiếm (debounce 300 ms), đồng bộ query lên URL, empty state khi không có kết quả · **M4** · 4h · N8–N9 · phụ thuộc 18.1 · ⇒ Lọc/tìm trên trang Menu
+- [x] **18.3** · UI: tab danh mục + ô tìm kiếm (debounce 300 ms), đồng bộ query lên URL, empty state khi không có kết quả · **M4** · 4h · N8–N9 · phụ thuộc 18.1 · ⇒ Lọc/tìm trên trang Menu
 
 ---
 
@@ -412,7 +412,7 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 **Sub-tasks:**
 
 - [ ] **30.1** · Kiểm tra axe/Lighthouse và sửa a11y, responsive cho Menu, Chi tiết, Giỏ hàng (360–1440 px) · **M5** · 3h · N7–N8 · phụ thuộc 5.4 · ⇒ Lighthouse Accessibility ≥ 90
-- [ ] **30.2** · Sửa a11y/responsive cho Đăng nhập, Đăng ký; kiểm thử Chrome, Firefox, Edge · **M4** · 2,5h · N8 · phụ thuộc 20.3 · ⇒ Bảng kết quả kiểm thử trình duyệt
+- [x] **30.2** · Sửa a11y/responsive cho Đăng nhập, Đăng ký; kiểm thử Chrome, Firefox, Edge · **M4** · 2,5h · N8 · phụ thuộc 20.3 · ⇒ Bảng kết quả kiểm thử trình duyệt
 
 ---
 

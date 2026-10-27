@@ -33,12 +33,15 @@ export function Header() {
         <div className="flex items-center gap-4">
           <Link
             href="/cart"
-            aria-label="Xem giỏ hàng"
-            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-crema/30 text-xl transition hover:border-crema"
+            aria-label={`Xem giỏ hàng, ${cartCount} món`}
+            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-crema/30 text-xl transition hover:border-crema focus:outline-none focus-visible:ring-2 focus-visible:ring-caramel"
           >
-            🛍️
+            <span aria-hidden="true">🛍️</span>
             {cartCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-caramel px-1 text-xs font-bold text-espresso">
+              <span
+                aria-live="polite"
+                className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-caramel px-1 text-xs font-bold text-white"
+              >
                 {cartCount > 99 ? '99+' : cartCount}
               </span>
             )}
@@ -48,9 +51,10 @@ export function Header() {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 px-3 py-2 rounded-full border border-crema/30 text-sm font-medium hover:border-crema transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-full border border-crema/30 text-sm font-medium transition-colors hover:border-crema focus:outline-none focus-visible:ring-2 focus-visible:ring-caramel"
                 aria-expanded={showUserMenu}
                 aria-haspopup="true"
+                aria-label={`Tài khoản ${user.email}, mở menu người dùng`}
               >
                 <span className="w-8 h-8 rounded-full bg-caramel/20 flex items-center justify-center text-caramel font-bold">
                   {user.email.charAt(0).toUpperCase()}
@@ -107,13 +111,13 @@ export function Header() {
             <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="px-4 py-2 text-sm font-medium text-espresso hover:text-caramel transition-colors"
+                className="rounded-lg border border-crema/40 px-4 py-2 text-sm font-semibold text-crema transition-colors hover:border-crema hover:bg-crema/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-caramel"
               >
                 Đăng nhập
               </Link>
               <Link
                 href="/register"
-                className="px-4 py-2 text-sm font-medium text-crema bg-caramel rounded-lg hover:bg-caramel/90 transition-colors"
+                className="rounded-lg bg-caramel px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-caramel/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-caramel"
               >
                 Đăng ký
               </Link>
