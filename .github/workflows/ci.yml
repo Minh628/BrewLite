@@ -1,0 +1,119 @@
+name: BrewLite CI
+
+# Kích hoạt pipeline khi có commit push hoặc pull request vào các nhánh chính
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ==========================================
+  # 1. Job Backend (NestJS, Prisma, PostgreSQL)
+  # ==========================================
+  backend:
+    name: Backend CI (NestJS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Tự động thực thi mọi lệnh bên trong thư mục backend/
+        working-directory: backend
+
+    # Khởi tạo Service Container PostgreSQL để phục vụ kiểm thử tích hợp và migration
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: brewlite
+          POSTGRES_PASSWORD: brewlite_password
+          POSTGRES_DB: brewlite_test
+        ports:
+          - 5432:5432
+        # Cấu hình health-check sử dụng pg_isready để đảm bảo DB sẵn sàng trước khi chạy migration
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Chuỗi kết nối CSDL test tới Service Container Postgres ở trên
+      DATABASE_URL: postgresql://brewlite:brewlite_password@localhost:5432/brewlite_test?schema=public
+      # Khóa bí mật dùng cho JWT trong môi trường test (tối thiểu 32 ký tự theo chuẩn bảo mật)
+      JWT_SECRET: super-secret-key-for-test-environment-min-32-chars
+      CI: 'true'
+      # Vô hiệu hóa Husky hook trên môi trường CI để tránh lỗi phân quyền hoặc thiếu Git context
+      HUSKY: '0'
+
+    steps:
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Cài đặt môi trường Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+          # Chỉ định file package-lock.json ở thư mục gốc của Monorepo để cache hiệu quả
+          cache-dependency-path: package-lock.json
+
+      - name: Cài đặt dependencies
+        run: npm ci
+
+      - name: Khởi tạo Prisma Client
+        # Bắt buộc sinh mã client trước khi build và test để TypeScript nhận diện type của CSDL
+        run: npx prisma generate
+
+      - name: Kiểm tra Linting (ESLint)
+        run: npm run lint
+
+      - name: Build ứng dụng Backend
+        run: npm run build
+
+      - name: Triển khai Prisma Migrations vào Database test
+        # Áp dụng toàn bộ migration vào container postgres trước khi chạy test
+        run: npx prisma migrate deploy
+
+      - name: Chạy Unit Tests
+        run: npm run test
+
+      - name: Chạy E2E Tests
+        run: npm run test:e2e
+
+  # ==========================================
+  # 2. Job Frontend (Next.js 15, Tailwind CSS)
+  # ==========================================
+  frontend:
+    name: Frontend CI (Next.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Tự động thực thi mọi lệnh bên trong thư mục frontend/
+        working-directory: frontend
+
+    env:
+      CI: 'true'
+      HUSKY: '0'
+
+    steps:
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Cài đặt môi trường Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Cài đặt dependencies
+        run: npm ci
+
+      - name: Kiểm tra Linting (ESLint)
+        run: npm run lint
+
+      - name: Build ứng dụng Next.js
+        # Truyền biến môi trường NEXT_PUBLIC_API_URL giả lập để Next.js pre-render các trang tĩnh
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
