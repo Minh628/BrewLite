@@ -35,8 +35,8 @@ BrewLite/
 │  ├─ architecture.md         # Kiến trúc 3 lớp, ADR & thiết kế module
 │  ├─ erd/                    # Sơ đồ CSDL, DBML & ERD
 │  └─ ui/                     # Thiết kế giao diện & luồng UI
-├─ docker-compose.yml          # production: PostgreSQL + Adminer + backend + frontend
-├─ docker-compose.dev.yml      # dev: PostgreSQL 16 + Adminer + backend + frontend
+├─ docker-compose.yml          # production: PostgreSQL + backend + frontend
+├─ docker-compose.dev.yml      # dev: PostgreSQL 16 với credentials từ Neon.tech
 ├─ .env.dev                    # credentials dev (git-ignored)
 ├─ package.json                # scripts dùng chung
 └─ .env.example
@@ -50,6 +50,11 @@ BrewLite/
 
 ## Thay đổi gần đây
 
+- **PB-23 (Sub-task 23.1 & 23.2): Log request & mã tương quan `X-Request-Id`**
+  - `RequestLoggingMiddleware` ghi một dòng log cho mọi request: requestId, method, url, status, thời gian (kể cả request bị guard chặn 401/429 và route không tồn tại 404).
+  - Body lỗi có thêm `requestId` trùng header `X-Request-Id` (xem mục [Đọc log request](#đọc-log-request-pb-23)).
+- **PB-16 (Sub-task 16.1): Swagger tại [`/api-docs`](http://localhost:3001/api-docs)** cho products, categories, toppings, auth, orders; nút Authorize (Bearer JWT) gọi thử được `POST /orders`, `GET /auth/me`.
+- **PB-29 (Sub-task 29.1 & 29.2): Đo hiệu năng bằng autocannon** — kịch bản ở `scripts/perf/`, kết quả ở [`docs/perf-report.md`](./docs/perf-report.md).
 - **PB-07 (Sub-task 7.2): AuthModule - API Đăng ký (`POST /auth/register`)**
   - Xây dựng API đăng ký người dùng với mật khẩu băm bcrypt (salt rounds = 10) và tự động ký phát hành JWT accessToken.
   - Triển khai cơ chế chống race condition (bắt lỗi Prisma P2002 và ném HTTP 409 Conflict), Fast Pre-check tối ưu hóa CPU và Data Whitelisting (loại trừ tuyệt đối `passwordHash`).
@@ -103,7 +108,8 @@ Mọi lỗi từ hệ thống (client error 4xx hoặc server error 5xx) đều 
   "message": ["tên trường không hợp lệ"],
   "error": "Bad Request",
   "path": "/api/v1/endpoint",
-  "timestamp": "2026-09-30T13:30:00.000Z"
+  "timestamp": "2026-09-30T13:30:00.000Z",
+  "requestId": "0b6f8a52-3f7c-4a5e-9d0e-6f1c2b7a9e11"
 }
 ```
 
@@ -156,6 +162,42 @@ Mọi lỗi từ hệ thống (client error 4xx hoặc server error 5xx) đều 
      ```
   3. Server log sẽ hiển thị đầy đủ thông tin stack trace và ngữ cảnh lỗi mà không bị rò rỉ ra bên ngoài.
 
+## Đọc log request (PB-23)
+
+Mỗi request sinh đúng một dòng log ngữ cảnh `HTTP` khi response kết thúc:
+
+```text
+[Nest] 4821  - 10/24/2026, 10:31:34 AM     LOG [HTTP] [0b6f8a52-3f7c-4a5e-9d0e-6f1c2b7a9e11] GET /products?q=ca%20phe 200 16.8ms
+[Nest] 4821  - 10/24/2026, 10:31:35 AM    WARN [HTTP] [5d1c...] POST /orders 401 2.1ms
+[Nest] 4821  - 10/24/2026, 10:31:35 AM    WARN [HttpExceptionFilter] [5d1c...] 401 Unauthorized: Unauthorized
+```
+
+- **Định dạng:** `[requestId] METHOD url status thời_gian`. Mức `LOG` cho 2xx/3xx, `WARN` cho 4xx, `ERROR` cho 5xx.
+- **requestId:** lấy từ header `X-Request-Id` client gửi lên (chỉ nhận chữ, số, `.`, `_`, `-`, tối đa 128 ký tự để không giả mạo được dòng log), nếu không có thì server sinh UUID. Mã này luôn được trả lại trong header `X-Request-Id` và trong body lỗi (`requestId`).
+- **Lỗi 4xx:** thêm một dòng `HttpExceptionFilter` ghi lý do (ví dụ thông báo validate). **Lỗi 500:** thêm dòng `Unhandled Exception` kèm stack trace; stack trace chỉ nằm trong log, không trả ra client ở production.
+- **Tra một request:** lấy `requestId` từ tab Network (header `X-Request-Id`) hoặc body lỗi, rồi lọc log:
+  ```bash
+  npm run dev 2>&1 | grep "<requestId>"          # chạy local
+  docker compose logs backend | grep "<requestId>" # chạy Docker
+  ```
+
+## Tài liệu API (Swagger)
+
+- Mở http://localhost:3001/api-docs (JSON OpenAPI: `/api-docs-json`).
+- Gọi thử route cần đăng nhập: chạy `POST /auth/login` với tài khoản seed `customer@brewlite.vn` / `Password123`, copy `accessToken`, bấm **Authorize**, dán token rồi gọi `POST /orders`.
+
+## Đo hiệu năng (PB-29)
+
+Chạy trên database riêng vì `POST /orders` tạo đơn thật. Khởi động backend với `THROTTLE_LIMIT` lớn, nếu không rate-limit 100 request/phút sẽ trả 429:
+
+```bash
+THROTTLE_LIMIT=1000000 NODE_ENV=production npm run start --workspace @brewlite/backend
+npm run perf:products   # GET /products (menu đầy đủ + lọc/tìm)
+npm run perf:orders     # POST /orders có Bearer token
+```
+
+Biến tùy chọn: `PERF_BASE_URL`, `PERF_DURATION` (giây, mặc định 20), `PERF_CONNECTIONS` (mặc định 10), `PERF_OUT` (ghi JSON kết quả). Script thoát mã 1 nếu p95 ≥ 500 ms hoặc có response không phải 2xx. Kết quả đo: [`docs/perf-report.md`](./docs/perf-report.md).
+
 ## Chạy local (không Docker)
 
 Yêu cầu: Node.js 20+, npm 10+, Docker Desktop.
@@ -174,7 +216,7 @@ npm run dev
 - Backend: http://localhost:3001
 - Health check: http://localhost:3001/health
 - Menu: http://localhost:3001/products
-- Swagger UI: http://localhost:3001/docs (JSON: `/docs-json`)
+- Swagger: http://localhost:3001/api-docs
 
 ## Chạy bằng Docker (dev)
 
@@ -196,38 +238,6 @@ PostgreSQL dev chạy trên `localhost:5433` (tránh xung đột với port 5432
 Copy-Item .env.example .env
 docker compose up --build
 ```
-
-## Quản lý cơ sở dữ liệu (Adminer)
-
-Cả hai file compose đều có service `adminer` (giao diện web quản trị PostgreSQL), mở tại **http://localhost:8080**.
-
-Đăng nhập:
-
-| Trường   | Giá trị                                                               |
-| -------- | --------------------------------------------------------------------- |
-| System   | PostgreSQL                                                            |
-| Server   | `postgres` (tên service trong Docker network, không dùng `localhost`) |
-| Username | `POSTGRES_USER` (mặc định `brewlite`)                                 |
-| Password | `POSTGRES_PASSWORD` (mặc định `brewlite`)                             |
-| Database | `POSTGRES_DB` (mặc định `brewlite`)                                   |
-
-Khởi động riêng DB và Adminer:
-
-```bash
-# Local / production compose
-docker compose up -d postgres adminer
-
-# Dev compose
-docker compose --env-file .env.dev -f docker-compose.dev.yml up -d postgres adminer
-```
-
-Kết nối từ công cụ ngoài (DBeaver, psql, WebStorm...): host `localhost`, port `5432` (compose thường) hoặc `5433` (compose dev).
-
-```bash
-psql "postgresql://brewlite:brewlite@localhost:5433/brewlite"   # dev
-```
-
-Lưu ý: Adminer chỉ dành cho môi trường phát triển; không public cổng 8080 ra internet khi triển khai thật.
 
 ## Lộ trình API MVP
 

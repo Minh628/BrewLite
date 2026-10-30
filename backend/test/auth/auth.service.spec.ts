@@ -40,7 +40,7 @@ describe('AuthService', () => {
 
       // Mock: Tạo người dùng thành công trong CSDL
       const createdUser = {
-        id: 'user-cuid-123',
+        id: 3,
         email: 'test@brewlite.vn',
       };
       prismaMock.user.create.mockResolvedValue(createdUser);
@@ -53,7 +53,7 @@ describe('AuthService', () => {
       // Kiểm tra cấu trúc dữ liệu trả về đúng chuẩn
       expect(result).toEqual({
         user: {
-          id: 'user-cuid-123',
+          id: 3,
           email: 'test@brewlite.vn',
         },
         accessToken: 'jwt-mock-token-xyz',
@@ -83,7 +83,7 @@ describe('AuthService', () => {
 
       // Đảm bảo ký JWT với đúng payload
       expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
-        sub: 'user-cuid-123',
+        sub: '3',
         email: 'test@brewlite.vn',
       });
     });
@@ -134,7 +134,7 @@ describe('AuthService', () => {
   describe('validateUser', () => {
     it('trả về user context khi email và mật khẩu chính xác', async () => {
       const mockUser = {
-        id: 'user-cuid-123',
+        id: 3,
         email: 'test@brewlite.vn',
         passwordHash: '$2b$10$hashedpassword',
       };
@@ -144,7 +144,7 @@ describe('AuthService', () => {
       const result = await service.validateUser('test@brewlite.vn', 'password123');
 
       expect(result).toEqual({
-        id: 'user-cuid-123',
+        id: 3,
         email: 'test@brewlite.vn',
       });
       expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
@@ -168,7 +168,7 @@ describe('AuthService', () => {
 
     it('trả về null khi mật khẩu không khớp', async () => {
       const mockUser = {
-        id: 'user-cuid-123',
+        id: 3,
         email: 'test@brewlite.vn',
         passwordHash: '$2b$10$hashedpassword',
       };
@@ -186,32 +186,32 @@ describe('AuthService', () => {
       jwtServiceMock.signAsync.mockResolvedValue('jwt-mock-access-token');
 
       const user = {
-        id: 'user-cuid-123',
+        id: 3,
         email: 'test@brewlite.vn',
       };
 
       const result = await service.login(user);
 
       expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
-        sub: 'user-cuid-123',
+        sub: '3',
         email: 'test@brewlite.vn',
       });
       expect(result).toEqual({
         accessToken: 'jwt-mock-access-token',
         expiresIn: 3600,
         user: {
-          id: 'user-cuid-123',
+          id: 3,
           email: 'test@brewlite.vn',
         },
       });
     });
 
     it('ném lỗi UnauthorizedException (401) khi user context rỗng hoặc không hợp lệ', async () => {
-      await expect(service.login(null as unknown as { id: string; email: string })).rejects.toThrow(
+      await expect(service.login(null as unknown as { id: number; email: string })).rejects.toThrow(
         new UnauthorizedException('Invalid credentials'),
       );
 
-      await expect(service.login({ id: '', email: '' })).rejects.toThrow(
+      await expect(service.login({ id: 0, email: '' })).rejects.toThrow(
         new UnauthorizedException('Invalid credentials'),
       );
     });
@@ -221,16 +221,16 @@ describe('AuthService', () => {
     it('trả về thông tin profile thành công và không chứa passwordHash', async () => {
       const mockCreatedAt = new Date('2026-10-16T00:00:00.000Z');
       prismaMock.user.findUnique.mockResolvedValue({
-        id: 'user-cuid-123',
+        id: 3,
         email: 'an@brewlite.vn',
         loyaltyPoints: 100,
         createdAt: mockCreatedAt,
       });
 
-      const profile = await service.getProfile('user-cuid-123');
+      const profile = await service.getProfile(3);
 
       expect(profile).toEqual({
-        id: 'user-cuid-123',
+        id: 3,
         email: 'an@brewlite.vn',
         loyaltyPoints: 100,
         role: 'CUSTOMER',
@@ -242,7 +242,7 @@ describe('AuthService', () => {
 
       // Đảm bảo truy vấn findUnique chỉ định select an toàn để tiết kiệm RAM
       expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 'user-cuid-123' },
+        where: { id: 3 },
         select: {
           id: true,
           email: true,
@@ -255,7 +255,7 @@ describe('AuthService', () => {
     it('ném lỗi UnauthorizedException khi userId không tồn tại trong CSDL', async () => {
       prismaMock.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getProfile('non-existent-user-id')).rejects.toThrow(
+      await expect(service.getProfile(999999)).rejects.toThrow(
         new UnauthorizedException('User not found'),
       );
     });
@@ -269,7 +269,7 @@ describe('AuthService', () => {
     });
 
     it('xác thực thành công và trả về user khi thông tin đăng nhập đúng', async () => {
-      const mockUser = { id: 'user-cuid-123', email: 'test@brewlite.vn' };
+      const mockUser = { id: 3, email: 'test@brewlite.vn' };
       jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser);
 
       const result = await localStrategy.validate('test@brewlite.vn', 'password123');

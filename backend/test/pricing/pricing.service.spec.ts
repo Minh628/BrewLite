@@ -98,7 +98,7 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
 
     const mockCatalogProducts = [
       {
-        id: 'prod-cf-1',
+        id: 1,
         name: 'Americano',
         price: 40000,
         isActive: true,
@@ -109,21 +109,21 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
         ],
         toppings: [
           {
-            toppingId: 'top-pearl',
-            topping: { id: 'top-pearl', name: 'Trân châu đen', price: 5000, isActive: true },
+            toppingId: 1,
+            topping: { id: 1, name: 'Trân châu đen', price: 5000, isActive: true },
           },
           {
-            toppingId: 'top-cheese',
-            topping: { id: 'top-cheese', name: 'Kem Cheese', price: 10000, isActive: true },
+            toppingId: 2,
+            topping: { id: 2, name: 'Kem Cheese', price: 10000, isActive: true },
           },
           {
-            toppingId: 'top-disabled',
-            topping: { id: 'top-disabled', name: 'Thạch cũ', price: 5000, isActive: false },
+            toppingId: 3,
+            topping: { id: 3, name: 'Thạch cũ', price: 5000, isActive: false },
           },
         ],
       },
       {
-        id: 'prod-tea-2',
+        id: 2,
         name: 'Trà Đào Cam Sả',
         price: 45000,
         isActive: true,
@@ -132,8 +132,8 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
         ],
         toppings: [
           {
-            toppingId: 'top-peach',
-            topping: { id: 'top-peach', name: 'Miếng đào ngâm', price: 8000, isActive: true },
+            toppingId: 4,
+            topping: { id: 4, name: 'Miếng đào ngâm', price: 8000, isActive: true },
           },
         ],
       },
@@ -145,9 +145,9 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
       // Client cố tình gửi giá giả mạo (clientPrice = 100đ, clientUnitPrice = 1đ,...)
       const clientPayload = [
         {
-          productId: 'prod-cf-1',
+          productId: 1,
           size: 'M' as const,
-          toppingIds: ['top-pearl'],
+          toppingIds: [1],
           qty: 2,
           clientPrice: 100,
           clientUnitPrice: 1,
@@ -175,7 +175,7 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
       expect(itemSnapshot.lineTotal).toBe(100000);
       expect(itemSnapshot.toppings).toEqual([
         {
-          toppingId: 'top-pearl',
+          toppingId: 1,
           toppingName: 'Trân châu đen',
           price: 5000,
         },
@@ -189,17 +189,17 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
         // Món 1: Americano size L (+10.000) kèm Trân châu (+5.000) và Kem Cheese (+10.000), qty = 1
         // Đơn giá: 40k + 10k + 5k + 10k = 65k * 1 = 65k
         {
-          productId: 'prod-cf-1',
+          productId: 1,
           size: 'L' as const,
-          toppingIds: ['top-pearl', 'top-cheese'],
+          toppingIds: [1, 2],
           qty: 1,
         },
         // Món 2: Trà Đào size M (+0) kèm Đào ngâm (+8.000), qty = 3
         // Đơn giá: 45k + 0k + 8k = 53k * 3 = 159k
         {
-          productId: 'prod-tea-2',
+          productId: 2,
           size: 'M' as const,
-          toppingIds: ['top-peach'],
+          toppingIds: [4],
           qty: 3,
         },
       ];
@@ -218,11 +218,11 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
 
     it('từ chối khi số lượng món không hợp lệ (qty <= 0 hoặc không phải số nguyên)', async () => {
       await expect(
-        service.calculateOrderPricing([{ productId: 'prod-cf-1', size: 'S', qty: 0 }]),
+        service.calculateOrderPricing([{ productId: 1, size: 'S', qty: 0 }]),
       ).rejects.toThrow('Số lượng sản phẩm phải là số nguyên dương');
 
       await expect(
-        service.calculateOrderPricing([{ productId: 'prod-cf-1', size: 'S', qty: -2 }]),
+        service.calculateOrderPricing([{ productId: 1, size: 'S', qty: -2 }]),
       ).rejects.toThrow('Số lượng sản phẩm phải là số nguyên dương');
     });
 
@@ -230,7 +230,7 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
       mockPrisma.product.findMany.mockResolvedValue([]);
 
       await expect(
-        service.calculateOrderPricing([{ productId: 'prod-non-existent', size: 'S', qty: 1 }]),
+        service.calculateOrderPricing([{ productId: 999999, size: 'S', qty: 1 }]),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -239,7 +239,7 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
 
       // Trà Đào chỉ có size M, khách cố tình chọn size L
       await expect(
-        service.calculateOrderPricing([{ productId: 'prod-tea-2', size: 'L', qty: 1 }]),
+        service.calculateOrderPricing([{ productId: 2, size: 'L', qty: 1 }]),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -247,10 +247,10 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
       await expect(
         service.calculateOrderPricing([
           {
-            productId: 'prod-cf-1',
+            productId: 1,
             size: 'S',
             qty: 1,
-            toppingIds: ['top-pearl', 'top-pearl'],
+            toppingIds: [1, 1],
           },
         ]),
       ).rejects.toThrow('Topping không được chọn trùng lặp trong cùng một món');
@@ -263,10 +263,10 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
       await expect(
         service.calculateOrderPricing([
           {
-            productId: 'prod-cf-1',
+            productId: 1,
             size: 'S',
             qty: 1,
-            toppingIds: ['top-peach'],
+            toppingIds: [4],
           },
         ]),
       ).rejects.toThrow(BadRequestException);
@@ -275,10 +275,10 @@ describe('PricingService & calcUnitPrice (PB-21 / Sub-task 21.1)', () => {
       await expect(
         service.calculateOrderPricing([
           {
-            productId: 'prod-cf-1',
+            productId: 1,
             size: 'S',
             qty: 1,
-            toppingIds: ['top-disabled'],
+            toppingIds: [3],
           },
         ]),
       ).rejects.toThrow(BadRequestException);

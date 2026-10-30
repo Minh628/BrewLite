@@ -1,24 +1,32 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class ProductCategoryDto {
-  @ApiProperty({ example: 'clx1abc230000' })
-  id!: string;
+  @ApiProperty({ example: 1 })
+  id!: number;
+
+  @ApiProperty({ example: 'Cà phê' })
+  name!: string;
+}
+
+export class CategoryDto {
+  @ApiProperty({ example: 1 })
+  id!: number;
 
   @ApiProperty({ example: 'Cà phê' })
   name!: string;
 }
 
 export class ProductDto {
-  @ApiProperty({ example: 'clx1abc230001' })
-  id!: string;
+  @ApiProperty({ example: 3 })
+  id!: number;
 
-  @ApiProperty({ example: 'Cà phê sữa đá' })
+  @ApiProperty({ example: 'Cappuccino' })
   name!: string;
 
-  @ApiProperty({ description: 'Giá cơ bản (VND, size S)', example: 29000 })
+  @ApiProperty({ description: 'Giá cơ bản size S (VND)', example: 45000 })
   price!: number;
 
-  @ApiProperty({ type: String, nullable: true, example: 'https://example.com/ca-phe-sua.jpg' })
+  @ApiProperty({ type: String, nullable: true, example: '/cappuccino.svg' })
   imageUrl!: string | null;
 
   @ApiProperty({ type: () => ProductCategoryDto })
@@ -32,25 +40,25 @@ export class ProductSizeDto {
   @ApiProperty({ enum: ['S', 'M', 'L'], example: 'M' })
   code!: 'S' | 'M' | 'L';
 
-  @ApiProperty({ description: 'Phụ thu so với giá cơ bản (VND)', example: 5000 })
+  @ApiProperty({ description: 'Phụ thu so với size S (VND)', example: 5000 })
   extra!: number;
 }
 
 export class ProductDetailDto extends ProductDto {
-  @ApiPropertyOptional({ type: String, nullable: true, example: 'Cà phê pha phin với sữa đặc' })
+  @ApiProperty({ type: String, nullable: true, example: 'Espresso, sữa nóng, lớp bọt mịn' })
   description!: string | null;
 
-  @ApiProperty({ type: () => [ProductSizeDto], description: 'Các size theo thứ tự S, M, L' })
+  @ApiProperty({ type: () => [ProductSizeDto] })
   sizes!: ProductSizeDto[];
 }
 
 export class ToppingDto {
-  @ApiProperty({ example: 'clx1abc230010' })
-  id!: string;
+  @ApiProperty({ example: 1 })
+  id!: number;
 
   @ApiProperty({ example: 'Trân châu đen' })
   name!: string;
 
-  @ApiProperty({ description: 'Giá topping (VND)', example: 7000 })
+  @ApiProperty({ description: 'Giá topping (VND)', example: 5000 })
   price!: number;
 }

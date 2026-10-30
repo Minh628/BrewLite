@@ -30,9 +30,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * @param payload Dữ liệu định danh chứa sub (userId) và email
    * @returns User context gắn vào req.user
    */
-  validate(payload: JwtPayload): { id: string; email: string } {
+  validate(payload: JwtPayload): { id: number; email: string } {
     return {
-      id: payload.sub,
+      id: Number(payload.sub),
       email: payload.email,
     };
   }

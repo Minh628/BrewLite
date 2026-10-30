@@ -1,22 +1,15 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import Link from 'next/link';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { login } from '@/lib/api';
+import { loginSchema, type LoginForm } from '@/lib/auth-schemas';
 import { useAuth } from '@/store/auth';
-
-const loginSchema = z.object({
-  email: z.string().email('Email không đúng định dạng').min(1, 'Email không được để trống'),
-  password: z.string().min(1, 'Mật khẩu không được để trống'),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
 
 function LoginContent() {
   const router = useRouter();
@@ -62,9 +55,9 @@ function LoginContent() {
   return (
     <main className="flex-1 flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-sm border border-espresso/10 p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-espresso/10 p-6 sm:p-8">
           <h1 className="text-2xl font-black text-center text-espresso mb-2">Chào mừng quay lại</h1>
-          <p className="text-center text-espresso/60 mb-8">Đăng nhập để tiếp tục đặt đồ uống</p>
+          <p className="text-center text-espresso/70 mb-8">Đăng nhập để tiếp tục đặt đồ uống</p>
 
           {error && (
             <div
@@ -76,53 +69,41 @@ function LoginContent() {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-espresso mb-1.5">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                {...register('email')}
-                error={errors.email?.message}
-                disabled={isLoading}
-              />
-            </div>
+            <Input
+              id="email"
+              label="Email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              {...register('email')}
+              error={errors.email?.message}
+              disabled={isLoading}
+            />
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-espresso mb-1.5">
-                Mật khẩu
-              </label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                {...register('password')}
-                error={errors.password?.message}
-                disabled={isLoading}
-              />
-            </div>
+            <Input
+              id="password"
+              label="Mật khẩu"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              {...register('password')}
+              error={errors.password?.message}
+              disabled={isLoading}
+            />
 
             <Button type="submit" className="w-full" disabled={isLoading} loading={isLoading}>
               Đăng nhập
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-espresso/60">
+          <p className="mt-6 text-center text-sm text-espresso/70">
             Chưa có tài khoản?{' '}
             <Link
               href={`/register?returnUrl=${encodeURIComponent(returnUrl)}`}
-              className="font-medium text-caramel hover:underline"
+              className="rounded font-medium text-caramel underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-caramel"
             >
               Đăng ký ngay
             </Link>
-          </p>
-
-          <p className="mt-4 text-center text-xs text-espresso/40">
-            Tài khoản test: test@brewlite.com / 12345678
           </p>
         </div>
       </div>
@@ -130,11 +111,11 @@ function LoginContent() {
   );
 }
 
-import { useState } from 'react';
-
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex-1 flex items-center justify-center">Đang tải...</div>}>
+    <Suspense
+      fallback={<div className="flex-1 flex items-center justify-center py-12">Đang tải...</div>}
+    >
       <LoginContent />
     </Suspense>
   );

@@ -1,13 +1,14 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiErrorDto } from '../common/dto/api-error.dto';
 import { ProductDetailDto, ProductDto } from './dto/product.dto';
+import { ProductsQueryDto } from './dto/products-query.dto';
 import { ProductsService } from './products.service';
 
 @ApiTags('Products')
@@ -15,25 +16,26 @@ import { ProductsService } from './products.service';
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  /**
+   * @route GET /products?category={id}&q={keyword}
+   */
   @Get()
   @ApiOperation({
-    summary: 'Danh sách menu',
-    description: 'Trả về các sản phẩm đang bán, sắp xếp theo tên danh mục rồi tên sản phẩm.',
+    summary: 'Danh sách món đang bán',
+    description: 'Lọc theo danh mục và tìm theo tên. Không có kết quả thì trả mảng rỗng.',
   })
   @ApiOkResponse({ type: [ProductDto] })
-  findAll(): Promise<ProductDto[]> {
-    return this.productsService.findAll();
+  @ApiBadRequestResponse({ type: ApiErrorDto, description: 'category hoặc q không hợp lệ' })
+  findAll(@Query() query: ProductsQueryDto): Promise<ProductDto[]> {
+    return this.productsService.findAll(query);
   }
 
   @Get(':id')
-  @ApiOperation({
-    summary: 'Chi tiết sản phẩm',
-    description: 'Trả về mô tả và các size (S, M, L) kèm phụ thu của một sản phẩm.',
-  })
-  @ApiParam({ name: 'id', description: 'ID sản phẩm', example: 'clx1abc230001' })
+  @ApiOperation({ summary: 'Chi tiết món kèm các size' })
   @ApiOkResponse({ type: ProductDetailDto })
-  @ApiNotFoundResponse({ description: 'Không tìm thấy sản phẩm', type: ApiErrorDto })
-  findOne(@Param('id') id: string): Promise<ProductDetailDto> {
+  @ApiBadRequestResponse({ type: ApiErrorDto, description: 'id không phải số' })
+  @ApiNotFoundResponse({ type: ApiErrorDto, description: 'Món không tồn tại hoặc ngừng bán' })
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<ProductDetailDto> {
     return this.productsService.findOne(id);
   }
 }

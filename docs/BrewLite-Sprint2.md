@@ -281,13 +281,13 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 
 **Sub-tasks:**
 
-- [ ] **C.1** · Chốt API contract v2: /auth/\*, POST /orders, GET /products?category&q, GET /categories (JSON mẫu, mã lỗi) · ~~M3~~ **M1** · 1,5h · N1 · ⇒ docs/api-contract.md v2 được M2, M4, M5 duyệt
-- [ ] **6.1** · CreateOrderDto: items ≥ 1, ValidateNested, size ∈ {S,M,L}, qty 1–20, toppingIds là mảng số · ~~M3~~ **M1** · 2,5h · N2–N3 · phụ thuộc C.1, 7.1 · ⇒ DTO sai → 400 đúng định dạng lỗi chung
-- [ ] **6.2** · Kiểm tra productId/toppingId tồn tại và đang bán; ánh xạ lỗi Prisma (P2002, P2003) sang HTTP · ~~M3~~ **M1** · 2,5h · N3 · phụ thuộc 6.1 · ⇒ Sản phẩm không tồn tại → 400 rõ ràng
-- [ ] **6.3** · OrdersService.create: một transaction lưu Order + OrderItem + OrderItemTopping, giá do PricingService tính, trạng thái PENDING · ~~M3~~ **M1** (pair M2) · 3,5h · N4 · phụ thuộc 6.2, 21.1 · ⇒ Đơn lưu đúng trong DB
-- [ ] **6.4** · POST /orders gắn JwtAuthGuard, trả 201 `{orderId, code, status: PENDING, total}` · ~~M3~~ **M1** · 1h · N5 · phụ thuộc 6.3, 7.4 · ⇒ Endpoint đúng contract v2
-- [ ] **6.5** · Unit test OrdersService (tính tổng, transaction rollback khi lỗi) · ~~M3~~ **M1 hoặc M2** · 3h · N5–N6 · phụ thuộc 6.3 · ⇒ Test xanh
-- [ ] **6.6** · e2e POST /orders: 401 khi thiếu token, 400 khi sai DTO, 201 khi giá hợp lệ, giá giả bị bỏ qua · ~~M3~~ **M1 hoặc M2** · 3h · N7–N8 · phụ thuộc 6.4 · ⇒ Test xanh trong CI
+- [x] **C.1** · Chốt API contract v2: /auth/\*, POST /orders, GET /products?category&q, GET /categories (JSON mẫu, mã lỗi) · ~~M3~~ **M1** · 1,5h · N1 · ⇒ docs/api-contract.md v2 được M2, M4, M5 duyệt
+- [x] **6.1** · CreateOrderDto: items ≥ 1, ValidateNested, size ∈ {S,M,L}, qty 1–20, toppingIds là mảng số · ~~M3~~ **M1** · 2,5h · N2–N3 · phụ thuộc C.1, 7.1 · ⇒ DTO sai → 400 đúng định dạng lỗi chung
+- [x] **6.2** · Kiểm tra productId/toppingId tồn tại và đang bán; ánh xạ lỗi Prisma (P2002, P2003) sang HTTP · ~~M3~~ **M1** · 2,5h · N3 · phụ thuộc 6.1 · ⇒ Sản phẩm không tồn tại → 400 rõ ràng
+- [x] **6.3** · OrdersService.create: một transaction lưu Order + OrderItem + OrderItemTopping, giá do PricingService tính, trạng thái PENDING · ~~M3~~ **M1** (pair M2) · 3,5h · N4 · phụ thuộc 6.2, 21.1 · ⇒ Đơn lưu đúng trong DB
+- [x] **6.4** · POST /orders gắn JwtAuthGuard, trả 201 `{orderId, code, status: PENDING, total}` · ~~M3~~ **M1** · 1h · N5 · phụ thuộc 6.3, 7.4 · ⇒ Endpoint đúng contract v2
+- [x] **6.5** · Unit test OrdersService (tính tổng, transaction rollback khi lỗi) · ~~M3~~ **M1 hoặc M2** · 3h · N5–N6 · phụ thuộc 6.3 · ⇒ Test xanh
+- [x] **6.6** · e2e POST /orders: 401 khi thiếu token, 400 khi sai DTO, 201 khi giá hợp lệ, giá giả bị bỏ qua · ~~M3~~ **M1 hoặc M2** · 3h · N7–N8 · phụ thuộc 6.4 · ⇒ Test xanh trong CI
 - [ ] **6.7** · Màn hình đặt đơn từ giỏ: nút "Đặt hàng" → (chưa đăng nhập thì /login) → POST /orders → trang "Đã tạo đơn #mã – PENDING", xóa giỏ khi thành công · **M5** · 4h · N6–N7 · phụ thuộc 5.4, 6.4, 20.4 · ⇒ Luồng tạo đơn chạy trên UI
 - [ ] **6.8** · Tích hợp và sửa lỗi luồng đăng nhập ↔ đặt đơn (pair M1 + M5) · ~~M3~~ **M1** · 1,5h · N8 · phụ thuộc 6.7 · ⇒ Luồng chạy với API thật, không lỗi CORS/401 sai
 
@@ -308,7 +308,7 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 - [x] **20.3** · Trang /register: validate email, mật khẩu ≥ 8 ký tự, xác nhận mật khẩu; lỗi 409 · **M4** · 3h · N3–N4 · phụ thuộc 20.2 · ⇒ Đăng ký rồi tự đăng nhập
 - [x] **20.4** · Route guard (middleware) cho /checkout, lưu returnUrl và quay lại sau khi đăng nhập · **M4** · 2,5h · N4 · phụ thuộc 20.2 · ⇒ Chưa đăng nhập bị chuyển `/login?returnUrl=...`
 - [x] **20.5** · Header: menu người dùng (email), nút Đăng xuất · **M4** · 1,5h · N4–N5 · phụ thuộc 20.1 · ⇒ Đăng xuất xóa token, về trang chủ
-- [ ] **20.6** · Test FE: schema zod của form, auth store; tích hợp với API thật (pair M2 + M4) · **M4** · 3,5h · N5–N6 · phụ thuộc 20.3, 7.4 · ⇒ Test xanh; đăng nhập/đăng ký chạy với API thật
+- [x] **20.6** · Test FE: schema zod của form, auth store; tích hợp với API thật (pair M2 + M4) · **M4** · 3,5h · N5–N6 · phụ thuộc 20.3, 7.4 · ⇒ Test xanh; đăng nhập/đăng ký chạy với API thật
 
 ---
 
@@ -337,9 +337,9 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 
 **Sub-tasks:**
 
-- [ ] **18.1** · GET /products?category=&q= (tìm không phân biệt dấu: "ca phe" khớp "Cà phê") + GET /categories · ~~M3~~ **M1** · 3,5h · N6–N7 · phụ thuộc C.1 · ⇒ Query đúng contract v2
-- [ ] **18.2** · Test truy vấn lọc/tìm (có dấu, không dấu, rỗng, danh mục sai) · ~~M3~~ **M1** · 1,5h · N8–N9 · phụ thuộc 18.1 · ⇒ Test xanh
-- [ ] **18.3** · UI: tab danh mục + ô tìm kiếm (debounce 300 ms), đồng bộ query lên URL, empty state khi không có kết quả · **M4** · 4h · N8–N9 · phụ thuộc 18.1 · ⇒ Lọc/tìm trên trang Menu
+- [x] **18.1** · GET /products?category=&q= (tìm không phân biệt dấu: "ca phe" khớp "Cà phê") + GET /categories · ~~M3~~ **M1** · 3,5h · N6–N7 · phụ thuộc C.1 · ⇒ Query đúng contract v2
+- [x] **18.2** · Test truy vấn lọc/tìm (có dấu, không dấu, rỗng, danh mục sai) · ~~M3~~ **M1** · 1,5h · N8–N9 · phụ thuộc 18.1 · ⇒ Test xanh
+- [x] **18.3** · UI: tab danh mục + ô tìm kiếm (debounce 300 ms), đồng bộ query lên URL, empty state khi không có kết quả · **M4** · 4h · N8–N9 · phụ thuộc 18.1 · ⇒ Lọc/tìm trên trang Menu
 
 ---
 
@@ -353,8 +353,8 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 
 **Sub-tasks:**
 
-- [ ] **23.1** · LoggingInterceptor: method, url, status, thời gian; gắn requestId (header X-Request-Id) vào log lỗi · **M1** · 3,5h · N2–N3 · ⇒ Log có requestId
-- [ ] **23.2** · Test interceptor + ghi hướng dẫn đọc log vào README · **M1** · 1h · N3 · phụ thuộc 23.1 · ⇒ Test xanh
+- [x] **23.1** · LoggingInterceptor: method, url, status, thời gian; gắn requestId (header X-Request-Id) vào log lỗi · **M1** · 3,5h · N2–N3 · ⇒ Log có requestId
+- [x] **23.2** · Test interceptor + ghi hướng dẫn đọc log vào README · **M1** · 1h · N3 · phụ thuộc 23.1 · ⇒ Test xanh
 
 ---
 
@@ -368,7 +368,7 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 
 **Sub-tasks:**
 
-- [ ] **16.1** · Swagger /api-docs cho products, categories, auth, orders; nút Authorize (Bearer) · ~~M3~~ **M1** · 3h · N9–N10 · phụ thuộc 6.4, 18.1 · ⇒ /api-docs gọi thử được cả route có JWT
+- [x] **16.1** · Swagger /api-docs cho products, categories, auth, orders; nút Authorize (Bearer) · ~~M3~~ **M1** · 3h · N9–N10 · phụ thuộc 6.4, 18.1 · ⇒ /api-docs gọi thử được cả route có JWT
 
 ---
 
@@ -396,8 +396,8 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 
 **Sub-tasks:**
 
-- [ ] **29.1** · Kịch bản autocannon cho GET /products và POST /orders (có token) với dữ liệu mẫu · **M1** · 3h · N6–N7 · phụ thuộc 6.4 · ⇒ `scripts/perf/*.js`
-- [ ] **29.2** · Báo cáo p95 (< 500 ms), đề xuất tối ưu nếu vượt · **M1** · 1h · N8 · phụ thuộc 29.1 · ⇒ `docs/perf-report.md`
+- [x] **29.1** · Kịch bản autocannon cho GET /products và POST /orders (có token) với dữ liệu mẫu · **M1** · 3h · N6–N7 · phụ thuộc 6.4 · ⇒ `scripts/perf/*.js`
+- [x] **29.2** · Báo cáo p95 (< 500 ms), đề xuất tối ưu nếu vượt · **M1** · 1h · N8 · phụ thuộc 29.1 · ⇒ `docs/perf-report.md`
 
 ---
 
@@ -412,7 +412,7 @@ Ký hiệu: **N1** = Thứ 2 12/10 … **N5** = Thứ 6 16/10, **N6** = Thứ 2 
 **Sub-tasks:**
 
 - [ ] **30.1** · Kiểm tra axe/Lighthouse và sửa a11y, responsive cho Menu, Chi tiết, Giỏ hàng (360–1440 px) · **M5** · 3h · N7–N8 · phụ thuộc 5.4 · ⇒ Lighthouse Accessibility ≥ 90
-- [ ] **30.2** · Sửa a11y/responsive cho Đăng nhập, Đăng ký; kiểm thử Chrome, Firefox, Edge · **M4** · 2,5h · N8 · phụ thuộc 20.3 · ⇒ Bảng kết quả kiểm thử trình duyệt
+- [x] **30.2** · Sửa a11y/responsive cho Đăng nhập, Đăng ký; kiểm thử Chrome, Firefox, Edge · **M4** · 2,5h · N8 · phụ thuộc 20.3 · ⇒ Bảng kết quả kiểm thử trình duyệt
 
 ---
 

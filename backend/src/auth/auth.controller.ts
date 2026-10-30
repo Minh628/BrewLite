@@ -8,9 +8,23 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiTooManyRequestsResponse,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { ApiErrorDto } from '../common/dto/api-error.dto';
+import { BEARER_AUTH } from '../swagger';
 import { AuthService } from './auth.service';
 import { CurrentUser, CurrentUserPayload } from './decorators/current-user.decorator';
+import { LoginResponseDto, ProfileDto, RegisterResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -19,6 +33,7 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 /**
  * Controller xử lý các endpoint liên quan đến Authentication (Đăng ký, Đăng nhập)
  */
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -31,8 +46,15 @@ export class AuthController {
    */
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Đăng ký tài khoản và nhận accessToken' })
+  @ApiCreatedResponse({ type: RegisterResponseDto })
+  @ApiBadRequestResponse({
+    type: ApiErrorDto,
+    description: 'Email sai định dạng, mật khẩu < 8 ký tự',
+  })
+  @ApiConflictResponse({ type: ApiErrorDto, description: 'Email đã được đăng ký' })
   async register(@Body() registerDto: RegisterDto): Promise<{
-    user: { id: string; email: string };
+    user: { id: number; email: string };
     accessToken: string;
   }> {
     return this.authService.register(registerDto);
@@ -50,13 +72,20 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Đăng nhập lấy accessToken (JWT 1 giờ)',
+    description: 'Copy accessToken, bấm nút Authorize ở đầu trang để gọi các route cần đăng nhập.',
+  })
+  @ApiOkResponse({ type: LoginResponseDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'Sai email hoặc mật khẩu' })
+  @ApiTooManyRequestsResponse({ type: ApiErrorDto, description: 'Quá 5 lần/phút' })
   async login(
-    @Request() req: { user: { id: string; email: string } },
+    @Request() req: { user: { id: number; email: string } },
     @Body() _loginDto: LoginDto,
   ): Promise<{
     accessToken: string;
     expiresIn: number;
-    user: { id: string; email: string };
+    user: { id: number; email: string };
   }> {
     return this.authService.login(req.user);
   }
@@ -70,6 +99,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth(BEARER_AUTH)
+  @ApiOperation({ summary: 'Thông tin người dùng hiện tại' })
+  @ApiOkResponse({ type: ProfileDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'Thiếu, sai hoặc hết hạn token' })
   async getProfile(@CurrentUser() user: CurrentUserPayload) {
     return this.authService.getProfile(user.id);
   }

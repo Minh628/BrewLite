@@ -54,9 +54,9 @@ export function calcUnitPrice(
  * Lưu ý: Mọi trường giá do client gửi (nếu có cố tình đính kèm) đều bị bỏ qua hoàn toàn.
  */
 export interface OrderItemPricingInput {
-  productId: string;
+  productId: number;
   size: Size;
-  toppingIds?: string[];
+  toppingIds?: number[];
   qty: number;
   /** Giá giả mạo do client gửi (nếu có) - Server BẮT BUỘC bỏ qua */
   clientPrice?: number;
@@ -65,13 +65,13 @@ export interface OrderItemPricingInput {
 }
 
 export interface OrderItemToppingSnapshot {
-  toppingId: string;
+  toppingId: number;
   toppingName: string;
   price: number;
 }
 
 export interface OrderItemPricingSnapshot {
-  productId: string;
+  productId: number;
   productName: string;
   size: Size;
   basePrice: number;
@@ -111,7 +111,12 @@ export class PricingService {
 
     // 1. Kiểm tra định dạng sơ bộ từng món trước khi truy vấn DB
     for (const item of items) {
-      if (!item.productId || typeof item.productId !== 'string') {
+      if (
+        !item.productId ||
+        typeof item.productId !== 'number' ||
+        !Number.isInteger(item.productId) ||
+        item.productId <= 0
+      ) {
         throw new BadRequestException('Mã sản phẩm không hợp lệ');
       }
 

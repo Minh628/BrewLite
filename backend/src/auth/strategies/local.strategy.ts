@@ -21,7 +21,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
    * @param password Mật khẩu đăng nhập
    * @throws UnauthorizedException khi thông tin đăng nhập không hợp lệ
    */
-  async validate(email: string, password: string): Promise<{ id: string; email: string }> {
+  async validate(email: string, password: string): Promise<{ id: number; email: string }> {
     if (!email || !password) {
       throw new UnauthorizedException('Invalid credentials');
     }

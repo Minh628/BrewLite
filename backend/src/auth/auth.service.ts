@@ -27,7 +27,7 @@ export class AuthService {
    * 5. Ký và phát hành ngay accessToken JWT.
    */
   async register(dto: RegisterDto): Promise<{
-    user: { id: string; email: string };
+    user: { id: number; email: string };
     accessToken: string;
   }> {
     // Bước 1: Fast Pre-check bảo vệ tài nguyên tính toán của CPU
@@ -44,7 +44,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, this.BCRYPT_SALT_ROUNDS);
 
     // Bước 3: Tạo bản ghi người dùng với select chỉ lấy các trường an toàn
-    let user: { id: string; email: string };
+    let user: { id: number; email: string };
     try {
       user = await this.prisma.user.create({
         data: {
@@ -67,7 +67,7 @@ export class AuthService {
 
     // Bước 5: Ký JWT chứa thông tin định danh
     const accessToken = await this.jwtService.signAsync({
-      sub: user.id,
+      sub: String(user.id),
       email: user.email,
     });
 
@@ -89,7 +89,7 @@ export class AuthService {
    * @param pass Mật khẩu chưa băm
    * @returns Thông tin user context an toàn nếu khớp, ngược lại trả về null
    */
-  async validateUser(email: string, pass: string): Promise<{ id: string; email: string } | null> {
+  async validateUser(email: string, pass: string): Promise<{ id: number; email: string } | null> {
     const user = await this.prisma.user.findUnique({
       where: { email },
       select: {
@@ -121,17 +121,17 @@ export class AuthService {
    * @param user Thông tin user đã được xác thực qua LocalStrategy
    * @returns Đối tượng chứa accessToken, expiresIn (3600s) và user context
    */
-  async login(user: { id: string; email: string }): Promise<{
+  async login(user: { id: number; email: string }): Promise<{
     accessToken: string;
     expiresIn: number;
-    user: { id: string; email: string };
+    user: { id: number; email: string };
   }> {
     if (!user || !user.id || !user.email) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const payload = {
-      sub: user.id,
+      sub: String(user.id),
       email: user.email,
     };
 
@@ -155,8 +155,8 @@ export class AuthService {
    * @param userId Định danh người dùng
    * @returns Thông tin profile chuẩn hóa của người dùng
    */
-  async getProfile(userId: string): Promise<{
-    id: string;
+  async getProfile(userId: number): Promise<{
+    id: number;
     email: string;
     loyaltyPoints: number;
     role: string;

@@ -9,10 +9,7 @@ export class AppController {
    */
   @Get()
   @ApiOperation({ summary: 'Kiểm tra backend đang chạy' })
-  @ApiOkResponse({
-    description: 'Chuỗi chào',
-    schema: { type: 'string', example: 'Hello BrewLite' },
-  })
+  @ApiOkResponse({ schema: { type: 'string', example: 'Hello BrewLite' } })
   getHello(): string {
     return 'Hello BrewLite';
   }
@@ -22,15 +19,12 @@ export class AppController {
    * Trả về HTTP 200 kèm thông tin trạng thái hoạt động của backend
    */
   @Get('health')
-  @ApiOperation({
-    summary: 'Health check',
-    description: 'Trả về trạng thái và uptime của service.',
-  })
+  @ApiOperation({ summary: 'Health check: trạng thái và uptime' })
   @ApiOkResponse({
     schema: {
       example: {
         status: 'ok',
-        timestamp: '2026-10-03T08:00:00.000Z',
+        timestamp: '2026-10-24T10:00:00.000Z',
         uptime: 123.45,
         service: 'brewlite-backend',
       },

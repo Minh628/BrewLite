@@ -37,11 +37,19 @@ export default function CartPage() {
           <div className="divide-y divide-espresso/10">
             {lines.map((line, index) => (
               <div key={`${line.id}-${line.size}-${index}`} className="flex gap-4 p-4">
-                <img
-                  src={line.imageUrl}
-                  alt={line.name}
-                  className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                />
+                <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-espresso/5">
+                  {line.imageUrl ? (
+                    <img
+                      src={line.imageUrl}
+                      alt={line.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span aria-hidden="true" className="text-3xl">
+                      ☕
+                    </span>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-espresso truncate">{line.name}</h3>
                   <p className="text-sm text-espresso/60 mt-0.5">
@@ -105,10 +113,11 @@ export default function CartPage() {
             <Button variant="outline" onClick={clear} className="flex-1">
               Xóa giỏ hàng
             </Button>
-            <Link href="/checkout">
-              <Button className="flex-1" size="lg">
-                Tiến hành thanh toán
-              </Button>
+            <Link
+              href="/checkout"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-caramel px-7 py-3.5 text-lg font-semibold text-white transition-colors hover:bg-caramel/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-caramel"
+            >
+              Đặt hàng
             </Link>
           </div>
         </div>

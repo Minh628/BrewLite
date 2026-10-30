@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
@@ -10,6 +11,7 @@ export class LoginDto {
    * - Bắt buộc hợp lệ chuẩn RFC 5322
    * - Tự động loại bỏ khoảng trắng và chuyển về chữ thường
    */
+  @ApiProperty({ example: 'customer@brewlite.vn' })
   @IsNotEmpty({ message: 'Email không được để trống' })
   @IsEmail({}, { message: 'Email không đúng định dạng' })
   @Transform(({ value }: { value: unknown }) =>
@@ -21,6 +23,7 @@ export class LoginDto {
    * Mật khẩu đăng nhập:
    * - Chuỗi ký tự bắt buộc
    */
+  @ApiProperty({ example: 'Password123' })
   @IsNotEmpty({ message: 'Mật khẩu không được để trống' })
   @IsString({ message: 'Mật khẩu phải là chuỗi ký tự' })
   password!: string;

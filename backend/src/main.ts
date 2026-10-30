@@ -1,9 +1,9 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { setupSwagger } from './swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -61,14 +61,8 @@ async function bootstrap() {
   // Cấu hình HttpExceptionFilter toàn cục để chuẩn hóa JSON lỗi cho mọi API
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  // Swagger UI tại /docs, JSON tại /docs-json
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('BrewLite API')
-    .setDescription('REST API đặt cà phê không tiền mặt BrewLite')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swaggerConfig));
+  // Swagger UI tại /api-docs (PB-16)
+  setupSwagger(app);
 
   await app.listen(process.env.PORT ?? 3001);
 }

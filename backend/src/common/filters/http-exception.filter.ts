@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import {
   ArgumentsHost,
   Catch,
@@ -8,10 +7,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { REQUEST_ID_HEADER, resolveRequestId } from '../logging/request-id';
 
 /**
  * Bộ lọc ngoại lệ toàn cục chuẩn hóa cấu trúc JSON trả về cho mọi lỗi HTTP/hệ thống
- * Định dạng đầu ra thông thường: { statusCode, message, error, path, timestamp }
+ * Định dạng đầu ra thông thường: { statusCode, message, error, path, timestamp, requestId }
  * Định dạng Production 500: { statusCode: 500, message: "Internal server error", requestId, timestamp }
  */
 @Catch()
@@ -23,13 +23,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    // Trích xuất hoặc khởi tạo requestId để truy vết log (Request Tracing)
-    const headerRequestId = request.headers['x-request-id'];
-    const requestId =
-      (Array.isArray(headerRequestId) ? headerRequestId[0] : headerRequestId) || randomUUID();
+    // Dùng chung requestId với RequestLoggingMiddleware để log và response khớp nhau (PB-23)
+    const requestId = resolveRequestId(request);
 
     // Luôn đính kèm header X-Request-Id vào response để client / DevOps tiện đối chiếu tra cứu
-    response.setHeader('X-Request-Id', requestId);
+    response.setHeader(REQUEST_ID_HEADER, requestId);
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'Internal server error';
@@ -78,14 +76,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
       this.logger.error(`[${requestId}] Unknown Exception: ${JSON.stringify(exception)}`);
     }
 
-    // Ghi log cảnh báo cho các lỗi client (4xx) và log lỗi cho các lỗi server (5xx)
-    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
-      this.logger.error(
-        `[${requestId}] [${request.method}] ${request.url} - Status: ${status} - Error: ${error}`,
-      );
-    } else {
+    // Dòng log method/url/status/thời gian của mọi request (kể cả lỗi) do RequestLoggingMiddleware ghi;
+    // ở đây chỉ ghi thêm chi tiết lỗi 4xx để biết vì sao request bị từ chối
+    if (status < HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.warn(
-        `[${requestId}] [${request.method}] ${request.url} - Status: ${status} - Error: ${error}`,
+        `[${requestId}] ${status} ${error}: ${Array.isArray(message) ? message.join('; ') : message}`,
       );
     }
 
@@ -108,6 +103,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       error,
       path: request.url,
       timestamp: new Date().toISOString(),
+      requestId,
     });
   }
 }

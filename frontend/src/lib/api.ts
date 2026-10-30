@@ -1,6 +1,6 @@
-import type { ApiErrorBody, Product, ProductDetail, Topping } from './types';
+import type { ApiErrorBody, Category, Product, ProductDetail, Topping } from './types';
 
-export type { Product, ProductDetail, Topping };
+export type { Category, Product, ProductDetail, Topping };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -18,6 +18,10 @@ let getAccessToken: () => string | null = () => null;
 
 export function setAuthTokenGetter(getter: () => string | null) {
   getAccessToken = getter;
+}
+
+export function getApiBaseUrl(): string {
+  return API_URL;
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -63,12 +67,20 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function getProducts(): Promise<Product[]> {
-  return apiFetch<Product[]>('/products');
+export function getProducts(params?: { category?: number; q?: string }): Promise<Product[]> {
+  const search = new URLSearchParams();
+  if (params?.category !== undefined) search.set('category', String(params.category));
+  if (params?.q) search.set('q', params.q);
+  const query = search.toString();
+  return apiFetch<Product[]>(`/products${query ? `?${query}` : ''}`);
 }
 
 export function getProductById(id: number | string): Promise<ProductDetail> {
   return apiFetch<ProductDetail>(`/products/${id}`);
+}
+
+export function getCategories(): Promise<Category[]> {
+  return apiFetch<Category[]>('/categories');
 }
 
 export function getToppings(): Promise<Topping[]> {
@@ -79,7 +91,7 @@ export async function register(
   email: string,
   password: string,
 ): Promise<{
-  user: { id: string; email: string };
+  user: { id: number; email: string };
   accessToken: string;
 }> {
   return apiFetch('/auth/register', {
@@ -94,7 +106,7 @@ export async function login(
 ): Promise<{
   accessToken: string;
   expiresIn: number;
-  user: { id: string; email: string };
+  user: { id: number; email: string };
 }> {
   return apiFetch('/auth/login', {
     method: 'POST',
@@ -105,12 +117,12 @@ export async function login(
 export type CreateOrderItem = {
   productId: number;
   size: 'S' | 'M' | 'L';
-  quantity: number;
+  qty: number;
   toppingIds: number[];
 };
 
 export async function createOrder(items: CreateOrderItem[]): Promise<{
-  orderId: string;
+  orderId: number;
   code: string;
   status: string;
   total: number;
