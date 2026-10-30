@@ -58,6 +58,8 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Cài đặt dependencies
+        # Bắt buộc chạy tại thư mục gốc để npm workspaces cài đặt đầy đủ gói và định vị được bin husky cho hook prepare
+        working-directory: .
         run: npm ci
 
       - name: Khởi tạo Prisma Client
@@ -107,6 +109,8 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Cài đặt dependencies
+        # Bắt buộc chạy tại thư mục gốc để npm workspaces cài đặt đầy đủ gói và định vị được bin husky cho hook prepare
+        working-directory: .
         run: npm ci
 
       - name: Kiểm tra Linting (ESLint)
