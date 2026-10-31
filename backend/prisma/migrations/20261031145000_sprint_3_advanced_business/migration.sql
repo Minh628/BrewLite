@@ -49,3 +49,4 @@ CREATE UNIQUE INDEX "Order_userId_idempotencyKey_key" ON "Order"("userId", "idem
 
 -- Sync data for existing orders
 UPDATE "Order" SET "subtotal" = "total" WHERE "subtotal" = 0;
+
