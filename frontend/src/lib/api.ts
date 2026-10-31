@@ -1,6 +1,6 @@
-import type { ApiErrorBody, Category, Product, ProductDetail, Topping } from './types';
+import type { ApiErrorBody, Category, Product, ProductDetail, Topping, OrderDetail } from './types';
 
-export type { Category, Product, ProductDetail, Topping };
+export type { Category, Product, ProductDetail, Topping, OrderDetail };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -131,4 +131,13 @@ export async function createOrder(items: CreateOrderItem[]): Promise<{
     method: 'POST',
     body: JSON.stringify({ items }),
   });
+}
+
+/**
+ * Lấy thông tin chi tiết của một đơn hàng (Sub-task 9.1 & 9.3)
+ * @param id Mã ID số của đơn hàng
+ * @returns Chi tiết đơn hàng gồm các món, topping, tóm tắt thanh toán
+ */
+export function getOrderById(id: number | string): Promise<OrderDetail> {
+  return apiFetch<OrderDetail>(`/orders/${id}`);
 }
