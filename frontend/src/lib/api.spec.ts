@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, login, register, setAuthTokenGetter } from './api';
+import { ApiError, getOrderById, login, register, setAuthTokenGetter } from './api';
 import { useAuth } from '@/store/auth';
 
 type FetchArgs = { url: string; init: RequestInit | undefined };
@@ -124,5 +124,31 @@ describe('api client', () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(0);
     expect((error as ApiError).message).toContain('Không kết nối được máy chủ');
+  });
+
+  it('getOrderById gửi GET /orders/:id kèm Bearer token', async () => {
+    setAuthTokenGetter(() => 'test-bearer-token');
+    const mockOrder = {
+      orderId: 1001,
+      code: '#1001',
+      status: 'PAID',
+      subtotal: 70000,
+      discount: 0,
+      total: 70000,
+      pointsEarned: 7,
+      createdAt: '2026-11-02T10:30:00.000Z',
+      items: [],
+    };
+    const spy = mockFetch(200, mockOrder);
+
+    const result = await getOrderById(1001);
+
+    const { url, init } = lastFetchArgs(spy);
+    expect(url).toContain('/orders/1001');
+    expect(init?.headers).toMatchObject({
+      Authorization: 'Bearer test-bearer-token',
+    });
+    expect(result.orderId).toBe(1001);
+    expect(result.status).toBe('PAID');
   });
 });

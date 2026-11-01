@@ -1,52 +1,53 @@
-# Tài liệu Thiết kế Kiến trúc Hệ thống – BrewLite (v2.0)
+# Tài liệu Thiết kế Kiến trúc Hệ thống – BrewLite (v3.0)
 
-> **Mã công việc:** Sub-task A.1 (Sprint 2 Architecture Update)  
+> **Mã công việc:** Sub-task 31.1 (Sprint 3 Architecture Update & Delivery)  
 > **Người thực hiện:** M2 (Software Architect / Tech Lead)  
 > **Dự án:** BrewLite – Hệ thống đặt cà phê không tiền mặt (Cashless Coffee Ordering System)  
-> **Phiên bản:** 2.0.0 (Sprint 2 Architecture & ERD v2)  
+> **Phiên bản:** 3.0.0 (Sprint 3: Advanced Business Logic, Idempotency & Concurrency)  
 > **Hệ quản trị CSDL mục tiêu:** PostgreSQL 16+ (Docker Dev / Neon Serverless)  
-> **Công nghệ nền tảng:** NestJS (Backend), Next.js App Router (Frontend), Prisma ORM
+> **Công nghệ nền tảng:** NestJS 10+ (Backend), Next.js 14+ App Router (Frontend), Prisma ORM 5.19+
 
 ---
 
-## 1. Tổng quan hệ thống (System Overview & Context v2)
+## 1. Tổng quan hệ thống (System Overview & Context v3)
 
-### 1.1. Bối cảnh nghiệp vụ Sprint 2
+### 1.1. Bối cảnh nghiệp vụ Sprint 3
 
-BrewLite trong Sprint 2 mở rộng từ hiển thị danh mục sang chu trình đặt hàng khép kín:
+Sprint 3 đưa BrewLite từ hệ thống đặt hàng cơ bản lên một nền tảng thương mại F&B hoàn chỉnh, an toàn cao và chịu tải đồng thời:
 
-- **Xác thực người dùng (Authentication):** Đăng ký, đăng nhập tài khoản khách hàng bằng JWT và bảo mật mật khẩu với bcrypt.
-- **Tính giá chuẩn xác (Server-side Pricing):** Đóng vai trò là nguồn sự thật duy nhất (Single Source of Truth), tính toán đơn giá theo size, phụ thu và topping.
-- **Quản lý đơn hàng (Order Management):** Tiếp nhận giỏ hàng, xác thực dữ liệu và tạo đơn hàng an toàn thông qua Database Transaction với mô hình Snapshot kế toán.
-- **Thanh toán & Tích điểm:** Chuẩn bị luồng thanh toán giả lập với Idempotency Key và tích điểm thành viên (10%).
+- **Thanh toán không tiền mặt (Cashless Payments):** Tích hợp Mock Payment Gateway, hỗ trợ thẻ ngân hàng (Card) và ví điện tử (Wallet).
+- **Cơ chế Idempotency chống trừ tiền trùng lặp:** Bắt buộc Header `Idempotency-Key` (UUID v4) kết hợp mã băm kiểm tra toàn vẹn payload (`requestHash`), khóa dòng bi quan `SELECT ... FOR UPDATE` khi giao dịch.
+- **Cỗ máy trạng thái đơn hàng tập trung (Centralized Order State Machine):** `OrderStatusService` là chốt chặn duy nhất thay đổi trạng thái đơn, kiểm soát nghiêm ngặt 7 trạng thái với ma trận chuyển đổi và kích hoạt các Hook nghiệp vụ tự động (tích điểm khi `PAID`, hoàn kho và hủy điểm khi `CANCELLED`).
+- **Khuyến mãi thông minh (Promotions Engine):** Quản lý mã giảm giá theo tỷ lệ phần trăm (`PERCENT`) hoặc số tiền cố định (`FIXED`), kiểm tra điều kiện đơn tối thiểu (`minOrder`), mức giảm trần (`maxDiscount`), thời hạn và giới hạn lượt dùng (`usageLimit`).
+- **Kiểm soát tồn kho đồng thời (Optimistic Concurrency Control - OCC):** Sử dụng trường `version` trên bảng `Product` để trừ tồn kho an toàn mà không làm nghẽn kết nối cơ sở dữ liệu.
 
-### 1.2. Sơ đồ ngữ cảnh hệ thống v2 (C4 Context Diagram)
+### 1.2. Sơ đồ ngữ cảnh hệ thống v3 (C4 Context Diagram)
 
 ```mermaid
 C4Context
-    title Sơ đồ ngữ cảnh hệ thống BrewLite v2 (C4 Context)
+    title Sơ đồ ngữ cảnh hệ thống BrewLite v3 (C4 Context)
 
-    Person(customer, "Khách hàng (Customer)", "Đăng ký/đăng nhập, duyệt menu, tùy biến size/topping, đặt hàng và theo dõi tiến độ.")
-    Person(barista, "Nhân viên (Barista / Store)", "Tiếp nhận đơn hàng, cập nhật tiến độ pha chế và hoàn thành đơn.")
-    Person(admin, "Quản trị viên (Admin)", "Quản lý sản phẩm, topping, giá bán và cấu hình hệ thống.")
+    Person(customer, "Khách hàng (Customer)", "Đặt đồ uống, áp dụng mã khuyến mãi, thanh toán thẻ/ví, theo dõi tiến độ đơn hàng theo thời gian thực.")
+    Person(barista, "Nhân viên pha chế (Barista)", "Theo dõi danh sách đơn hàng đã thanh toán, tiếp nhận pha chế (PREPARING) và hoàn tất (READY).")
+    Person(admin, "Quản trị viên (Admin)", "Quản lý danh mục, cài đặt khuyến mãi (Promotion), giám sát tồn kho và đối soát thanh toán.")
 
-    System(brewlite, "Hệ thống BrewLite (v2)", "Hệ thống xử lý xác thực, định giá, quản lý đơn hàng và thanh toán không tiền mặt.")
+    System(brewlite, "Hệ thống BrewLite (v3)", "Xử lý nghiệp vụ F&B: Định giá, Khuyến mãi, Tồn kho đồng thời, State Machine và Giao dịch Idempotent.")
 
-    System_Ext(mockPayment, "Mock Payment Gateway", "Cổng thanh toán giả lập xử lý thẻ/ví với cơ chế Idempotency.")
-    SystemDb_Ext(postgres, "PostgreSQL Database", "Lưu trữ quan hệ: Users, Products, Categories, Toppings, Orders, OrderItems, OrderItemToppings, Payments.")
+    System_Ext(mockPayment, "Mock Payment Gateway", "Cổng thanh toán giả lập xử lý ủy quyền thẻ/ví với cơ chế Idempotency-Key.")
+    SystemDb_Ext(postgres, "PostgreSQL Database", "Lưu trữ quan hệ: Users, Products, Categories, Toppings, Orders, OrderItems, Payments, Promotions.")
 
-    Rel(customer, brewlite, "Xác thực, tạo đơn, thanh toán", "HTTPS / REST API")
-    Rel(barista, brewlite, "Xem hàng đợi đơn, đổi trạng thái", "HTTPS / Web App")
-    Rel(admin, brewlite, "Quản lý menu & báo cáo", "HTTPS / Admin Portal")
-    Rel(brewlite, mockPayment, "Ủy quyền & xác nhận thanh toán", "REST / Idempotency-Key")
-    Rel(brewlite, postgres, "Đọc/Ghi dữ liệu transactional (ACID)", "Prisma Client (TCP 5432/5433)")
+    Rel(customer, brewlite, "Tạo đơn, áp mã giảm giá, thanh toán", "HTTPS / REST API")
+    Rel(barista, brewlite, "Tiếp nhận đơn, cập nhật trạng thái pha chế", "HTTPS / Web App")
+    Rel(admin, brewlite, "Quản trị menu, cấu hình mã ưu đãi, báo cáo", "HTTPS / Admin Portal")
+    Rel(brewlite, mockPayment, "Ủy quyền & chốt giao dịch thanh toán", "REST / Idempotency-Key")
+    Rel(brewlite, postgres, "Đọc/Ghi dữ liệu transactional ACID (OCC & Lock)", "Prisma Client (TCP 5432)")
 ```
 
 ---
 
-## 2. Kiến trúc phân tầng Modular Monolith (Layered Architecture v2)
+## 2. Kiến trúc phân tầng Modular Monolith (Layered Architecture v3)
 
-Hệ thống Backend BrewLite áp dụng kiến trúc **3 lớp (Three-Tier Layered Architecture)** chuẩn hóa trong mô hình **Modular Monolith** của NestJS, phân định ranh giới nghiêm ngặt giữa các tầng:
+Hệ thống Backend BrewLite tiếp tục tuân thủ kiến trúc **3 lớp (Three-Tier Layered Architecture)** chuẩn hóa trong mô hình **Modular Monolith** của NestJS:
 
 ```mermaid
 graph TD
@@ -55,510 +56,377 @@ graph TD
         Route[NestJS Routing & Dispatcher]
         Pipes[Global ValidationPipe - Whitelist & Transform]
         Filters[Global HttpExceptionFilter - RFC 7807 Format]
-        Guards[AuthGuard: LocalAuthGuard / JwtAuthGuard]
-        Controllers[Controllers: Auth, Products, Orders, Pricing, Payments]
+        Guards[AuthGuard: JwtAuthGuard / RolesGuard]
+        Controllers[Controllers: Auth, Products, Orders, Payments, Promotions]
     end
 
     subgraph "Tier 2: Business Logic Layer (Tầng Nghiệp vụ)"
         AuthServ[AuthService: bcrypt salt=10, JWT sign/verify]
         ProdServ[ProductsService: catalog, sizes, toppings]
         PriceServ[PricingService: calcUnitPrice, Single Source of Truth]
-        OrderServ[OrdersService: FSM, validate, snapshot builder]
-        PayServ[PaymentsService: idempotency, loyalty integration]
+        OrderServ[OrdersService: tạo đơn, snapshot builder]
+        StatusServ[OrderStatusService: FSM 7 trạng thái, SELECT FOR UPDATE, Hooks]
+        PayServ[PaymentsService: Idempotency-Key, requestHash, Mock Gateway]
+        PromoServ[PromotionsService: validate rules, PERCENT/FIXED calculator]
+        StockServ[StockService: Optimistic Concurrency Control via version]
     end
 
     subgraph "Tier 3: Data Access & Persistence Layer (Tầng Lưu trữ & Dữ liệu)"
         PrismaServ[PrismaService: Connection Pool & Model Delegates]
         TxInteractive[Interactive Transactions: prisma.$transaction]
-        DB[(PostgreSQL 16 Engine)]
+        DB[(PostgreSQL 16 Engine: Row Lock & OCC)]
     end
 
     Client -->|HTTP REST + JSON| Route
     Route --> Pipes
     Pipes --> Guards
     Guards --> Controllers
+
     Controllers -->|DTO đã validate| AuthServ
     Controllers -->|DTO đã validate| ProdServ
     Controllers -->|DTO đã validate| OrderServ
-    Controllers -->|DTO đã validate| PriceServ
+    Controllers -->|DTO đã validate| PayServ
+    Controllers -->|DTO đã validate| PromoServ
 
-    OrderServ -->|Inject & Delegate tính giá| PriceServ
-    OrderServ -->|Bọc toàn bộ thao tác ghi| TxInteractive
-    PayServ -->|Cập nhật trạng thái & điểm| TxInteractive
+    OrderServ --> PriceServ
+    OrderServ --> PromoServ
+    OrderServ --> TxInteractive
+
+    PayServ --> StatusServ
+    PayServ --> StockServ
+    PayServ --> TxInteractive
+
+    StatusServ -->|Khóa dòng FOR UPDATE & cập nhật status| TxInteractive
+    StockServ -->|UPDATE WHERE version = v| TxInteractive
 
     TxInteractive --> PrismaServ
-    PrismaServ -->|SQL Queries / Connection Pool| DB
-
-    Filters -.->|Bắt ngoại lệ & chuẩn hóa JSON 4xx/5xx| Client
+    PrismaServ --> DB
+    Filters -.->|Chuẩn hóa JSON Error 4xx/5xx| Client
 ```
-
-### 2.1. Phân định trách nhiệm và ranh giới các tầng
-
-| Tầng kiến trúc             | Thành phần đảm nhiệm                                                           | Trách nhiệm chính                                                                                                                                                                                                                                                    | Ranh giới nghiêm ngặt (Boundaries)                                                                                                          |
-| :------------------------- | :----------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Tier 1: Presentation**   | Controllers, DTOs, Pipes, Guards, Filters                                      | - Tiếp nhận request HTTP, parse JSON.<br>- Validate định dạng dữ liệu đầu vào qua `ValidationPipe` (`class-validator`).<br>- Xác thực người dùng qua `LocalAuthGuard` và bảo vệ endpoint bằng `JwtAuthGuard`.<br>- Chuẩn hóa phản hồi lỗi qua `HttpExceptionFilter`. | **TUYỆT ĐỐI KHÔNG** query database trực tiếp (không inject `PrismaService`).<br>**TUYỆT ĐỐI KHÔNG** chứa logic tính tiền hoặc băm mật khẩu. |
-| **Tier 2: Business Logic** | Services (`AuthService`, `PricingService`, `OrdersService`, `ProductsService`) | - Thực thi toàn bộ nghiệp vụ lõi: băm mật khẩu, so khớp credential, tính giá snapshot, kiểm tra ràng buộc size/topping.<br>- Điều phối máy trạng thái đơn hàng (FSM).<br>- Đảm bảo tính toán giá độc lập với dữ liệu client gửi.                                     | Không phụ thuộc trực tiếp vào HTTP Request/Response objects.<br>Chỉ làm việc với Plain DTOs/Entities đã qua validate.                       |
-| **Tier 3: Data Access**    | `PrismaService`, Prisma Client Model Delegates                                 | - Trừu tượng hóa truy vấn SQL, quản lý kết nối connection pool.<br>- Thực thi atomic transaction (`prisma.$transaction`) để bảo vệ tính nhất quán ACID.<br>- Chuyển đổi dữ liệu bảng thành TypeScript Type an toàn 100%.                                             | Không chứa logic nghiệp vụ giá hay xác thực.<br>Tập trung vào truy xuất, lọc, cập nhật và khóa dữ liệu.                                     |
 
 ---
 
-## 3. Đặc tả 4 Module nghiệp vụ cốt lõi Backend (NestJS Modules v2)
+## 3. Đặc tả 8 Module nghiệp vụ cốt lõi Backend (NestJS Modules v3)
 
-Trong Sprint 2, Backend được cấu trúc thành **4 module chính** theo mô hình Modular Monolith:
+Trong Sprint 3, hệ thống được module hóa thành **8 module chuyên trách**:
 
-```mermaid
-classDiagram
-    class AppModule {
-        +PrismaModule
-        +AuthModule
-        +ProductsModule
-        +PricingModule
-        +OrdersModule
-    }
+### 3.1. `ProductsModule`: Danh mục & Thông tin sản phẩm
 
-    class ProductsModule {
-        +ProductsController
-        +ProductsService
-        +findAll(category, search)
-        +findOne(id)
-        +findSizes(productId)
-        +findToppings(productId)
-    }
+- **Nhiệm vụ:** Quản lý danh mục (`Category`), sản phẩm (`Product`), cấu hình kích cỡ (`ProductSize`) và danh sách topping khả dụng (`ProductTopping`).
+- **Đặc điểm v3:** Bổ sung trường `version Int` phục vụ kiểm soát tồn kho đồng thời.
 
-    class AuthModule {
-        +AuthController
-        +AuthService
-        +LocalStrategy
-        +JwtStrategy
-        +register(RegisterDto)
-        +login(LoginDto)
-        +getProfile(userId)
-    }
+### 3.2. `AuthModule`: Xác thực & Phân quyền RBAC
 
-    class PricingModule {
-        +PricingService
-        +calcUnitPrice(base, size, toppings)
-        +calculateOrderPricing(items)
-    }
+- **Nhiệm vụ:** Đăng ký, đăng nhập JWT stateless (HS256, hạn 1 giờ), băm mật khẩu `bcrypt` (salt = 10 rounds).
+- **Đặc điểm v3:** Hỗ trợ 3 vai trò người dùng trong hệ thống: `CUSTOMER`, `BARISTA`, `ADMIN`.
 
-    class OrdersModule {
-        +OrdersController
-        +OrdersService
-        +createOrder(userId, CreateOrderDto)
-        +getOrderById(id)
-        +getUserOrders(userId)
-        +updateOrderStatus(id, newStatus)
-    }
+### 3.3. `PricingModule`: Đơn vị tính giá duy nhất (Single Source of Truth)
 
-    AppModule --> ProductsModule
-    AppModule --> AuthModule
-    AppModule --> PricingModule
-    AppModule --> OrdersModule
+- **Nhiệm vụ:** Tính toán đơn giá từng ly (`calcUnitPrice`), phụ thu size và tổng giá trị dòng món.
+- **Nguyên tắc:** Zero Client Trust – máy chủ tự truy vấn giá gốc từ CSDL và bỏ qua mọi thông số giá client gửi lên.
 
-    OrdersModule ..> PricingModule : "Inject PricingService (Tính giá & Snapshot)"
-    OrdersModule ..> ProductsModule : "Truy vấn Menu & Kiểm tra tồn kho"
-    PricingModule ..> ProductsModule : "Batch Query Product, Size, Topping"
-```
+### 3.4. `OrdersModule`: Khởi tạo & Truy vấn đơn hàng
 
-### 3.1. `ProductsModule`: Quản lý danh mục, sản phẩm, size & topping
+- **Nhiệm vụ:** Tiếp nhận giỏ hàng, gọi `PricingService` tạo snapshot kế toán bất biến (`OrderItem`, `OrderItemTopping`), lưu đơn ở trạng thái ban đầu `PENDING`.
+- **Endpoints:** `POST /orders`, `GET /orders/me`, `GET /orders/:id`.
 
-- **Mục tiêu:** Cung cấp thông tin danh mục, sản phẩm menu, phân loại size và danh sách topping khả dụng kèm giá niêm yết.
-- **Thành phần:**
-  - `ProductsController`: Tiếp nhận các truy vấn lọc theo category, tìm kiếm theo tên, lấy chi tiết sản phẩm.
-  - `ProductsService`: Truy vấn danh sách món hoạt động (`isActive: true`), kèm các quan hệ `sizes` (`ProductSize`) và `toppings` (`ProductTopping -> Topping`).
-- **Ranh giới:** Cung cấp dữ liệu danh mục tĩnh/bán tĩnh, không xử lý giỏ hàng hay đơn hàng.
+### 3.5. `OrderStatusModule` (`OrderStatusService`): Cỗ máy trạng thái tập trung (MỚI)
 
-### 3.2. `AuthModule`: Xác thực & Ủy quyền người dùng
+- **Nhiệm vụ:** **Nơi duy nhất được phép cập nhật `Order.status`** trên toàn hệ thống.
+- **Cơ chế an toàn:** Khóa dòng bi quan (`SELECT ... FOR UPDATE`) bên trong transaction để loại bỏ race condition khi nhiều sự kiện đồng thời tác động lên một đơn.
+- **Ma trận trạng thái:** Kiểm tra cặp chuyển đổi qua `assertTransition(from, to)`. Nếu vi phạm ném `409 Conflict` (`INVALID_TRANSITION`).
+- **Hook điều phối:**
+  - `onPaid`: Kích hoạt cộng điểm thưởng thành viên (Loyalty).
+  - `onCancelled`: Kích hoạt hoàn trả tồn kho và thu hồi điểm thưởng.
 
-- **Mục tiêu:** Quản lý vòng đời tài khoản người dùng, xác thực định danh và cấp phát token an toàn.
-- **Thành phần:**
-  - `PassportModule`, `JwtModule` (HS256, thời hạn 1 giờ / 3600 giây).
-  - `LocalStrategy`: Xác thực tài khoản qua email và mật khẩu thô (sử dụng `bcrypt.compare`).
-  - `JwtStrategy`: Giải mã và xác thực token Bearer từ header `Authorization: Bearer <token>`, trích xuất `sub` (userId) và `email` gắn vào `req.user`.
-  - `AuthService`:
-    - **Băm mật khẩu:** Sử dụng `bcrypt` với `saltRounds = 10` (chuẩn khuyến nghị OWASP).
-    - **Fast Pre-check:** Kiểm tra sự tồn tại của email trước khi băm bcrypt để tiết kiệm chu kỳ CPU khi trùng lặp.
-    - **Race-condition Handling:** Bắt mã lỗi `P2002` từ Prisma khi có 2 request đăng ký cùng email đến nano-giây cuối.
-    - **Timing Attack Prevention (Dummy Compare):** Khi không tìm thấy email, chạy hàm băm giả định để thời gian xử lý đồng nhất, chống lộ thông tin người dùng (User Enumeration).
-    - **Bảo vệ RAM:** Dùng Prisma `select` loại bỏ triệt để trường `passwordHash`, không bao giờ nạp vào bộ nhớ hoặc trả về API.
+### 3.6. `PaymentsModule`: Thanh toán Idempotent & Mock Gateway (MỚI)
 
-### 3.3. `PricingModule` (`PricingService`): Single Source of Truth về giá
+- **Nhiệm vụ:** Xử lý thanh toán không tiền mặt cho đơn hàng qua phương thức thẻ (`CARD`) hoặc ví (`WALLET`).
+- **Bảo mật Idempotency:** Bắt buộc Header `Idempotency-Key` (UUID v4).
+- **Kiểm tra toàn vẹn:** Sinh `requestHash = sha256(orderId|method|cardLast4)`.
+  - Khóa trùng + hash trùng $\rightarrow$ Trả kết quả đã cache (200 OK).
+  - Khóa trùng + hash lệch $\rightarrow$ Trả `422 Unprocessable Entity` (phát hiện giả mạo).
+  - Khóa mới $\rightarrow$ Xử lý thanh toán qua Mock Gateway, gọi `OrderStatusService.transition(..., PAID)`.
 
-- **Mục tiêu:** Đóng vai trò là nguồn sự thật duy nhất (Single Source of Truth) về giá bán trên toàn hệ thống, phục vụ cả việc báo giá trước và chốt giá lưu đơn.
-- **Thành phần:**
-  - `calcUnitPrice(base, size, toppings)`: Hàm thuần túy (pure function) đồng bộ logic 100% với hàm tính giá ở Frontend (`frontend/src/lib/pricing.ts`).
-  - `PricingService.calculateOrderPricing(items)`:
-    - Tiếp nhận mảng món đặt mua (`OrderItemPricingInput`: `productId`, `size`, `toppingIds`, `qty`).
-    - **Bảo mật giá:** Bỏ qua hoàn toàn mọi trường giá client gửi kèm (`clientPrice`, `clientUnitPrice`, `clientLineTotal`) để ngăn chặn tấn công giả mạo giá tiền.
-    - **Chống N+1 Query:** Batch query toàn bộ `Product`, `ProductSize`, `ProductTopping` trong một câu truy vấn `findMany({ where: { id: { in: productIds } } })` và map vào bộ nhớ $O(1)$.
-    - **Kiểm tra tính hợp lệ:** Xác minh size thuộc sản phẩm (`S`, `M`, `L`), topping thuộc danh sách được phép và đang hoạt động (`isActive = true`), chống chọn trùng lặp topping trong 1 ly.
-    - **Tạo Snapshot:** Xuất cấu trúc `OrderItemPricingSnapshot` đầy đủ giá gốc, phụ thu size, giá topping, đơn giá ly và thành tiền từng món.
+### 3.7. `PromotionsModule`: Động cơ khuyến mãi & Giảm giá (MỚI)
 
-### 3.4. `OrdersModule`: Tiếp nhận giỏ hàng & Lưu trữ Transactional
+- **Nhiệm vụ:** Xác thực và áp dụng mã voucher ưu đãi cho đơn hàng.
+- **Hỗ trợ 2 kiểu chiết khấu:**
+  - `PERCENT`: Giảm theo tỷ lệ % (ví dụ 10%), có chặn mức giảm tối đa `maxDiscount`.
+  - `FIXED`: Giảm số tiền cố định (ví dụ 15.000 VND).
+- **Quy tắc kiểm duyệt:** Kiểm tra ngày hiệu lực (`startsAt <= now <= endsAt`), trạng thái kích hoạt (`isActive`), giá trị đơn tối thiểu (`minOrder`), và giới hạn lượt dùng (`usedCount < usageLimit`). Tăng `usedCount` nguyên tử khi đơn thanh toán thành công.
 
-- **Mục tiêu:** Quản lý vòng đời đơn hàng, đảm bảo tính toàn vẹn dữ liệu từ lúc tạo giỏ đến khi hoàn tất đơn.
-- **Thành phần:**
-  - `OrdersController`: Endpoint `POST /orders` (tạo đơn mới), `GET /orders` (lịch sử đơn của user), `GET /orders/:id` (chi tiết đơn), `PATCH /orders/:id/status` (đổi trạng thái đơn cho Barista/Admin).
-  - `OrdersService`:
-    - Validate DTO đầu vào bằng `class-validator` (chặn số lượng âm, sai định dạng UUID/CUID, sai enum size).
-    - Gọi `PricingService.calculateOrderPricing` để tính toán lại tổng tiền và snapshot giá độc lập.
-    - **Bọc Database Transaction:** Sử dụng `prisma.$transaction(async (tx) => { ... })` để thực hiện nguyên tử:
-      1. Tạo bản ghi `Order` với trạng thái ban đầu `PENDING`.
-      2. Tạo danh sách các dòng món `OrderItem` kèm snapshot giá.
-      3. Tạo các bản ghi phụ thuộc `OrderItemTopping` cho từng topping của từng ly.
-    - Đảm bảo không xảy ra tình trạng đơn hàng tạo thành công nhưng thiếu món hoặc thiếu topping do sự cố ngắt quãng kết nối.
+### 3.8. `StockModule`: Quản lý tồn kho bằng Optimistic Concurrency Control (MỚI)
+
+- **Nhiệm vụ:** Kiểm soát số lượng đồ uống khả dụng, ngăn chặn hiện tượng bán âm kho (overselling) trong các khung giờ cao điểm.
+- **Cơ chế:** Dùng Optimistic Locking với trường `Product.version`. Thực hiện trừ kho không cần khóa đọc, chỉ khóa điều kiện khi ghi `UPDATE ... WHERE id = ... AND version = ... AND stock >= qty`.
 
 ---
 
-## 4. Mô hình Dữ liệu Bổ sung ERD v2 (Database Schema v2)
+## 4. Mô hình Dữ liệu Bổ sung ERD v3 (Database Schema v3)
 
-### 4.1. Sơ đồ thực thể quan hệ ERD v2 (Mermaid)
+### 4.1. Sơ đồ thực thể quan hệ ERD v3 (Mermaid)
 
 ```mermaid
 erDiagram
     User ||--o{ Order : "đặt hàng (1-N)"
-    Order ||--|{ OrderItem : "chứa (1-N)"
+    Order ||--|{ OrderItem : "chứa chi tiết (1-N)"
     Product ||--o{ OrderItem : "tham chiếu gốc (1-N)"
     OrderItem ||--o{ OrderItemTopping : "kèm topping (1-N)"
     Topping ||--o{ OrderItemTopping : "tham chiếu gốc (1-N)"
     Category ||--o{ Product : "phân loại (1-N)"
     Product ||--o{ ProductSize : "cấu hình size (1-N)"
     Product ||--o{ ProductTopping : "cho phép topping (1-N)"
-    Order ||--o{ Payment : "thanh toán (1-N)"
+    Order ||--o{ Payment : "giao dịch thanh toán (1-N)"
 
     User {
-        string id PK "cuid"
+        int id PK "autoincrement"
         string email UK "Email đăng nhập"
         string passwordHash "Băm bcrypt salt=10"
         Role role "Enum: CUSTOMER, BARISTA, ADMIN"
-        int loyaltyPoints "Điểm tích lũy (>= 0)"
+        int loyaltyPoints "Điểm thưởng thành viên"
         datetime createdAt "Ngày tạo tài khoản"
     }
 
+    Product {
+        int id PK "autoincrement"
+        int categoryId FK "Thuộc danh mục"
+        string name UK "Tên sản phẩm"
+        int price "Giá gốc size S"
+        int stock "Số lượng tồn kho"
+        int version "Optimistic Locking version"
+        boolean isActive "Trạng thái kinh doanh"
+    }
+
     Order {
-        string id PK "cuid"
-        string userId FK "ID khách hàng"
+        int id PK "autoincrement"
+        int userId FK "Khách hàng đặt"
         OrderStatus status "Enum: 7 trạng thái"
-        int total "Tổng tiền đơn hàng (VND)"
+        int total "Tổng tiền thực thanh toán (VND)"
+        int subtotal "Tạm tính trước giảm giá (VND)"
+        int discount "Số tiền chiết khấu (VND)"
+        string promoCode "Mã khuyến mãi đã áp dụng"
+        int pointsEarned "Điểm tích lũy khi PAID"
+        string idempotencyKey "Khóa chống trùng tạo đơn"
         datetime createdAt "Thời gian tạo đơn"
+        datetime updatedAt "Thời gian cập nhật"
     }
 
     OrderItem {
-        string id PK "cuid"
-        string orderId FK "Thuộc đơn hàng"
-        string productId FK "Sản phẩm gốc"
-        string productName "Snapshot tên món lúc đặt"
+        int id PK "autoincrement"
+        int orderId FK "Thuộc đơn hàng"
+        int productId FK "Sản phẩm gốc"
         Size size "Enum: S, M, L"
-        int basePrice "Snapshot giá gốc size S"
-        int sizeExtra "Snapshot phụ thu size"
+        int qty "Số lượng ly"
         int unitPrice "Snapshot đơn giá 1 ly"
-        int qty "Số lượng ly (>= 1)"
-        int lineTotal "Thành tiền dòng món"
+        int lineTotal "Snapshot thành tiền dòng món"
     }
 
     OrderItemTopping {
-        string orderItemId PK,FK "Thuộc dòng OrderItem"
-        string toppingId PK,FK "Topping gốc"
-        string toppingName "Snapshot tên topping lúc đặt"
-        int price "Snapshot đơn giá topping"
+        int orderItemId PK,FK "Thuộc dòng OrderItem"
+        int toppingId PK,FK "Topping gốc"
+        int price "Snapshot giá topping lúc mua"
     }
 
-    Product {
-        string id PK "cuid"
-        string categoryId FK "Thuộc danh mục"
-        string name UK "Tên đồ uống"
-        int price "Giá gốc size S (VND)"
-        int stock "Số lượng tồn kho"
-        boolean isActive "Trạng thái kinh doanh"
-    }
-
-    Topping {
-        string id PK "cuid"
-        string name UK "Tên topping"
-        int price "Giá niêm yết (VND)"
-        boolean isActive "Trạng thái kinh doanh"
+    Promotion {
+        int id PK "autoincrement"
+        string code UK "Mã khuyến mãi (in hoa)"
+        DiscountType type "Enum: PERCENT, FIXED"
+        int value "Giá trị % hoặc số tiền VND"
+        int minOrder "Giá trị đơn tối thiểu"
+        int maxDiscount "Mức giảm trần (cho PERCENT)"
+        datetime startsAt "Thời điểm bắt đầu"
+        datetime endsAt "Thời điểm kết thúc"
+        int usageLimit "Giới hạn lượt sử dụng"
+        int usedCount "Số lượt đã dùng"
+        boolean isActive "Trạng thái hoạt động"
     }
 
     Payment {
         string idempotencyKey PK "UUID v4 chống trùng lặp"
-        string orderId FK "Đơn hàng thanh toán"
-        int amount "Số tiền thanh toán"
-        string method "WALLET / CARD"
-        string status "SUCCESS / FAILED"
-        datetime createdAt "Thời gian giao dịch"
+        int orderId FK "Đơn hàng thanh toán"
+        int amount "Số tiền giao dịch (VND)"
+        string method "Phương thức: CARD | WALLET"
+        PaymentStatus status "Enum: SUCCEEDED, FAILED, REFUNDED"
+        string requestHash "sha256(orderId|method|cardLast4)"
+        string cardLast4 "4 số cuối thẻ (nếu là CARD)"
+        string failureReason "Lý do thất bại nếu có"
+        datetime createdAt "Thời gian thực hiện"
     }
 ```
 
-### 4.2. Định nghĩa các Enum cốt lõi
-
-Hệ thống quy chuẩn 3 Enum trung tâm quản lý quyền hạn, kích cỡ và vòng đời đơn hàng:
+### 4.2. Danh mục Enum mới trong Sprint 3
 
 ```typescript
-// 1. Phân quyền người dùng trong hệ thống
-export enum Role {
-  CUSTOMER = 'CUSTOMER', // Khách hàng đặt món, xem lịch sử và tích điểm
-  BARISTA = 'BARISTA', // Nhân viên quầy bar tiếp nhận đơn và cập nhật trạng thái pha chế
-  ADMIN = 'ADMIN', // Quản trị viên hệ thống quản lý menu và cấu hình
+// Trạng thái giao dịch thanh toán
+export enum PaymentStatus {
+  SUCCEEDED = 'SUCCEEDED', // Thanh toán thành công
+  FAILED = 'FAILED', // Giao dịch bị từ chối / lỗi số dư
+  REFUNDED = 'REFUNDED', // Đã hoàn tiền về tài khoản
 }
 
-// 2. Kích cỡ đồ uống chuẩn hóa
-export enum Size {
-  S = 'S', // Size nhỏ (Small) - Giá gốc niêm yết của sản phẩm
-  M = 'M', // Size vừa (Medium) - Phụ thu sizeExtra
-  L = 'L', // Size lớn (Large) - Phụ thu sizeExtra
+// Kiểu chiết khấu của chương trình khuyến mãi
+export enum DiscountType {
+  PERCENT = 'PERCENT', // Giảm theo % giá trị đơn
+  FIXED = 'FIXED', // Giảm trừ số tiền trực tiếp (VND)
 }
 
-// 3. Vòng đời đơn hàng đầy đủ 7 trạng thái (chuẩn hóa Sprint 2 & chuẩn bị Sprint 3)
+// Vòng đời đơn hàng 7 trạng thái chuẩn hóa
 export enum OrderStatus {
   PENDING = 'PENDING', // Đơn vừa tạo, chờ thanh toán
   PAID = 'PAID', // Đã thanh toán thành công
   PAYMENT_FAILED = 'PAYMENT_FAILED', // Thanh toán thất bại, chờ thử lại
-  PREPARING = 'PREPARING', // Barista tiếp nhận và đang pha chế
-  READY = 'READY', // Đồ uống sẵn sàng tại quầy, chờ khách nhận
-  COMPLETED = 'COMPLETED', // Khách đã nhận đồ uống, kết thúc chu trình
-  CANCELLED = 'CANCELLED', // Đơn hàng bị hủy (khách hủy hoặc sự cố quán)
+  PREPARING = 'PREPARING', // Barista đang pha chế
+  READY = 'READY', // Sẵn sàng tại quầy, chờ khách lấy
+  COMPLETED = 'COMPLETED', // Khách đã nhận món (hoàn tất)
+  CANCELLED = 'CANCELLED', // Đơn đã hủy
 }
 ```
 
-### 4.3. Bảng tra cứu cấu trúc dữ liệu chi tiết (Data Dictionary v2)
-
-#### Bảng `User` (Người dùng)
-
-| Tên cột         | Kiểu dữ liệu   | Ràng buộc                        | Mô tả                                                  |
-| :-------------- | :------------- | :------------------------------- | :----------------------------------------------------- |
-| `id`            | `VARCHAR(30)`  | `PK`, `@default(cuid())`         | Khóa chính định danh tài khoản                         |
-| `email`         | `VARCHAR(255)` | `NOT NULL`, `UNIQUE`             | Email đăng nhập duy nhất                               |
-| `passwordHash`  | `VARCHAR(255)` | `NOT NULL`                       | Mật khẩu đã băm bcrypt (salt >= 10)                    |
-| `role`          | `ENUM Role`    | `NOT NULL`, `DEFAULT 'CUSTOMER'` | Phân quyền người dùng (`CUSTOMER`, `BARISTA`, `ADMIN`) |
-| `loyaltyPoints` | `INTEGER`      | `NOT NULL`, `DEFAULT 0`          | Điểm tích lũy thành viên (>= 0)                        |
-| `createdAt`     | `TIMESTAMPTZ`  | `NOT NULL`, `DEFAULT NOW()`      | Thời điểm tạo tài khoản                                |
-
-#### Bảng `Order` (Đơn hàng)
-
-| Tên cột     | Kiểu dữ liệu       | Ràng buộc                        | Mô tả                                   |
-| :---------- | :----------------- | :------------------------------- | :-------------------------------------- |
-| `id`        | `VARCHAR(30)`      | `PK`, `@default(cuid())`         | Khóa chính định danh đơn hàng           |
-| `userId`    | `VARCHAR(30)`      | `NOT NULL`, `FK -> User(id)`     | Khách hàng sở hữu đơn hàng              |
-| `status`    | `ENUM OrderStatus` | `NOT NULL`, `DEFAULT 'PENDING'`  | Trạng thái vòng đời (7 trạng thái)      |
-| `total`     | `INTEGER`          | `NOT NULL`, `CHECK (total >= 0)` | Tổng giá trị thanh toán cuối cùng (VND) |
-| `createdAt` | `TIMESTAMPTZ`      | `NOT NULL`, `DEFAULT NOW()`      | Thời điểm tạo đơn hàng                  |
-
-#### Bảng `OrderItem` (Chi tiết món & Snapshot giá)
-
-| Tên cột       | Kiểu dữ liệu   | Ràng buộc                            | Mô tả                                         |
-| :------------ | :------------- | :----------------------------------- | :-------------------------------------------- |
-| `id`          | `VARCHAR(30)`  | `PK`, `@default(cuid())`             | Khóa chính chi tiết dòng món                  |
-| `orderId`     | `VARCHAR(30)`  | `NOT NULL`, `FK -> Order(id)`        | Thuộc về đơn hàng nào                         |
-| `productId`   | `VARCHAR(30)`  | `NOT NULL`, `FK -> Product(id)`      | Tham chiếu sản phẩm gốc                       |
-| `productName` | `VARCHAR(150)` | `NOT NULL`                           | **Snapshot** tên món lúc mua                  |
-| `size`        | `ENUM Size`    | `NOT NULL`                           | Kích cỡ đã chọn (`S`, `M`, `L`)               |
-| `basePrice`   | `INTEGER`      | `NOT NULL`, `CHECK (basePrice >= 0)` | **Snapshot** giá gốc size S tại thời điểm mua |
-| `sizeExtra`   | `INTEGER`      | `NOT NULL`, `CHECK (sizeExtra >= 0)` | **Snapshot** phụ thu size tại thời điểm mua   |
-| `unitPrice`   | `INTEGER`      | `NOT NULL`, `CHECK (unitPrice >= 0)` | **Snapshot** đơn giá 1 ly hoàn chỉnh          |
-| `qty`         | `INTEGER`      | `NOT NULL`, `CHECK (qty >= 1)`       | Số lượng ly đặt mua                           |
-| `lineTotal`   | `INTEGER`      | `NOT NULL`, `CHECK (lineTotal >= 0)` | Thành tiền dòng món (`unitPrice * qty`)       |
-
-#### Bảng `OrderItemTopping` (Topping của món & Snapshot giá)
-
-| Tên cột       | Kiểu dữ liệu   | Ràng buộc                        | Mô tả                                          |
-| :------------ | :------------- | :------------------------------- | :--------------------------------------------- |
-| `orderItemId` | `VARCHAR(30)`  | `PK`, `FK -> OrderItem(id)`      | Thuộc dòng món OrderItem nào                   |
-| `toppingId`   | `VARCHAR(30)`  | `PK`, `FK -> Topping(id)`        | Tham chiếu topping gốc                         |
-| `toppingName` | `VARCHAR(100)` | `NOT NULL`                       | **Snapshot** tên topping lúc mua               |
-| `price`       | `INTEGER`      | `NOT NULL`, `CHECK (price >= 0)` | **Snapshot** đơn giá topping tại thời điểm mua |
-
-### 4.4. Phân tích kiến trúc: Snapshot Pattern & Tính toàn vẹn kế toán
-
-1. **Vấn đề thực tế F&B:**
-   - Menu thường xuyên thay đổi giá theo chiến dịch (ví dụ: Trà Đào tăng từ 35.000đ lên 40.000đ).
-   - Topping có thể bị gỡ bỏ hoặc tạm dừng bán (`isActive = false`).
-   - Nếu đơn hàng chỉ lưu khóa ngoại `productId` và `toppingId`, khi xuất lại hóa đơn lịch sử hoặc chạy báo cáo doanh thu kế toán, hệ thống sẽ tính theo giá hiện tại, làm **sai lệch số liệu tài chính trong quá khứ**.
-2. **Giải pháp Snapshot Pattern trong ERD v2:**
-   - Toàn bộ tên món, giá gốc, phụ thu size, tên topping, giá topping và đơn giá từng dòng đều được lưu trữ trực tiếp dưới dạng bản ghi bất biến (Immutable Record).
-   - Đảm bảo tính toán độc lập, xem lại hóa đơn sau 1 năm vẫn giữ nguyên chính xác từng đồng so với thời điểm khách thanh toán.
-
 ---
 
-## 5. Nguyên tắc Thiết kế & Giao tiếp cốt lõi (Core Principles)
+## 5. Nguyên tắc Thiết kế, Bảo mật & Đồng thời cốt lõi
 
-### 5.1. Contract-first: Giao tiếp nghiêm ngặt giữa Frontend & Backend
+### 5.1. Cơ chế Idempotency & Bảo mật thanh toán chuyên sâu
 
-- Mọi tương tác API giữa ứng dụng Next.js và Backend NestJS phải tuân thủ nghiêm ngặt hợp đồng giao tiếp được định nghĩa tại `docs/api-contract.md` v2 (kết hợp các quy chuẩn chung tại `docs/api-conventions.md`).
-- **DTO Validation:** Toàn bộ payload đầu vào được validate qua Global `ValidationPipe`:
-  ```typescript
-  new ValidationPipe({
-    whitelist: true, // Tự động loại bỏ field không khai báo
-    forbidNonWhitelisted: true, // Báo lỗi 400 nếu truyền field lạ
-    transform: true, // Chuyển đổi kiểu tự động
-  });
-  ```
-- **Chuẩn hóa Error Response:** Mọi lỗi 4xx/5xx được chuẩn hóa theo định dạng RFC 7807 mở rộng:
-  ```json
-  {
-    "statusCode": 400,
-    "message": ["size must be one of the following values: S, M, L"],
-    "error": "Bad Request",
-    "path": "/orders",
-    "timestamp": "2026-10-20T04:20:00.000Z"
-  }
-  ```
-
-### 5.2. Idempotency & Transactional Integrity: Tính toàn vẹn giao dịch
-
-- **Database Transaction (`prisma.$transaction`):** Thao tác tạo đơn hàng liên quan đến 3 thực thể (`Order`, `OrderItem`, `OrderItemTopping`). Để tránh phân mảnh dữ liệu (Data Fragmentation) hoặc sinh ra bản ghi mồ côi khi mạng chập chờn, toàn bộ chu trình ghi phải nằm trong một Interactive Transaction duy nhất:
-  ```typescript
-  // Minh họa Transaction tạo đơn hàng nguyên tử
-  return await this.prisma.$transaction(async (tx) => {
-    // 1. Tạo đơn hàng với trạng thái ban đầu PENDING
-    const order = await tx.order.create({
-      data: {
-        userId,
-        status: OrderStatus.PENDING,
-        total: pricingResult.total,
-      },
-    });
-
-    // 2. Tạo toàn bộ OrderItem & OrderItemTopping với snapshot giá
-    for (const item of pricingResult.items) {
-      await tx.orderItem.create({
-        data: {
-          orderId: order.id,
-          productId: item.productId,
-          productName: item.productName,
-          size: item.size,
-          basePrice: item.basePrice,
-          sizeExtra: item.sizeExtra,
-          unitPrice: item.unitPrice,
-          qty: item.qty,
-          lineTotal: item.lineTotal,
-          toppings: {
-            create: item.toppings.map((t) => ({
-              toppingId: t.toppingId,
-              toppingName: t.toppingName,
-              price: t.price,
-            })),
-          },
-        },
-      });
-    }
-
-    return order;
-  });
-  ```
-- **Idempotency với `Idempotency-Key`:** Endpoint thanh toán `POST /payments` bắt buộc truyền UUID v4 duy nhất trong Header `Idempotency-Key`. Nếu một giao dịch với key đó đã tồn tại, hệ thống trả về kết quả đã xử lý trước đó mà không thực hiện trừ tiền hay thay đổi trạng thái đơn lần hai.
-
-### 5.3. Server-side Price Calculation: Chống gian lận giá
-
-- **Nguyên tắc "Zero Client Trust":** Tuyệt đối không tin tưởng bất kỳ thông tin giá nào do Frontend hoặc client gửi lên (kể cả `price`, `unitPrice`, `total`).
-- `OrdersService` chỉ nhận danh sách định danh: `productId`, `size`, `toppingIds`, `qty`.
-- `PricingService` truy vấn trực tiếp giá gốc của món từ bảng `Product`, phụ thu size từ `ProductSize`, và giá topping từ bảng `Topping` đang hoạt động trong CSDL.
-- Tính toán lại toàn bộ `lineTotal`, `subtotal` và `total` trên Server. Mọi trường giá giả mạo gửi kèm trong request body đều bị loại bỏ hoặc bỏ qua hoàn toàn.
-
----
-
-## 6. Luồng nghiệp vụ cốt lõi & Máy trạng thái đơn hàng (FSM v2)
-
-### 6.1. Sequence Diagram: Luồng Tạo Đơn Hàng & Tính Giá Server-side
+Nhằm ngăn chặn hiện tượng trừ tiền hai lần và phát hiện kịp thời các nỗ lực tấn công đổi payload, quy trình thanh toán áp dụng cơ chế 4 bước nghiêm ngặt:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as Khách hàng (Next.js)
-    participant AuthGuard as JwtAuthGuard
-    participant OrderCtrl as OrdersController
-    participant OrderServ as OrdersService
-    participant PriceServ as PricingService
+    actor Client as Next.js Client
+    participant Ctrl as PaymentsController
+    participant Serv as PaymentsService
+    participant StatusServ as OrderStatusService
     participant DB as PostgreSQL (Prisma tx)
+    participant Gateway as Mock Payment Gateway
 
-    Client->>OrderCtrl: POST /orders (Items: productId, size, toppingIds, qty)<br>Header: Authorization: Bearer <JWT>
-    OrderCtrl->>AuthGuard: Kiểm tra tính hợp lệ của JWT
-    AuthGuard-->>OrderCtrl: Xác thực thành công (userId, email)
-    OrderCtrl->>OrderServ: createOrder(userId, createOrderDto)
-    activate OrderServ
+    Client->>Ctrl: POST /payments<br>Header: Idempotency-Key: <UUID><br>Body: { orderId, method, cardLast4 }
+    Ctrl->>Serv: processPayment(key, dto)
+    activate Serv
 
-    OrderServ->>PriceServ: calculateOrderPricing(createOrderDto.items)
-    activate PriceServ
-    Note over PriceServ: Bỏ qua toàn bộ giá client gửi kèm!
-    PriceServ->>DB: Batch query: Product + ProductSize + ProductTopping
-    DB-->>PriceServ: Dữ liệu menu & giá niêm yết hiện hành
-    Note over PriceServ: Tính đơn giá từng ly: calcUnitPrice(base, size, toppings)<br>Tính lineTotal = unitPrice * qty<br>Tổng cộng total = sum(lineTotal)
-    PriceServ-->>OrderServ: OrderPricingResult (total, items snapshot)
-    deactivate PriceServ
+    Serv->>Serv: Tính requestHash = sha256(orderId|method|cardLast4)
+    Serv->>DB: prisma.payment.findUnique({ where: { idempotencyKey: key } })
 
-    OrderServ->>DB: prisma.$transaction(async (tx) => { ... })
-    Note over OrderServ,DB: 1. Tạo Order (userId, total, status: PENDING)<br>2. Tạo các OrderItem kèm snapshot giá<br>3. Tạo các OrderItemTopping kèm snapshot giá
-    DB-->>OrderServ: Commit Transaction thành công (Order Entity)
-    OrderServ-->>OrderCtrl: Chi tiết đơn hàng đã tạo
-    deactivate OrderServ
+    alt Khóa Idempotency-Key ĐÃ TỒN TẠI
+        DB-->>Serv: Trả về bản ghi Payment cũ
+        alt requestHash KHỚP
+            Note over Serv,Client: Khách bấm lặp hoặc mạng chập chờn gửi lại
+            Serv-->>Ctrl: Trả kết quả thanh toán cũ (200 OK / Cached)
+            Ctrl-->>Client: HTTP 200 OK (Kết quả giao dịch trước đó)
+        else requestHash KHÔNG KHỚP
+            Note over Serv,Client: Cảnh báo giả mạo / tái sử dụng sai key
+            Serv-->>Ctrl: Ném ngoại lệ 422 Unprocessable Entity
+            Ctrl-->>Client: HTTP 422: "Idempotency-Key đã dùng cho giao dịch khác"
+        end
+    else Khóa CHƯA TỒN TẠI (Giao dịch mới)
+        Serv->>DB: Bắt đầu Transaction (prisma.$transaction)
+        activate DB
+        Serv->>StatusServ: transition(tx, orderId, PAID)
+        activate StatusServ
+        StatusServ->>DB: SELECT id, status FROM "Order" WHERE id = :id FOR UPDATE
+        Note over StatusServ,DB: Khóa dòng ngăn chặn race condition!
+        StatusServ->>StatusServ: assertTransition(order.status, PAID)
+        StatusServ-->>Serv: Chuyển trạng thái Order hợp lệ
+        deactivate StatusServ
 
-    OrderCtrl-->>Client: HTTP 201 Created (Order metadata + Snapshot items)
+        Serv->>Gateway: authorizeAndCharge({ amount, method, cardLast4 })
+        Gateway-->>Serv: Kết quả: SUCCESS / FAILED
+
+        Serv->>DB: tx.payment.create({ idempotencyKey, orderId, amount, status, requestHash })
+        Serv->>DB: Commit Transaction
+        deactivate DB
+
+        Serv-->>Ctrl: Kết quả giao dịch thanh toán mới
+        deactivate Serv
+        Ctrl-->>Client: HTTP 201 Created (Payment details)
+    end
 ```
 
-### 6.2. Máy trạng thái đơn hàng (Order State Machine - Đủ 7 trạng thái)
+### 5.2. Kiểm soát tồn kho đồng thời với Optimistic Concurrency Control (OCC)
 
-Đơn hàng tuân thủ quy trình chuyển đổi trạng thái nghiêm ngặt theo máy trạng thái hữu hạn (Finite State Machine):
+Thay vì dùng `SELECT ... FOR UPDATE` làm nghẽn toàn bộ luồng duyệt menu của khách hàng, bảng `Product` áp dụng Optimistic Locking:
+
+1. Đọc dữ liệu tự do không khóa:
+   ```typescript
+   const product = await prisma.product.findUnique({ where: { id: productId } });
+   ```
+2. Thực thi câu lệnh cập nhật có điều kiện kiểm tra phiên bản:
+   ```sql
+   UPDATE "Product"
+   SET "stock" = "stock" - :qty,
+       "version" = "version" + 1
+   WHERE "id" = :productId
+     AND "version" = :currentVersion
+     AND "stock" >= :qty;
+   ```
+3. Nếu số dòng cập nhật thành công (`affectedRows === 1`), việc trừ tồn kho hoàn tất an toàn. Nếu `affectedRows === 0`, hệ thống nhận diện đã có tiến trình khác can thiệp đồng thời hoặc món đã hết hàng, từ đó tiến hành retry tự động với backoff trước khi phản hồi lỗi `409 Conflict`.
+
+---
+
+## 6. Luồng nghiệp vụ cốt lõi & Cỗ máy trạng thái đơn hàng (FSM v3)
+
+### 6.1. Sơ đồ State Machine 7 trạng thái (Mermaid)
 
 ```mermaid
 stateDiagram-v2
     [*] --> PENDING: Khách tạo đơn hàng (POST /orders)
 
     PENDING --> PAID: Thanh toán thành công (POST /payments)
-    PENDING --> PAYMENT_FAILED: Thanh toán thẻ/ví thất bại
-    PENDING --> CANCELLED: Khách hủy đơn trước khi thanh toán
+    PENDING --> PAYMENT_FAILED: Cổng thanh toán báo lỗi / Thẻ từ chối
+    PENDING --> CANCELLED: Khách bấm hủy đơn trước khi thanh toán
 
     PAYMENT_FAILED --> PAID: Thử lại thanh toán thành công
-    PAYMENT_FAILED --> CANCELLED: Hết hạn chờ thanh toán / Khách bấm hủy
+    PAYMENT_FAILED --> PAYMENT_FAILED: Thử lại thanh toán tiếp tục thất bại
+    PAYMENT_FAILED --> CANCELLED: Hết hạn chờ thanh toán / Khách hủy đơn
 
-    PAID --> PREPARING: Barista tiếp nhận & bắt đầu pha chế
-    PREPARING --> READY: Hoàn tất pha chế, chờ khách nhận
-    READY --> COMPLETED: Khách nhận đồ uống thành công
+    PAID --> PREPARING: Barista tiếp nhận & bắt đầu chế biến
+    PAID --> CANCELLED: Quán hủy đơn (sự cố hết nguyên liệu)
 
-    PAID --> CANCELLED: Quán hủy có hoàn tiền (sự cố hết nguyên liệu)
-    PREPARING --> CANCELLED: Hủy đột xuất do sự cố kỹ thuật
+    PREPARING --> READY: Hoàn tất pha chế, đặt tại quầy nhận món
+
+    READY --> COMPLETED: Khách hàng xuất trình mã và nhận nước
 
     COMPLETED --> [*]
     CANCELLED --> [*]
 ```
 
-#### Ma trận chuyển đổi trạng thái hợp lệ (State Transition Matrix):
+### 6.2. Ma trận 49 cặp chuyển đổi trạng thái & Tác vụ Hooks đi kèm
 
-| Trạng thái hiện tại  | Trạng thái tiếp theo cho phép         | Tác nhân kích hoạt               | Ghi chú nghiệp vụ                                              |
-| :------------------- | :------------------------------------ | :------------------------------- | :------------------------------------------------------------- |
-| **`PENDING`**        | `PAID`, `PAYMENT_FAILED`, `CANCELLED` | Hệ thống thanh toán / Khách hàng | Đơn vừa tạo, chờ xác nhận giao dịch thanh toán.                |
-| **`PAYMENT_FAILED`** | `PAID`, `CANCELLED`                   | Cổng thanh toán / Khách hàng     | Cho phép thử lại thanh toán với phương thức khác hoặc hủy đơn. |
-| **`PAID`**           | `PREPARING`, `CANCELLED`              | Barista / Quản lý cửa hàng       | Đơn đã thanh toán, chuyển vào hàng đợi pha chế.                |
-| **`PREPARING`**      | `READY`, `CANCELLED`                  | Barista quầy pha chế             | Đang chế biến đồ uống theo công thức.                          |
-| **`READY`**          | `COMPLETED`                           | Khách hàng / Nhân viên quầy      | Đồ uống đã sẵn sàng tại quầy, chờ khách đến lấy.               |
-| **`COMPLETED`**      | _(Trạng thái kết thúc)_               | Hệ thống                         | Khách đã lấy nước, tích điểm thành viên hoàn tất.              |
-| **`CANCELLED`**      | _(Trạng thái kết thúc)_               | Hệ thống / Khách hàng            | Đơn đã hủy, giải phóng đơn hàng hoặc hoàn tiền (nếu đã paid).  |
+Cỗ máy trạng thái tuân thủ ma trận kiểm tra nghiêm ngặt $7 \times 7 = 49$ cặp trạng thái:
 
----
+| Trạng thái nguồn (`from`) | Trạng thái đích hợp lệ (`to`)         | Tác nhân kích hoạt           | Tác vụ kích hoạt đi kèm (Lifecycle Hooks)                                                                                           |
+| :------------------------ | :------------------------------------ | :--------------------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
+| **`PENDING`**             | `PAID`, `PAYMENT_FAILED`, `CANCELLED` | Khách hàng / Cổng thanh toán | • Vào `PAID`: Kích hoạt Hook tích điểm thưởng thành viên (`LoyaltyService`).<br>• Vào `CANCELLED`: Không cần hoàn điểm (chưa tích). |
+| **`PAYMENT_FAILED`**      | `PAID`, `PAYMENT_FAILED`, `CANCELLED` | Khách hàng / Cổng thanh toán | • Vào `PAID`: Kích hoạt Hook tích điểm thưởng thành viên.<br>• `PAYMENT_FAILED`: Ghi nhận lý do thất bại.                           |
+| **`PAID`**                | `PREPARING`, `CANCELLED`              | Barista / Quản lý cửa hàng   | • Vào `CANCELLED`: Kích hoạt Hook hoàn trả tồn kho (`StockService`) và thu hồi điểm loyalty đã tích.                                |
+| **`PREPARING`**           | `READY`                               | Barista quầy pha chế         | Đổi cờ trạng thái, gửi thông báo đồ uống sẵn sàng.                                                                                  |
+| **`READY`**               | `COMPLETED`                           | Khách hàng / Nhân viên quầy  | Đóng đơn hàng, hoàn tất chu trình phục vụ.                                                                                          |
+| **`COMPLETED`**           | _(Không có - Trạng thái kết thúc)_    | —                            | Cấm mọi hành vi chuyển trạng thái tiếp theo (Ném `409 INVALID_TRANSITION`).                                                         |
+| **`CANCELLED`**           | _(Không có - Trạng thái kết thúc)_    | —                            | Cấm mọi hành vi phục hồi hoặc đổi sang trạng thái khác.                                                                             |
 
-## 7. Các Quyết định Kiến trúc Bổ sung (Architectural Decision Records - ADR v2)
-
-### ADR-006: Server-side Pricing as Single Source of Truth & Snapshot Pattern
-
-- **Bối cảnh:** Ứng dụng F&B có nguy cơ bị can thiệp payload HTTP gửi giá giả mạo (ví dụ: sửa 50.000đ thành 1.000đ). Đồng thời, menu thường xuyên thay đổi giá gây sai lệch số liệu kế toán lịch sử đơn hàng.
-- **Quyết định:**
-  1. Triển khai `PricingService` tập trung phía Server đóng vai trò Single Source of Truth. Bỏ qua mọi thông tin giá do client gửi lên.
-  2. Áp dụng Snapshot Pattern: Bảng `OrderItem` và `OrderItemTopping` lưu snapshot bất biến toàn bộ tên món, giá gốc, phụ thu size và giá topping tại thời điểm tạo đơn.
-- **Hệ quả:** Tăng thêm vài cột lưu trữ trong DB nhưng đảm bảo an toàn tuyệt đối về mặt tài chính và dữ liệu lịch sử kế toán.
-
-### ADR-007: Xác thực phi trạng thái (Stateless Authentication) bằng JWT & Passport
-
-- **Bối cảnh:** Hệ thống cần xác thực nhanh, phục vụ ứng dụng web Next.js và sẵn sàng cho mobile app mà không tạo áp lực lưu session state trên backend.
-- **Quyết định:** Sử dụng **Passport** với **LocalStrategy** (đăng nhập email/password) và **JwtStrategy** (xác thực token Bearer), thuật toán **HS256**, thời hạn sống của token là **1 giờ (3600s)**. Mật khẩu băm bằng **bcrypt** với **10 rounds salt**.
-- **Cơ chế an toàn:**
-  - Fast pre-check email và Dummy compare chống Timing Attack khi đăng nhập.
-  - Loại bỏ hoàn toàn trường `passwordHash` trong mọi truy vấn nghiệp vụ qua Prisma `select`.
-- **Hệ quả:** Token stateless không thể thu hồi tức thì trước khi hết hạn (trừ khi có blacklist Redis). Thời hạn 1 giờ là cân bằng lý tưởng cho giai đoạn hiện tại.
+> [!IMPORTANT]
+> Toàn bộ 42 cặp trạng thái còn lại (như `PENDING` $\rightarrow$ `READY`, `COMPLETED` $\rightarrow$ `PREPARING`, `READY` $\rightarrow$ `PREPARING`, `CANCELLED` $\rightarrow$ `PAID`...) đều bị cấm tuyệt đối và được bảo vệ bởi bộ Unit Test ma trận 49 cặp (`order-state-machine.spec.ts`).
 
 ---
 
-## 8. Kế hoạch xác thực kiến trúc & Tiêu chí hoàn thành (Definition of Done)
+## 7. Danh mục Quyết định Kiến trúc (ADR Index)
 
-- [x] Mô hình phân tầng Modular Monolith của NestJS với 4 module (`ProductsModule`, `AuthModule`, `PricingModule`, `OrdersModule`) được đặc tả chi tiết.
-- [x] Mô hình dữ liệu ERD v2 với đầy đủ quan hệ thực thể, Snapshot Pattern và 3 Enum chuẩn hóa (`Role`, `Size`, `OrderStatus` 7 trạng thái) được tích hợp hoàn chỉnh.
-- [x] Ba nguyên tắc cốt lõi (Contract-first, Idempotency & Transactional Integrity, Server-side Pricing) được làm rõ cơ chế thực thi và code minh họa.
-- [x] Sơ đồ tuần tự (Sequence Diagram) và Máy trạng thái đơn hàng (FSM 7 trạng thái kèm ma trận chuyển đổi) được chuẩn hóa.
-- [x] Toàn bộ tài liệu viết bằng Markdown chuẩn, sơ đồ Mermaid kết xuất không lỗi cú pháp, sẵn sàng làm cơ sở nghiệm thu cho Sprint 2.
+| Mã ADR      | Tiêu đề quyết định                                                                                                                                                              | Trạng thái   | Ngày duyệt     | Phạm vi                     |
+| :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :----------- | :------------- | :-------------------------- |
+| **ADR-001** | Lựa chọn kiến trúc Modular Monolith trên nền tảng NestJS & Next.js App Router                                                                                                   | Accepted     | 2026-10-15     | Toàn hệ thống               |
+| **ADR-002** | Lựa chọn PostgreSQL và Prisma ORM làm nền tảng CSDL quan hệ chính thức                                                                                                          | Accepted     | 2026-10-16     | Database & Persistence      |
+| **ADR-003** | [Quản lý trạng thái đơn hàng tập trung, Chống thanh toán lặp bằng Idempotency Key và Khóa lạc quan tồn kho](file:///docs/architecture/adr/003-state-machine-and-idempotency.md) | **Accepted** | **2026-10-31** | **Backend Core (Sprint 3)** |
+| **ADR-006** | Server-side Pricing as Single Source of Truth & Snapshot Pattern kế toán                                                                                                        | Accepted     | 2026-10-24     | Định giá & Đơn hàng         |
+| **ADR-007** | Xác thực phi trạng thái (Stateless Authentication) bằng JWT, Passport & Bcrypt                                                                                                  | Accepted     | 2026-10-24     | Bảo mật & Xác thực          |
+
+---
+
+## 8. Tiêu chí hoàn thành (Definition of Done - DoD v3.0)
+
+- [x] Kiến trúc phân hệ Backend Sprint 3 (`Payments`, `Promotions`, `Stock`, `OrderStatus`) được mô tả chi tiết, rõ ràng ranh giới.
+- [x] Sơ đồ tuần tự Sequence Diagram xử lý Idempotency Key, Request Hash và khóa dòng `SELECT ... FOR UPDATE` được tích hợp.
+- [x] Sơ đồ State Machine 7 trạng thái và bảng ma trận chuyển đổi kèm các Hook kích hoạt nghiệp vụ (`PAID` tích điểm, `CANCELLED` hoàn kho) được chuẩn hóa.
+- [x] Cơ chế Optimistic Concurrency Control (`Product.version`) được mô hình hóa và phân tích rủi ro/đánh đổi rõ ràng.
+- [x] Bản ghi quyết định kiến trúc ADR-003 (`docs/architecture/adr/003-state-machine-and-idempotency.md`) được tạo lập chuẩn định dạng.
+- [x] Tài liệu markdown chuẩn, cú pháp Mermaid hợp lệ 100%, sẵn sàng cho nghiệm thu Sub-task 31.1.

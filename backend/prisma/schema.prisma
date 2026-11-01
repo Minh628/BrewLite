@@ -34,6 +34,12 @@ enum PaymentMethod {
   CARD
 }
 
+enum PaymentStatus {
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
 enum DiscountType {
   PERCENT
   FIXED
@@ -56,6 +62,7 @@ model Product {
   price       Int
   imageUrl    String?
   stock       Int              @default(0)
+  version     Int              @default(0)
   isActive    Boolean          @default(true)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
@@ -112,14 +119,14 @@ model Order {
   userId         Int
   user           User        @relation(fields: [userId], references: [id])
   status         OrderStatus @default(PENDING)
-  subtotal       Int         @default(0) // Σ lineTotal; đơn cũ được migration gán = total
-  discount       Int         @default(0) // Số tiền được giảm nhờ mã khuyến mãi
-  promoCode      String? // Mã đã áp (IN HOA)
-  pointsEarned   Int         @default(0) // Điểm cộng khi đơn vào PAID
-  idempotencyKey String? // Khóa chống tạo trùng đơn từ client
   total          Int         @default(0) // Số tiền phải trả = subtotal − discount
+  subtotal       Int         @default(0) // Σ lineTotal ban đầu
+  discount       Int         @default(0) // Số tiền giảm
+  promoCode      String? // Mã giảm giá đã áp (IN HOA)
+  pointsEarned   Int         @default(0) // Điểm tích lũy khi PAID
+  idempotencyKey String? // Khóa chống tạo trùng đơn
   createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  updatedAt      DateTime    @default(now()) @updatedAt
   items          OrderItem[]
   payments       Payment[]
 
@@ -129,9 +136,9 @@ model Order {
 
 model Promotion {
   id          Int          @id @default(autoincrement())
-  code        String       @unique // lưu IN HOA
+  code        String       @unique // Lưu in hoa
   type        DiscountType
-  value       Int // PERCENT: 1–100; FIXED: VND
+  value       Int // PERCENT: 1-100; FIXED: VND
   minOrder    Int          @default(0)
   maxDiscount Int?
   startsAt    DateTime
@@ -139,8 +146,6 @@ model Promotion {
   usageLimit  Int?
   usedCount   Int          @default(0)
   isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
 }
 
 model OrderItem {
@@ -169,9 +174,12 @@ model OrderItemTopping {
 model Payment {
   idempotencyKey String        @id
   orderId        Int
-  amount         Int
-  method         PaymentMethod
-  status         String
-  createdAt      DateTime      @default(now())
   order          Order         @relation(fields: [orderId], references: [id])
+  amount         Int
+  method         String // "CARD" | "WALLET"
+  status         PaymentStatus
+  requestHash    String // sha256(orderId|method|cardLast4)
+  cardLast4      String?
+  failureReason  String?
+  createdAt      DateTime      @default(now())
 }

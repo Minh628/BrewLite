@@ -21,8 +21,9 @@
 | Vai trò | Email                  | Mật khẩu      |
 | ------- | ---------------------- | ------------- |
 | Khách   | `customer@brewlite.vn` | `Password123` |
-| Quầy    | `barista@brewlite.vn`  | (theo seed)   |
-| Admin   | `admin@brewlite.vn`    | (theo seed)   |
+| Quầy    | `barista@brewlite.vn`  | `matkhau123`  |
+| Admin   | `admin@brewlite.vn`    | `matkhau123`  |
+| Khách 2 | `an@brewlite.vn`       | `matkhau123`  |
 
 **Dữ liệu test**
 
@@ -33,6 +34,24 @@
 | Mã giảm giá dùng được | `BREW10` (10%, trần 20.000đ) · `GIAM15K` (15.000đ, đơn ≥ 100.000đ) |
 | Mã giảm giá lỗi       | `HETHAN` (hết hạn → `PROMO_EXPIRED`)                               |
 | Món hết hàng          | "Bạc xỉu" (tồn kho 0)                                              |
+
+**Bảng giá seed (dùng cho toàn bộ kịch bản)**
+
+| #   | Sản phẩm   | Giá S (base) | Size M | Size L  | Tồn kho |
+| --- | ---------- | ------------ | ------ | ------- | ------- |
+| 1   | Ca phe sua | 35.000đ      | +5.000 | +10.000 | 100     |
+| 2   | Americano  | 40.000đ      | +5.000 | +10.000 | 100     |
+| 3   | Cappuccino | 45.000đ      | +5.000 | +10.000 | 100     |
+| 4   | Tra dao    | 39.000đ      | +5.000 | +10.000 | 100     |
+| 5   | Bạc xỉu    | 35.000đ      | +5.000 | +10.000 | **0**   |
+
+| Topping (id)        | Giá      |
+| ------------------- | -------- |
+| 1 · Trân châu đen   | +5.000đ  |
+| 2 · Trân châu trắng | +7.000đ  |
+| 3 · Thạch trái cây  | +6.000đ  |
+| 4 · Pudding trứng   | +8.000đ  |
+| 5 · Kem Cheese      | +10.000đ |
 
 ---
 
@@ -51,8 +70,8 @@
 **M1** (vai khách):
 
 1. Mở Menu; lọc danh mục "Cà phê"; tìm `ca phe` (không dấu) → vẫn khớp.
-2. Vào **Cappuccino** → chọn size **L**, topping **Trân châu** + **Kem cheese**, số lượng **×2**.
-3. Thêm **Trà đào M** (×1). Giỏ: tạm tính **178.000đ**.
+2. Vào **Cappuccino** (45.000đ) → chọn size **L** (+10.000đ), topping **Trân châu đen** (+5.000đ) + **Kem Cheese** (+10.000đ) → đơn giá **70.000đ**, số lượng **×2** → 140.000đ.
+3. Thêm **Trà đào** size **M** (39.000 + 5.000 = **44.000đ**) ×1. Giỏ: tạm tính **184.000đ**.
 4. Mở **Bạc xỉu** → nhãn **"Hết hàng"**, nút "Thêm vào giỏ" bị tắt → không thêm được. _(10.3 — M1)_
 
 ### (2 phút) Thanh toán thất bại → thử lại → thành công
@@ -69,17 +88,17 @@
 
 **M4** trên Swagger:
 
-1. `POST /promotions/validate` với `{"code":"brew10","subtotal":178000}` → **`{"code":"BREW10","discount":17800}`** (chuẩn hóa chữ thường → IN HOA).
-2. Thử `HETHAN` → **400 `PROMO_EXPIRED`**; thử `GIAM15K` với đơn 44.000đ → **400 `PROMO_MIN_ORDER`**.
+1. `POST /promotions/validate` với `{"code":"brew10","subtotal":184000}` → **`{"code":"BREW10","discount":18400}`** (chuẩn hóa chữ thường → IN HOA).
+2. Thử `HETHAN` → **400 `PROMO_EXPIRED`**; thử `GIAM15K` với đơn 44.000đ → **400 `PROMO_MIN_ORDER`**; thử `GIAM15K` với 184.000đ → **`discount: 15000`** (FIXED, không bị trần).
 3. Tạo đơn có mã:
    ```json
    POST /orders
    { "items":[{"productId":3,"size":"L","qty":2,"toppingIds":[1,5]},
-              {"productId":5,"size":"M","qty":1}],
+              {"productId":4,"size":"M","qty":1}],
      "promoCode":"BREW10" }
    ```
-   → **201** `subtotal: 178000, discount: 17800, total: 160200, status: PENDING`.
-4. Thanh toán đơn đó bằng thẻ `4242…` → **`/auth/me`** cho thấy `loyaltyPoints: 16` (`floor(160200 / 10000)`).
+   → **201** `subtotal: 184000, discount: 18400, total: 165600, status: PENDING`.
+4. Thanh toán đơn đó bằng thẻ `4242…` → **`/auth/me`** cho thấy `loyaltyPoints: 16` (`floor(165600 / 10000)`).
 
 > Nếu đã làm stretch **PB-27** thì làm bước 1–3 này ngay trên UI `/checkout`.
 
@@ -122,14 +141,17 @@ Tổng: **208 test** xanh.
 
 ## 2. Số liệu chuẩn cho demo
 
-| Bước                                  | Giá trị                               |
-| ------------------------------------- | ------------------------------------- |
-| Cappuccino L + Trân châu + Kem cheese | 67.000đ × 2 = **134.000đ**            |
-| Trà đào M                             | **44.000đ**                           |
-| Tạm tính (subtotal)                   | **178.000đ**                          |
-| BREW10                                | 10% = 17.800đ (dưới trần 20.000đ)     |
-| Tổng phải trả (total)                 | **160.200đ**                          |
-| Điểm thưởng                           | floor(160.200 / 10.000) = **16 điểm** |
+> Tính theo **giá seed thực tế** (đã kiểm chứng bằng API trên DB thật, 01/11/2026).
+
+| Bước                                                                         | Giá trị                               |
+| ---------------------------------------------------------------------------- | ------------------------------------- |
+| Cappuccino L (45.000 + 10.000) + Trân châu đen (5.000) + Kem Cheese (10.000) | **70.000đ** × 2 = **140.000đ**        |
+| Trà đào M (39.000 + 5.000)                                                   | **44.000đ**                           |
+| Tạm tính (subtotal)                                                          | **184.000đ**                          |
+| BREW10                                                                       | 10% = 18.400đ (dưới trần 20.000đ)     |
+| Tổng phải trả (total)                                                        | **165.600đ**                          |
+| Điểm thưởng                                                                  | floor(165.600 / 10.000) = **16 điểm** |
+| GIAM15K trên đơn này (nếu dùng thay BREW10)                                  | **15.000đ** (FIXED) → total 169.000đ  |
 
 ---
 

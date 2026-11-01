@@ -55,10 +55,11 @@ BrewLite v1.0.0 là bản hoàn chỉnh của ứng dụng đặt cà phê khôn
 
 ### 2.4 Cơ sở dữ liệu
 
-- Bảng mới `Promotion` (`code` unique, `type`, `value`, `minOrder`, `maxDiscount`, `startsAt`, `endsAt`, `usageLimit`, `usedCount`, `isActive`).
-- Cột mới trên `Order`: `subtotal`, `discount`, `promoCode`, `pointsEarned`, `idempotencyKey`, `updatedAt`; unique `(userId, idempotencyKey)`.
-- Migration: `prisma/migrations/20261101000000_s3_promotions_loyalty_idempotency`.
-- Seed mã test: **BREW10** (10%, trần 20.000đ), **GIAM15K** (15.000đ, đơn ≥ 100.000đ), **HETHAN** (đã hết hạn).
+- Bảng `Promotion` (`code` unique, `type`, `value`, `minOrder`, `maxDiscount`, `startsAt`, `endsAt`, `usageLimit`, `usedCount`, `isActive`).
+- Cột trên `Order`: `subtotal`, `discount`, `promoCode`, `pointsEarned`, `idempotencyKey`, `updatedAt`; unique `(userId, idempotencyKey)`.
+- Cột `Payment.requestHash`, `cardLast4`, `failureReason`; enum `PaymentStatus`; `Product.version` (optimistic locking) — phần của M1/M3 trong cùng migration Sprint 3.
+- Migration Sprint 3: `prisma/migrations/20261031145000_sprint_3_advanced_business` (bản hợp nhất của nhóm).
+- Seed mã test: **BREW10** (10%, trần 20.000đ), **GIAM15K** (15.000đ, đơn ≥ 100.000đ), **HETHAN** (đã hết hạn). Ngày hiệu lực tính tương đối theo thời điểm seed để bản demo luôn chạy được.
 
 ### 2.5 API contract v3 (phần liên quan M4)
 
@@ -70,8 +71,8 @@ POST /orders                 Authorization: Bearer · Idempotency-Key: <uuid> (t
     -> 400 PROMO_* | 409 OUT_OF_STOCK
 
 POST /promotions/validate    Authorization: Bearer
-   { "code": "brew10", "subtotal": 178000 }
-    -> 200 { "code": "BREW10", "discount": 17800 }
+   { "code": "brew10", "subtotal": 184000 }
+    -> 200 { "code": "BREW10", "discount": 18400 }
     -> 400 PROMO_NOT_FOUND | PROMO_INACTIVE | PROMO_EXPIRED | PROMO_MIN_ORDER | PROMO_EXHAUSTED
 ```
 
@@ -79,14 +80,29 @@ POST /promotions/validate    Authorization: Bearer
 
 ## 3. Kiểm thử
 
-| Hạng mục                                                         | Số test | Trạng thái |
-| ---------------------------------------------------------------- | ------- | ---------- |
-| `test/promotions/promotions.service.spec.ts` (10.4a)             | 16      | xanh       |
-| `test/loyalty/loyalty.service.spec.ts` (10.4c)                   | 10      | xanh       |
-| `test/orders/orders.service.spec.ts` (10.4b + 10.2b)             | 24      | xanh       |
-| `test/orders/orders-idempotency.spec.ts` (10.2c — test (b))      | 7       | xanh       |
-| `test/orders/orders.e2e-spec.ts` (HTTP v3 + promo + idempotency) | 18      | xanh       |
-| Toàn bộ backend (`npm test`)                                     | **208** | **xanh**   |
+| Hạng mục                                                              | Số test | Trạng thái |
+| --------------------------------------------------------------------- | ------- | ---------- |
+| `test/promotions/promotions.service.spec.ts` (10.4a)                  | 16      | xanh       |
+| `test/loyalty/loyalty.service.spec.ts` (10.4c)                        | 10      | xanh       |
+| `test/orders/orders.service.spec.ts` (10.4b + 10.2b)                  | 24      | xanh       |
+| `test/orders/orders-idempotency.spec.ts` (10.2c — test (b))           | 7       | xanh       |
+| `test/orders/loyalty-hooks.service.spec.ts` (10.4c nối State Machine) | 4       | xanh       |
+| `test/loyalty/loyalty.db.spec.ts` (10.4c trên **PostgreSQL thật**)    | 4       | xanh       |
+| `test/orders/orders.e2e-spec.ts` (HTTP v3 + promo + idempotency)      | 18      | xanh       |
+| Toàn bộ backend (`npm test`)                                          | **275** | **xanh**   |
+
+**Kiểm chứng thủ công trên DB thật (01/11/2026):**
+
+| Bước                                         | Kết quả                                                                     |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| `migrate reset` + seed                       | 5/5 migration sạch, seed OK                                                 |
+| `POST /promotions/validate` BREW10 @184.000đ | 200 `{code:"BREW10", discount:18400}`                                       |
+| HETHAN / GIAM15K @44.000đ / KHONGCO          | 400 `PROMO_EXPIRED` / `PROMO_MIN_ORDER` / `PROMO_NOT_FOUND`                 |
+| `POST /orders` + `promoCode`                 | 201, `subtotal 184000 / discount 18400 / total 165600` lưu đúng trong DB    |
+| `POST /orders` cùng `Idempotency-Key` ×2     | lần 2 = **200 + `Idempotent-Replayed: true`**, cùng `orderId`, DB chỉ 1 đơn |
+| `usedCount` sau 2 đơn có mã                  | = 2 (không trừ đôi)                                                         |
+| `OrderStatusService.transition` → PAID       | `pointsEarned = 16`, `User.loyaltyPoints = 16`                              |
+| award lặp / PAID → CANCELLED                 | +0 điểm; thu hồi đúng 16 điểm, không trừ hai lần                            |
 
 Build (`npm run build`) và lint (`npm run lint`) không lỗi.
 
@@ -103,8 +119,8 @@ npm run prisma:seed
 # 2. Kiểm tra mã giảm giá
 curl -X POST http://localhost:3001/promotions/validate \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"code":"brew10","subtotal":178000}'
-# → {"code":"BREW10","discount":17800}
+  -d '{"code":"brew10","subtotal":184000}'
+# → {"code":"BREW10","discount":18400}
 
 # 3. Tạo đơn có mã + idempotency (gửi lại đúng lệnh này chỉ nhận 1 đơn)
 curl -X POST http://localhost:3001/orders \
@@ -112,8 +128,9 @@ curl -X POST http://localhost:3001/orders \
   -H "Idempotency-Key: 5f0c1f4e-8a1d-4b9e-9c2b-77d1a0f3c2a1" \
   -H "Content-Type: application/json" \
   -d '{"items":[{"productId":3,"size":"L","qty":2,"toppingIds":[1,5]},
-                {"productId":5,"size":"M","qty":1}],"promoCode":"BREW10"}'
-# → 201 {subtotal: 178000, discount: 17800, total: 160200, status: "PENDING"}
+                {"productId":4,"size":"M","qty":1}],"promoCode":"BREW10"}'
+# → 201 {subtotal: 184000, discount: 18400, total: 165600, status: "PENDING"}
+#   (Cappuccino L + Trân châu đen + Kem Cheese = 70.000đ × 2; Trà đào M = 44.000đ)
 ```
 
 ---
@@ -132,11 +149,10 @@ curl -X POST http://localhost:3001/orders \
 
 ### 5.2 Giới hạn đã biết của phần M4
 
-1. **Chưa có endpoint hủy đơn** → `LoyaltyService.revoke` và `PromotionsService.releaseUsage` hiện chỉ được unit-test, chưa được gọi từ API. Khi PB-25 làm, gắn hai lời gọi này vào tác vụ `→ CANCELLED` của `OrderStatusService`.
-2. **Cộng điểm chưa nối vào State Machine** (chờ 10.1b của M2): `OrderStatusService.transition` cần gọi `LoyaltyService.award` khi vào `PAID` và `revoke` khi `PAID → CANCELLED`, trong **cùng transaction**. Hiện `award/revoke` đã an toàn để gọi lặp lại (chống cộng đôi bằng điều kiện DB).
+1. **`LoyaltyService` đã nối vào State Machine** qua `backend/src/orders/loyalty-hooks.service.ts` (hook `onPaid` → `award`, `onCancelled` → `revoke`). Phụ thuộc `OrderStatusService` của M2 — nếu hook chưa được gọi từ luồng thanh toán/hủy, cần kiểm tra `OrderStatusService.transition`.
+2. **Chưa có endpoint hủy đơn** → `PromotionsService.releaseUsage` (hoàn lượt mã) hiện chưa được gọi từ API. Khi PB-25 làm, gắn lời gọi này vào hook `onCancelled`.
 3. **Idempotency-Key không lưu hash payload**: cùng key + payload khác vẫn trả đơn cũ (khóa là key). Contract v3 chỉ bắt buộc 422 cho `POST /payments` (10.2a của M3), không bắt buộc cho `POST /orders`.
-4. **`usedCount` hoàn lượt** khi hủy đơn phụ thuộc PB-25 (mục 5.2.1).
-5. **Không đổi điểm lấy giảm giá** trong v1.0.0 (ngoài phạm vi, Mục 4.2 Sprint 3).
+4. **Không đổi điểm lấy giảm giá** trong v1.0.0 (ngoài phạm vi, Mục 4.2 Sprint 3).
 
 ---
 

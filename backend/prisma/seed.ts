@@ -22,7 +22,7 @@ async function main() {
     });
   }
 
-  // 2. Seed Products (id: 1..4)
+  // 2. Seed Products (id: 1..5) - bao gồm món "Bạc xỉu" hết hàng (stock: 0) để kiểm thử UI
   const products = [
     {
       name: 'Ca phe sua',
@@ -51,6 +51,13 @@ async function main() {
       stock: 100,
       imageUrl: '/peach-tea.svg',
       categoryId: 2,
+    },
+    {
+      name: 'Bạc xỉu',
+      price: 35000,
+      stock: 0, // Tồn kho 0 để phục vụ kiểm thử tính năng hiển thị "Hết hàng" (Task 10.3)
+      imageUrl: '/coffee-milk.svg',
+      categoryId: 1,
     },
   ];
 
@@ -105,7 +112,8 @@ async function main() {
     }
   }
 
-  // 5. Seed Test Users theo đặc tả Sprint 2 (Sub-task 7.1)
+  // 5. Seed Test Users theo đặc tả Sprint 2 (Sub-task 7.1) & Sprint 3 (Mục 11.1)
+  // Bổ sung tài khoản phân quyền Barista và Admin
   const testUsers = [
     {
       email: 'an@brewlite.vn',
@@ -117,6 +125,18 @@ async function main() {
       email: 'customer@brewlite.vn',
       rawPassword: 'Password123',
       role: Role.CUSTOMER,
+      loyaltyPoints: 0,
+    },
+    {
+      email: 'barista@brewlite.vn',
+      rawPassword: 'matkhau123',
+      role: Role.BARISTA,
+      loyaltyPoints: 0,
+    },
+    {
+      email: 'admin@brewlite.vn',
+      rawPassword: 'matkhau123',
+      role: Role.ADMIN,
       loyaltyPoints: 0,
     },
   ];
@@ -140,60 +160,64 @@ async function main() {
     });
   }
 
-  // 6. Seed mã giảm giá (Sprint 3 — Sub-task 10.4, Mục 11.1)
-  //   BREW10   : giảm 10%, trần 20.000đ
-  //   GIAM15K  : giảm 15.000đ cho đơn từ 100.000đ
-  //   HETHAN   : đã hết hạn — dùng để demo lỗi PROMO_EXPIRED
+  // 6. Seed Promotions theo đặc tả Sprint 3 (Mục 11.1 — Sub-task 10.4a)
+  // Mã: BREW10 (10%, trần 20.000đ) · GIAM15K (15.000đ, đơn ≥ 100.000đ) · HETHAN (đã hết hạn)
+  // Idempotent: upsert theo code; KHÔNG reset usedCount khi chạy lại để không mất lượt đã dùng thật.
+  const now = new Date();
+  const pastDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 ngày trước: đảm bảo mã có hiệu lực
+  const futureDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 năm sau: còn hạn sử dụng
+  const expiredDate = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000); // 1 ngày trước: đã hết hạn
+
   const promotions = [
     {
       code: 'BREW10',
       type: DiscountType.PERCENT,
       value: 10,
-      minOrder: 0,
       maxDiscount: 20000,
-      startsAt: new Date('2026-10-01T00:00:00Z'),
-      endsAt: new Date('2027-12-31T23:59:59Z'),
-      usageLimit: null,
+      minOrder: 0,
+      startsAt: pastDate,
+      endsAt: futureDate,
       isActive: true,
+      usageLimit: null,
     },
     {
       code: 'GIAM15K',
       type: DiscountType.FIXED,
       value: 15000,
-      minOrder: 100000,
       maxDiscount: null,
-      startsAt: new Date('2026-10-01T00:00:00Z'),
-      endsAt: new Date('2027-12-31T23:59:59Z'),
-      usageLimit: null,
+      minOrder: 100000,
+      startsAt: pastDate,
+      endsAt: futureDate,
       isActive: true,
+      usageLimit: null,
     },
     {
       code: 'HETHAN',
       type: DiscountType.PERCENT,
       value: 20,
-      minOrder: 0,
       maxDiscount: 50000,
-      startsAt: new Date('2026-01-01T00:00:00Z'),
-      endsAt: new Date('2026-09-30T23:59:59Z'),
-      usageLimit: null,
+      minOrder: 0,
+      startsAt: pastDate,
+      endsAt: expiredDate,
       isActive: true,
+      usageLimit: null,
     },
   ];
 
-  for (const promotion of promotions) {
+  for (const promo of promotions) {
     await prisma.promotion.upsert({
-      where: { code: promotion.code },
-      // Seed idempotent: không reset usedCount để chạy lại không làm mất dữ liệu thật
+      where: { code: promo.code },
       update: {
-        type: promotion.type,
-        value: promotion.value,
-        minOrder: promotion.minOrder,
-        maxDiscount: promotion.maxDiscount,
-        startsAt: promotion.startsAt,
-        endsAt: promotion.endsAt,
-        isActive: promotion.isActive,
+        type: promo.type,
+        value: promo.value,
+        maxDiscount: promo.maxDiscount,
+        minOrder: promo.minOrder,
+        startsAt: promo.startsAt,
+        endsAt: promo.endsAt,
+        isActive: promo.isActive,
+        usageLimit: promo.usageLimit,
       },
-      create: promotion,
+      create: promo,
     });
   }
 }
