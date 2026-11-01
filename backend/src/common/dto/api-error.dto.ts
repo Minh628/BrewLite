@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /** Cấu trúc lỗi chuẩn do HttpExceptionFilter trả về */
 export class ApiErrorDto {
@@ -13,6 +13,12 @@ export class ApiErrorDto {
 
   @ApiProperty({ example: 'Bad Request' })
   error!: string;
+
+  @ApiPropertyOptional({
+    description: 'Mã lỗi nghiệp vụ (contract v3): PROMO_*, OUT_OF_STOCK, ORDER_NOT_PAYABLE…',
+    example: 'PROMO_EXPIRED',
+  })
+  code?: string;
 
   @ApiProperty({ example: '/orders' })
   path!: string;

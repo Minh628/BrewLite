@@ -32,7 +32,20 @@ export class CreatedOrderDto {
   @ApiProperty({ enum: OrderStatus, example: OrderStatus.PENDING })
   status!: OrderStatus;
 
-  @ApiProperty({ description: 'Tổng tiền do server tính (VND)', example: 178000 })
+  @ApiProperty({ description: 'Tổng tiền trước giảm giá do server tính (VND)', example: 178000 })
+  subtotal!: number;
+
+  @ApiProperty({ description: 'Số tiền được giảm (VND)', example: 17800 })
+  discount!: number;
+
+  @ApiProperty({
+    description: 'Mã giảm giá đã áp (IN HOA), null nếu không áp mã',
+    example: 'BREW10',
+    nullable: true,
+  })
+  promoCode!: string | null;
+
+  @ApiProperty({ description: 'Tổng tiền phải trả = subtotal − discount (VND)', example: 160200 })
   total!: number;
 
   @ApiProperty({ type: () => [CreatedOrderItemDto] })
@@ -40,4 +53,12 @@ export class CreatedOrderDto {
 
   @ApiProperty({ example: '2026-10-24T10:00:00.000Z' })
   createdAt!: string;
+}
+
+/**
+ * Phản hồi khi trả lại đơn đã tạo bằng cùng Idempotency-Key (Sub-task 10.2b).
+ */
+export class ReplayedOrderDto extends CreatedOrderDto {
+  @ApiProperty({ example: true, description: 'Đơn đã tồn tại, không tạo mới' })
+  replayed!: boolean;
 }

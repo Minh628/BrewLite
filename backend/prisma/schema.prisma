@@ -34,6 +34,11 @@ enum PaymentMethod {
   CARD
 }
 
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
 model Category {
   id        Int       @id @default(autoincrement())
   name      String    @unique
@@ -103,16 +108,39 @@ model User {
 }
 
 model Order {
-  id        Int         @id @default(autoincrement())
-  userId    Int
-  user      User        @relation(fields: [userId], references: [id])
-  status    OrderStatus @default(PENDING)
-  total     Int // Đơn vị VND, do server tính toán
-  createdAt DateTime    @default(now())
-  items     OrderItem[]
-  payments  Payment[]
+  id             Int         @id @default(autoincrement())
+  userId         Int
+  user           User        @relation(fields: [userId], references: [id])
+  status         OrderStatus @default(PENDING)
+  subtotal       Int         @default(0) // Σ lineTotal; đơn cũ được migration gán = total
+  discount       Int         @default(0) // Số tiền được giảm nhờ mã khuyến mãi
+  promoCode      String? // Mã đã áp (IN HOA)
+  pointsEarned   Int         @default(0) // Điểm cộng khi đơn vào PAID
+  idempotencyKey String? // Khóa chống tạo trùng đơn từ client
+  total          Int         @default(0) // Số tiền phải trả = subtotal − discount
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  items          OrderItem[]
+  payments       Payment[]
 
+  @@unique([userId, idempotencyKey])
   @@index([userId, createdAt])
+}
+
+model Promotion {
+  id          Int          @id @default(autoincrement())
+  code        String       @unique // lưu IN HOA
+  type        DiscountType
+  value       Int // PERCENT: 1–100; FIXED: VND
+  minOrder    Int          @default(0)
+  maxDiscount Int?
+  startsAt    DateTime
+  endsAt      DateTime
+  usageLimit  Int?
+  usedCount   Int          @default(0)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 model OrderItem {

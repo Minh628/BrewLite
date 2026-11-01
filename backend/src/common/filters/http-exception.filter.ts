@@ -32,6 +32,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'Internal server error';
     let error = 'Internal Server Error';
+    let code: string | undefined;
 
     // Xử lý nếu là HttpException của NestJS (bao gồm cả BadRequest từ ValidationPipe hoặc ThrottlerException 429)
     if (exception instanceof HttpException) {
@@ -55,6 +56,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
           error = responseObj.error;
         } else {
           error = exception.name;
+        }
+
+        // Mã lỗi nghiệp vụ (contract v3): PROMO_*, OUT_OF_STOCK, INVALID_TRANSITION…
+        if (typeof responseObj.code === 'string') {
+          code = responseObj.code;
         }
       }
 
@@ -101,6 +107,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       statusCode: status,
       message,
       error,
+      ...(code ? { code } : {}),
       path: request.url,
       timestamp: new Date().toISOString(),
       requestId,

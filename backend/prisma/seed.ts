@@ -1,6 +1,6 @@
 // Nạp biến môi trường từ file .env vào process.env khi chạy script
 import 'dotenv/config';
-import { PrismaClient, Role } from '@prisma/client';
+import { DiscountType, PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -137,6 +137,63 @@ async function main() {
         role: user.role,
         loyaltyPoints: user.loyaltyPoints,
       },
+    });
+  }
+
+  // 6. Seed mã giảm giá (Sprint 3 — Sub-task 10.4, Mục 11.1)
+  //   BREW10   : giảm 10%, trần 20.000đ
+  //   GIAM15K  : giảm 15.000đ cho đơn từ 100.000đ
+  //   HETHAN   : đã hết hạn — dùng để demo lỗi PROMO_EXPIRED
+  const promotions = [
+    {
+      code: 'BREW10',
+      type: DiscountType.PERCENT,
+      value: 10,
+      minOrder: 0,
+      maxDiscount: 20000,
+      startsAt: new Date('2026-10-01T00:00:00Z'),
+      endsAt: new Date('2027-12-31T23:59:59Z'),
+      usageLimit: null,
+      isActive: true,
+    },
+    {
+      code: 'GIAM15K',
+      type: DiscountType.FIXED,
+      value: 15000,
+      minOrder: 100000,
+      maxDiscount: null,
+      startsAt: new Date('2026-10-01T00:00:00Z'),
+      endsAt: new Date('2027-12-31T23:59:59Z'),
+      usageLimit: null,
+      isActive: true,
+    },
+    {
+      code: 'HETHAN',
+      type: DiscountType.PERCENT,
+      value: 20,
+      minOrder: 0,
+      maxDiscount: 50000,
+      startsAt: new Date('2026-01-01T00:00:00Z'),
+      endsAt: new Date('2026-09-30T23:59:59Z'),
+      usageLimit: null,
+      isActive: true,
+    },
+  ];
+
+  for (const promotion of promotions) {
+    await prisma.promotion.upsert({
+      where: { code: promotion.code },
+      // Seed idempotent: không reset usedCount để chạy lại không làm mất dữ liệu thật
+      update: {
+        type: promotion.type,
+        value: promotion.value,
+        minOrder: promotion.minOrder,
+        maxDiscount: promotion.maxDiscount,
+        startsAt: promotion.startsAt,
+        endsAt: promotion.endsAt,
+        isActive: promotion.isActive,
+      },
+      create: promotion,
     });
   }
 }
