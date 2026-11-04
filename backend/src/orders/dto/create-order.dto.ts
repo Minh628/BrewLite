@@ -1,5 +1,5 @@
 import { ApiHideProperty, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   Allow,
   ArrayMinSize,
@@ -9,7 +9,9 @@ import {
   IsIn,
   IsInt,
   IsOptional,
+  IsString,
   Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -83,8 +85,29 @@ export class CreateOrderDto {
   @Type(() => CreateOrderItemDto)
   items!: CreateOrderItemDto[];
 
+  @ApiPropertyOptional({
+    example: 'BREW10',
+    description: 'Mã giảm giá (không phân biệt hoa thường). Bỏ trống nếu không áp mã.',
+  })
+  @IsOptional()
+  @IsString({ message: 'promoCode phải là chuỗi' })
+  @MaxLength(64, { message: 'promoCode tối đa 64 ký tự' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && value.trim() ? value.trim().toUpperCase() : undefined,
+  )
+  promoCode?: string;
+
   /** Tổng tiền client tự tính (nếu có) - server bỏ qua, tự tính lại qua PricingService */
   @ApiHideProperty()
   @Allow()
   total?: unknown;
+
+  /** Tổng phụ / giảm giá do client tự khai (nếu có) - server bỏ qua */
+  @ApiHideProperty()
+  @Allow()
+  subtotal?: unknown;
+
+  @ApiHideProperty()
+  @Allow()
+  discount?: unknown;
 }

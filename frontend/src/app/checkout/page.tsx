@@ -4,13 +4,25 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { useCart } from '@/store/cart';
-import { createOrder } from '@/lib/api';
+import { ApiError, createOrder } from '@/lib/api';
 import { formatVND } from '@/lib/format';
+import type { CartLine } from '@/store/cart';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import Link from 'next/link';
 
 type CreatedOrder = { orderId: number; code: string; status: string; total: number };
+
+function mapOrderError(err: unknown, lines: CartLine[]): string {
+  if (err instanceof ApiError && err.code === 'OUT_OF_STOCK') {
+    const productId = err.errorBody?.productId as number | undefined;
+    const productName = productId
+      ? (lines.find((l) => l.id === productId)?.name ?? 'Một món')
+      : 'Một món';
+    return `${productName} vừa hết hàng. Vui lòng kiểm tra lại giỏ hàng.`;
+  }
+  return err instanceof Error ? err.message : 'Đặt hàng thất bại. Vui lòng thử lại.';
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -67,7 +79,7 @@ export default function CheckoutPage() {
       clear();
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đặt hàng thất bại. Vui lòng thử lại.');
+      setError(mapOrderError(err, lines));
     } finally {
       setIsSubmitting(false);
     }

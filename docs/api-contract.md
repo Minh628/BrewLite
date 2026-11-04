@@ -1,4 +1,4 @@
-# BrewLite API Contract v3.0 (Sprint 3)
+﻿# BrewLite API Contract v3.0 (Sprint 3)
 
 Tài liệu hợp đồng giao tiếp API giữa Backend (NestJS) và Frontend (Next.js) cho Sprint 3 (Thanh toán không tiền mặt, State Machine, Khuyến mãi, Lịch sử đơn hàng, Kiểm soát tồn kho đồng thời).
 
@@ -183,8 +183,17 @@ Mọi phản hồi lỗi (4xx, 5xx) đều tuân theo định dạng JSON thốn
   }
   ```
 - **Lỗi**:
-  - 400 Bad Request kèm code: `PROMO_NOT_FOUND`, `PROMO_EXPIRED`, `PROMO_MIN_ORDER`, `PROMO_EXHAUSTED`.
+  - 400 Bad Request kèm code: `PROMO_NOT_FOUND`, `PROMO_INACTIVE`, `PROMO_EXPIRED`, `PROMO_MIN_ORDER`, `PROMO_EXHAUSTED`.
   - 401 Unauthorized.
+- **Quy tắc tính giảm giá**: PERCENT = `floor(subtotal × value / 100)`, không vượt `maxDiscount`; FIXED = `min(value, subtotal)`; kết quả không vượt `subtotal` và không âm.
+
+#### Quy tắc điểm thưởng (Sub-task 10.4c)
+
+- `pointsEarned = floor(total / 10.000)` — tính trên **total sau giảm giá**.
+- Cộng điểm **một lần** khi đơn vào `PAID`: `OrderStatusService.transition` gọi hook `onPaid` → `LoyaltyService.award` trong **cùng transaction**.
+- Đơn `PAID → CANCELLED` gọi hook `onCancelled` → `LoyaltyService.revoke` (thu hồi đúng số điểm đã cộng).
+- Gọi lặp (retry, đua idempotency) không cộng/trừ đôi: điều kiện `pointsEarned = 0` (khi award) và `pointsEarned > 0` (khi revoke) bảo đảm chỉ một lần thành công.
+- Điểm hiện tại trả về ở `GET /auth/me` (`loyaltyPoints`).
 
 ---
 
@@ -241,7 +250,6 @@ Mọi phản hồi lỗi (4xx, 5xx) đều tuân theo định dạng JSON thốn
 
 #### GET /orders/me?page=1&limit=10
 
-- **Mục đích**: Lấy danh sách lịch sử đơn hàng của người dùng hiện tại (phân trang).
 - **Quyền**: Yêu cầu Bearer Token
 - **Query Parameters**:
   - `page`: Number (mặc định 1)

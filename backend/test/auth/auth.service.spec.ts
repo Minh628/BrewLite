@@ -85,6 +85,7 @@ describe('AuthService', () => {
       expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
         sub: '3',
         email: 'test@brewlite.vn',
+        role: 'CUSTOMER',
       });
     });
 
@@ -137,6 +138,7 @@ describe('AuthService', () => {
         id: 3,
         email: 'test@brewlite.vn',
         passwordHash: '$2b$10$hashedpassword',
+        role: 'CUSTOMER',
       };
       prismaMock.user.findUnique.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockImplementation(() => Promise.resolve(true));
@@ -146,10 +148,11 @@ describe('AuthService', () => {
       expect(result).toEqual({
         id: 3,
         email: 'test@brewlite.vn',
+        role: 'CUSTOMER',
       });
       expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'test@brewlite.vn' },
-        select: { id: true, email: true, passwordHash: true },
+        select: { id: true, email: true, passwordHash: true, role: true },
       });
     });
 
@@ -195,6 +198,7 @@ describe('AuthService', () => {
       expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
         sub: '3',
         email: 'test@brewlite.vn',
+        role: 'CUSTOMER',
       });
       expect(result).toEqual({
         accessToken: 'jwt-mock-access-token',
@@ -224,6 +228,7 @@ describe('AuthService', () => {
         id: 3,
         email: 'an@brewlite.vn',
         loyaltyPoints: 100,
+        role: 'CUSTOMER',
         createdAt: mockCreatedAt,
       });
 
@@ -247,6 +252,7 @@ describe('AuthService', () => {
           id: true,
           email: true,
           loyaltyPoints: true,
+          role: true,
           createdAt: true,
         },
       });
@@ -269,7 +275,7 @@ describe('AuthService', () => {
     });
 
     it('xác thực thành công và trả về user khi thông tin đăng nhập đúng', async () => {
-      const mockUser = { id: 3, email: 'test@brewlite.vn' };
+      const mockUser = { id: 3, email: 'test@brewlite.vn', role: 'CUSTOMER' };
       jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser);
 
       const result = await localStrategy.validate('test@brewlite.vn', 'password123');

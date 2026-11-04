@@ -242,8 +242,8 @@ Ký hiệu: **N1** = T2 02/11, **N2** = T3 03/11 · **[BE]** / **[FE]**.
 
 ### 🔸 Nền tảng chung (2 giờ đầu Ngày 1, mọi người phụ thuộc)
 
-- [ ] **C.3** · [BE] Chốt API contract v3 (Mục 11.2): POST /payments, POST /promotions/validate, GET /orders/me, GET /orders/:id, PATCH /orders/:id/status; header Idempotency-Key; mã lỗi mới · **M2** · 1h · N1 08:15–09:15 · ⇒ `docs/api-contract.md` v3 được cả nhóm duyệt **trước 09:30**
-- [ ] **E.3** · [BE] **Một** migration Sprint 3 + seed: `Product.version`, cột mới của `Order`, bảng `Promotion`, enum `PaymentStatus`, tài khoản `barista@brewlite.vn` và `admin@brewlite.vn`, mã BREW10/GIAM15K/HETHAN, sản phẩm "Bạc xỉu" tồn kho 0 · **M2** · 2h · N1 09:30–11:15 · ⇒ **Merge trước 11:15**; `prisma migrate dev` sạch
+- [x] **C.3** · [BE] Chốt API contract v3 (Mục 11.2): POST /payments, POST /promotions/validate, GET /orders/me, GET /orders/:id, PATCH /orders/:id/status; header Idempotency-Key; mã lỗi mới · **M2** · 1h · N1 08:15–09:15 · ⇒ `docs/api-contract.md` v3 được cả nhóm duyệt **trước 09:30**
+- [x] **E.3** · [BE] **Một** migration Sprint 3 + seed: `Product.version`, cột mới của `Order`, bảng `Promotion`, enum `PaymentStatus`, tài khoản `barista@brewlite.vn` và `admin@brewlite.vn`, mã BREW10/GIAM15K/HETHAN, sản phẩm "Bạc xỉu" tồn kho 0 · **M2** · 2h · N1 09:30–11:15 · ⇒ **Merge trước 11:15**; `prisma migrate dev` sạch
 
 ---
 
@@ -257,28 +257,28 @@ Ký hiệu: **N1** = T2 02/11, **N2** = T3 03/11 · **[BE]** / **[FE]**.
 
 #### 10.1 Order State Machine — M2 (+ M5)
 
-- [ ] **10.1a** · [BE] `orders/order-state-machine.ts`: bảng `TRANSITIONS` (Mục 6.1), `assertTransition(from, to)` ném 409 `INVALID_TRANSITION`; **test (a)** đủ 49 cặp · **M2** · 2,5h · N1 chiều + N2 sáng · ⇒ Test xanh
-- [ ] **10.1b** · [BE] `OrderStatusService.transition(tx, orderId, to)`: khóa dòng Order, gọi `assertTransition`, cập nhật trạng thái, chạy tác vụ đi kèm (PAID → `LoyaltyService.award`; CANCELLED → `StockService.release`, `LoyaltyService.revoke`). **Nơi duy nhất đổi `Order.status`** · **M2** · 1,5h · N1 · ⇒ **Merge trước 16:30 N1**
+- [x] **10.1a** · [BE] `orders/order-state-machine.ts`: bảng `TRANSITIONS` (Mục 6.1), `assertTransition(from, to)` ném 409 `INVALID_TRANSITION`; **test (a)** đủ 49 cặp · **M2** · 2,5h · N1 chiều + N2 sáng · ⇒ Test xanh
+- [x] **10.1b** · [BE] `OrderStatusService.transition(tx, orderId, to)`: khóa dòng Order, gọi `assertTransition`, cập nhật trạng thái, chạy tác vụ đi kèm (PAID → `LoyaltyService.award`; CANCELLED → `StockService.release`, `LoyaltyService.revoke`). **Nơi duy nhất đổi `Order.status`** · **M2** · 1,5h · N1 · ⇒ **Merge trước 16:30 N1**
 - [ ] **10.1c** · [BE] `RolesGuard` + `@Roles()`; thêm `role` vào JWT, `/auth/login`, `/auth/me`; `PATCH /orders/:id/status` (BARISTA/ADMIN; chỉ PREPARING/READY/COMPLETED); e2e: khách → 403, sai thứ tự → 409 · **M5** · 2h · N1 (guard) + N2 sáng (endpoint) · phụ thuộc 10.1b · ⇒ Quầy đổi trạng thái được qua Swagger
 
 #### 10.2 Thanh toán idempotent — M3 + M4
 
 - [ ] **10.2a** · [BE] POST /payments: `Idempotency-Key` bắt buộc (thiếu → 400); trong transaction `SELECT … FOR UPDATE` dòng Order; key đã có + cùng payload → trả lại kết quả cũ (200, `Idempotent-Replayed: true`); key đã có + payload khác → 422; đơn đã PAID → 409 · **M3** · 2,5h · N2 08:15–10:45 · phụ thuộc 8.2 · ⇒ **Merge trước 11:00 N2**
-- [ ] **10.2b** · [BE] POST /orders nhận `Idempotency-Key`: `@@unique([userId, idempotencyKey])`, gặp P2002 → trả đơn đã tạo (200) · **M4** · 1,5h · N2 08:15–09:45 · phụ thuộc 10.4b · ⇒ **Merge trước 10:00 N2**
-- [ ] **10.2c** · [BE] **Test (b):** 2 request song song cùng key → 1 Payment, 1 lần PAID, response giống nhau; điểm thưởng chỉ cộng 1 lần; POST /orders cùng key 2 lần → 1 đơn · **M4** · 2h · N2 09:45–11:45 · phụ thuộc 10.2a, 10.2b · ⇒ Test xanh trong CI
+- [x] **10.2b** · [BE] POST /orders nhận `Idempotency-Key`: `@@unique([userId, idempotencyKey])`, gặp P2002 → trả đơn đã tạo (200) · **M4** · 1,5h · N2 08:15–09:45 · phụ thuộc 10.4b · ⇒ **Merge trước 10:00 N2**
+- [x] **10.2c** · [BE] **Test (b):** 2 request song song cùng key → 1 Payment, 1 lần PAID, response giống nhau; điểm thưởng chỉ cộng 1 lần; POST /orders cùng key 2 lần → 1 đơn · **M4** · 2h · N2 09:45–11:45 · phụ thuộc 10.2a, 10.2b · ⇒ Test xanh trong CI
 
 #### 10.3 Tồn kho khi đặt đồng thời — M1
 
-- [ ] **10.3a** · [BE] `StockService.reserve(tx, items)`: gộp qty theo productId; `updateMany({ where: { id, version, stock: { gte: qty } }, data: { stock: { decrement: qty }, version: { increment: 1 } } })`; 0 dòng → đọc lại: hết hàng → 409 `OUT_OF_STOCK` kèm `productId`, xung đột phiên bản → thử lại tối đa 3 lần; `release(tx, orderId)` · **M1** · 2,5h · N1 sáng (viết với mock, rebase lên migration 11:15) · ⇒ `src/stock/stock.service.ts`
-- [ ] **10.3b** · [BE] Gọi `reserve` trong transaction của `OrdersService.create`; nối `release` vào tác vụ CANCELLED · **M1** · 1h · N1 13:10–14:10 · ⇒ **Merge trước 15:00 N1** (người đầu tiên sửa `OrdersService.create`)
-- [ ] **10.3c** · [BE] **Test (c):** 20 request POST /orders đồng thời (20 user test) mua 1 ly món tồn kho 5 → đúng 5 × 201, 15 × 409, tồn kho = 0, không âm; PostgreSQL thật trong CI · **M1** · 1,5h · N2 08:15–09:45 · ⇒ Test xanh 5 lần liên tiếp
-- [ ] **10.3d** · [FE] GET /products trả `inStock`; ProductCard + trang chi tiết hiện "Hết hàng", tắt nút thêm giỏ; `mapOrderError()` hiện "Món X vừa hết hàng" ở checkout · **M1** · 1,5h · N2 09:45–11:15 · ⇒ Không thêm được món hết hàng
+- [x] **10.3a** · [BE] `StockService.reserve(tx, items)`: gộp qty theo productId; `updateMany({ where: { id, version, stock: { gte: qty } }, data: { stock: { decrement: qty }, version: { increment: 1 } } })`; 0 dòng → đọc lại: hết hàng → 409 `OUT_OF_STOCK` kèm `productId`, xung đột phiên bản → thử lại tối đa 3 lần; `release(tx, orderId)` · **M1** · 2,5h · N1 sáng (viết với mock, rebase lên migration 11:15) · ⇒ `src/stock/stock.service.ts`
+- [x] **10.3b** · [BE] Gọi `reserve` trong transaction của `OrdersService.create`; nối `release` vào tác vụ CANCELLED · **M1** · 1h · N1 13:10–14:10 · ⇒ **Merge trước 15:00 N1** (người đầu tiên sửa `OrdersService.create`)
+- [x] **10.3c** · [BE] **Test (c):** 20 request POST /orders đồng thời (20 user test) mua 1 ly món tồn kho 5 → đúng 5 × 201, 15 × 409, tồn kho = 0, không âm; PostgreSQL thật trong CI · **M1** · 1,5h · N2 08:15–09:45 · ⇒ Test xanh 5 lần liên tiếp
+- [x] **10.3d** · [FE] GET /products trả `inStock`; ProductCard + trang chi tiết hiện "Hết hàng", tắt nút thêm giỏ; `mapOrderError()` hiện "Món X vừa hết hàng" ở checkout · **M1** · 1,5h · N2 09:45–11:15 · ⇒ Không thêm được món hết hàng
 
 #### 10.4 Khuyến mãi & điểm thưởng — M4
 
-- [ ] **10.4a** · [BE] `PromotionsService.validate(code, subtotal)`: tồn tại, `isActive`, trong hạn, `subtotal ≥ minOrder`, còn lượt; giảm PERCENT (trần `maxDiscount`) / FIXED, không vượt subtotal; `POST /promotions/validate`; unit test ≥ 6 ca · **M4** · 2,5h · N1 08:15–10:45 · ⇒ `src/promotions/`
-- [ ] **10.4b** · [BE] POST /orders nhận `promoCode`: lưu `subtotal`, `discount`, `promoCode`, `total = subtotal − discount`; tăng `usedCount` có điều kiện trong cùng transaction · **M4** · 1,5h · N1 15:00–16:30 · phụ thuộc 10.3b · ⇒ **Merge trước 17:00 N1**
-- [ ] **10.4c** · [BE] `LoyaltyService.award(tx, order)`: `pointsEarned = floor(total / 10.000)`, cộng `User.loyaltyPoints`; `revoke` khi hủy; gắn vào 10.1b; test: vào PAID 2 lần không cộng đôi · **M4** · 2h · N1 (viết 10:45–12:00 + 13:10–14:00, gắn 16:30–17:00) · ⇒ Điểm cộng đúng 1 lần
+- [x] **10.4a** · [BE] `PromotionsService.validate(code, subtotal)`: tồn tại, `isActive`, trong hạn, `subtotal ≥ minOrder`, còn lượt; giảm PERCENT (trần `maxDiscount`) / FIXED, không vượt subtotal; `POST /promotions/validate`; unit test ≥ 6 ca · **M4** · 2,5h · N1 08:15–10:45 · ⇒ `src/promotions/`
+- [x] **10.4b** · [BE] POST /orders nhận `promoCode`: lưu `subtotal`, `discount`, `promoCode`, `total = subtotal − discount`; tăng `usedCount` có điều kiện trong cùng transaction · **M4** · 1,5h · N1 15:00–16:30 · phụ thuộc 10.3b · ⇒ **Merge trước 17:00 N1**
+- [x] **10.4c** · [BE] `LoyaltyService.award(tx, order)`: `pointsEarned = floor(total / 10.000)`, cộng `User.loyaltyPoints`; `revoke` khi hủy; gắn vào 10.1b; test: vào PAID 2 lần không cộng đôi · **M4** · 2h · N1 (viết 10:45–12:00 + 13:10–14:00, gắn 16:30–17:00) · ⇒ Điểm cộng đúng 1 lần
 
 ---
 
@@ -325,7 +325,7 @@ Ký hiệu: **N1** = T2 02/11, **N2** = T3 03/11 · **[BE]** / **[FE]**.
 
 - [ ] **31.1** · `docs/architecture.md` v3: module Payments, Promotions, Stock, OrderStatus; sơ đồ State Machine; **ADR-003** (State Machine tập trung, idempotency bằng khóa dòng + key, optimistic locking) · **M2** · 1h · N2 13:10–14:10
 - [ ] **31.2** · README bàn giao (chạy bằng 1 lệnh, tài khoản test khách/quầy/admin, thẻ test, mã giảm giá test) + `docs/deployment.md` (biến môi trường, Adminer, sự cố thường gặp) · **M5** · 1,5h · N2 14:30–16:00
-- [ ] **31.3** · `docs/release-notes.md` v1.0.0 (tính năng, hạng mục stretch chưa làm, giới hạn đã biết) + `docs/demo-script.md` (Mục 10.1) · **M4** · 1h · N2 16:00–17:00
+- [x] **31.3** · `docs/release-notes.md` v1.0.0 (tính năng, hạng mục stretch chưa làm, giới hạn đã biết) + `docs/demo-script.md` (Mục 10.1) · **M4** · 1h · N2 16:00–17:00
 - [ ] **31.4** · `docs/api-contract.md` v3 khớp Swagger: người viết API cập nhật ngay trong PR của mình (DoD Mục 13.2)
 
 ---

@@ -1,16 +1,28 @@
-import type { ApiErrorBody, Category, Product, ProductDetail, Topping, OrderDetail } from './types';
+import type {
+  ApiErrorBody,
+  Category,
+  Product,
+  ProductDetail,
+  Topping,
+  OrderDetail,
+  PaginatedOrders,
+} from './types';
 
-export type { Category, Product, ProductDetail, Topping, OrderDetail };
+export type { Category, Product, ProductDetail, Topping, OrderDetail, PaginatedOrders };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
+  errorBody?: Record<string, unknown>;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string, errorBody?: Record<string, unknown>) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.code = code;
+    this.errorBody = errorBody;
   }
 }
 
@@ -57,11 +69,15 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     let message = `Yêu cầu thất bại (${response.status}).`;
+    let code: string | undefined;
+    let errorBody: Record<string, unknown> | undefined;
     try {
-      const body = (await response.json()) as ApiErrorBody;
+      const body = (await response.json()) as ApiErrorBody & Record<string, unknown>;
       message = Array.isArray(body.message) ? body.message.join(', ') : (body.message ?? message);
+      if (typeof body.code === 'string') code = body.code;
+      errorBody = body as Record<string, unknown>;
     } catch {}
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, response.status, code, errorBody);
   }
 
   return response.json() as Promise<T>;
@@ -140,4 +156,8 @@ export async function createOrder(items: CreateOrderItem[]): Promise<{
  */
 export function getOrderById(id: number | string): Promise<OrderDetail> {
   return apiFetch<OrderDetail>(`/orders/${id}`);
+}
+
+export function getMyOrders(page = 1, limit = 10): Promise<PaginatedOrders> {
+  return apiFetch<PaginatedOrders>(`/orders/me?page=${page}&limit=${limit}`);
 }

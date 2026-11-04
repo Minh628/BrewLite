@@ -8,6 +8,8 @@ import { ProductsModule } from './products/products.module';
 import { PricingModule } from './pricing/pricing.module';
 import { AuthModule } from './auth/auth.module';
 import { OrdersModule } from './orders/orders.module';
+import { PromotionsModule } from './promotions/promotions.module';
+import { LoyaltyModule } from './loyalty/loyalty.module';
 import { RequestLoggingMiddleware } from './common/logging/request-logging.middleware';
 
 @Module({
@@ -25,6 +27,8 @@ import { RequestLoggingMiddleware } from './common/logging/request-logging.middl
     ProductsModule,
     PricingModule,
     OrdersModule,
+    PromotionsModule,
+    LoyaltyModule,
   ],
   controllers: [AppController],
   providers: [

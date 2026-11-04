@@ -119,12 +119,12 @@ model Order {
   userId         Int
   user           User        @relation(fields: [userId], references: [id])
   status         OrderStatus @default(PENDING)
-  total          Int // Đơn vị VND, do server tính toán
+  total          Int         @default(0) // Số tiền phải trả = subtotal − discount
   subtotal       Int         @default(0) // Σ lineTotal ban đầu
   discount       Int         @default(0) // Số tiền giảm
-  promoCode      String?
+  promoCode      String? // Mã giảm giá đã áp (IN HOA)
   pointsEarned   Int         @default(0) // Điểm tích lũy khi PAID
-  idempotencyKey String?
+  idempotencyKey String? // Khóa chống tạo trùng đơn
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @default(now()) @updatedAt
   items          OrderItem[]
@@ -132,6 +132,20 @@ model Order {
 
   @@unique([userId, idempotencyKey])
   @@index([userId, createdAt])
+}
+
+model Promotion {
+  id          Int          @id @default(autoincrement())
+  code        String       @unique // Lưu in hoa
+  type        DiscountType
+  value       Int // PERCENT: 1-100; FIXED: VND
+  minOrder    Int          @default(0)
+  maxDiscount Int?
+  startsAt    DateTime
+  endsAt      DateTime
+  usageLimit  Int?
+  usedCount   Int          @default(0)
+  isActive    Boolean      @default(true)
 }
 
 model OrderItem {
@@ -155,20 +169,6 @@ model OrderItemTopping {
   price       Int // Giá topping tại thời điểm tạo đơn
 
   @@id([orderItemId, toppingId])
-}
-
-model Promotion {
-  id          Int          @id @default(autoincrement())
-  code        String       @unique // Lưu in hoa
-  type        DiscountType
-  value       Int // PERCENT: 1-100; FIXED: VND
-  minOrder    Int          @default(0)
-  maxDiscount Int?
-  startsAt    DateTime
-  endsAt      DateTime
-  usageLimit  Int?
-  usedCount   Int          @default(0)
-  isActive    Boolean      @default(true)
 }
 
 model Payment {

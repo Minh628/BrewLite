@@ -1,6 +1,6 @@
 // Nạp biến môi trường từ file .env vào process.env khi chạy script
 import 'dotenv/config';
-import { PrismaClient, Role, DiscountType } from '@prisma/client';
+import { DiscountType, PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -160,8 +160,9 @@ async function main() {
     });
   }
 
-  // 6. Seed Promotions theo đặc tả Sprint 3 (Mục 11.1)
-  // Đảm bảo tính idempotent: cập nhật nếu đã tồn tại mã code, tạo mới nếu chưa có
+  // 6. Seed Promotions theo đặc tả Sprint 3 (Mục 11.1 — Sub-task 10.4a)
+  // Mã: BREW10 (10%, trần 20.000đ) · GIAM15K (15.000đ, đơn ≥ 100.000đ) · HETHAN (đã hết hạn)
+  // Idempotent: upsert theo code; KHÔNG reset usedCount khi chạy lại để không mất lượt đã dùng thật.
   const now = new Date();
   const pastDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 ngày trước: đảm bảo mã có hiệu lực
   const futureDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 năm sau: còn hạn sử dụng
@@ -178,7 +179,6 @@ async function main() {
       endsAt: futureDate,
       isActive: true,
       usageLimit: null,
-      usedCount: 0,
     },
     {
       code: 'GIAM15K',
@@ -190,19 +190,17 @@ async function main() {
       endsAt: futureDate,
       isActive: true,
       usageLimit: null,
-      usedCount: 0,
     },
     {
       code: 'HETHAN',
       type: DiscountType.PERCENT,
       value: 20,
-      maxDiscount: null,
+      maxDiscount: 50000,
       minOrder: 0,
       startsAt: pastDate,
       endsAt: expiredDate,
       isActive: true,
       usageLimit: null,
-      usedCount: 0,
     },
   ];
 
@@ -218,7 +216,6 @@ async function main() {
         endsAt: promo.endsAt,
         isActive: promo.isActive,
         usageLimit: promo.usageLimit,
-        usedCount: promo.usedCount,
       },
       create: promo,
     });

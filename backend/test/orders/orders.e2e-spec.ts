@@ -12,12 +12,19 @@ describe('Orders API (e2e) - POST /orders (Sub-task 6.6)', () => {
   let token: string;
 
   const txMock = {
-    order: { create: jest.fn() },
+    order: { create: jest.fn(), updateMany: jest.fn() },
     orderItem: { create: jest.fn() },
+    promotion: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+    },
   };
 
   const prismaMock = {
     product: { findMany: jest.fn() },
+    order: { findUnique: jest.fn<Promise<unknown>, [unknown]>(() => Promise.resolve(null)) },
+    promotion: { findUnique: jest.fn<Promise<unknown>, [unknown]>(() => Promise.resolve(null)) },
     $transaction: jest.fn((callback: (tx: typeof txMock) => Promise<unknown>) => callback(txMock)),
   };
 
@@ -47,11 +54,39 @@ describe('Orders API (e2e) - POST /orders (Sub-task 6.6)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     prismaMock.product.findMany.mockImplementation(findProductsByIds);
+    prismaMock.order.findUnique.mockResolvedValue(null);
+    prismaMock.promotion.findUnique.mockResolvedValue(null);
     txMock.order.create.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
       Promise.resolve({ id: 1001, createdAt: new Date('2026-10-24T10:00:00Z'), ...data }),
     );
+    txMock.order.updateMany.mockResolvedValue({ count: 1 });
     txMock.orderItem.create.mockResolvedValue({});
   });
+
+  /** Cấu hình mã giảm giá giả lập cho DB (mặc định không có mã). */
+  const givenPromotion = (overrides: Record<string, unknown> = {}) => {
+    const promo = {
+      id: 1,
+      code: 'BREW10',
+      type: 'PERCENT',
+      value: 10,
+      minOrder: 0,
+      maxDiscount: 20000,
+      startsAt: new Date('2026-10-01T00:00:00Z'),
+      endsAt: new Date('2026-12-31T00:00:00Z'),
+      usageLimit: null,
+      usedCount: 0,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...overrides,
+    };
+    prismaMock.promotion.findUnique.mockResolvedValue(promo);
+    txMock.promotion.findUnique.mockResolvedValue(promo);
+    txMock.promotion.updateMany.mockResolvedValue({ count: 1 });
+    txMock.promotion.update.mockResolvedValue({});
+    return promo;
+  };
 
   afterAll(async () => {
     await app.close();
@@ -162,7 +197,7 @@ describe('Orders API (e2e) - POST /orders (Sub-task 6.6)', () => {
   });
 
   describe('201 Created', () => {
-    it('tạo đơn PENDING đúng contract v2 cho user trong token', async () => {
+    it('tạo đơn PENDING đúng contract v3 cho user trong token', async () => {
       const response = await postOrder(validOrderBody);
 
       expect(response.status).toBe(201);
@@ -170,6 +205,9 @@ describe('Orders API (e2e) - POST /orders (Sub-task 6.6)', () => {
         orderId: 1001,
         code: '#1001',
         status: 'PENDING',
+        subtotal: EXPECTED_TOTAL,
+        discount: 0,
+        promoCode: null,
         total: EXPECTED_TOTAL,
         items: [
           { productId: 3, size: 'L', qty: 2, unitPrice: 67000, lineTotal: 134000 },
@@ -178,7 +216,15 @@ describe('Orders API (e2e) - POST /orders (Sub-task 6.6)', () => {
         createdAt: '2026-10-24T10:00:00.000Z',
       });
       expect(txMock.order.create).toHaveBeenCalledWith({
-        data: { userId: 7, status: 'PENDING', total: EXPECTED_TOTAL },
+        data: {
+          userId: 7,
+          status: 'PENDING',
+          subtotal: EXPECTED_TOTAL,
+          discount: 0,
+          promoCode: null,
+          total: EXPECTED_TOTAL,
+          idempotencyKey: null,
+        },
       });
       expect(txMock.orderItem.create).toHaveBeenCalledTimes(2);
     });
@@ -202,6 +248,75 @@ describe('Orders API (e2e) - POST /orders (Sub-task 6.6)', () => {
       expect(txMock.order.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ total: EXPECTED_TOTAL }),
       });
+    });
+  });
+
+  describe('mã giảm giá (Sub-task 10.4b)', () => {
+    it('promoCode BREW10 → giảm 17.800đ, tổng 160.200đ', async () => {
+      givenPromotion();
+
+      const response = await postOrder({ ...validOrderBody, promoCode: 'brew10' });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toMatchObject({
+        subtotal: 178000,
+        discount: 17800,
+        promoCode: 'BREW10',
+        total: 160200,
+      });
+      expect(txMock.promotion.update).toHaveBeenCalledWith({
+        where: { code: 'BREW10' },
+        data: { usedCount: { increment: 1 } },
+      });
+    });
+
+    it('mã hết hạn → 400 kèm code PROMO_EXPIRED, không tạo đơn', async () => {
+      givenPromotion({ code: 'HETHAN', endsAt: new Date('2026-10-01T00:00:00Z') });
+
+      const response = await postOrder({ ...validOrderBody, promoCode: 'hethan' });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toMatchObject({ code: 'PROMO_EXPIRED' });
+      expect(txMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('mã không tồn tại → 400 kèm code PROMO_NOT_FOUND', async () => {
+      const response = await postOrder({ ...validOrderBody, promoCode: 'KHONGCO' });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toMatchObject({ code: 'PROMO_NOT_FOUND' });
+    });
+  });
+
+  describe('Idempotency-Key (Sub-task 10.2b)', () => {
+    it('gửi cùng key 2 lần: lần đầu 201, lần sau 200 kèm Idempotent-Replayed', async () => {
+      const first = await postOrder(validOrderBody).set('Idempotency-Key', 'e2e-key-1');
+      expect(first.status).toBe(201);
+
+      prismaMock.order.findUnique.mockResolvedValue({
+        id: 1001,
+        userId: 7,
+        status: 'PENDING',
+        subtotal: EXPECTED_TOTAL,
+        discount: 0,
+        promoCode: null,
+        pointsEarned: 0,
+        idempotencyKey: 'e2e-key-1',
+        total: EXPECTED_TOTAL,
+        createdAt: new Date('2026-10-24T10:00:00Z'),
+        updatedAt: new Date('2026-10-24T10:00:00Z'),
+        items: [
+          { productId: 3, size: 'L', qty: 2, unitPrice: 67000, lineTotal: 134000 },
+          { productId: 5, size: 'M', qty: 1, unitPrice: 44000, lineTotal: 44000 },
+        ],
+      });
+
+      const second = await postOrder(validOrderBody).set('Idempotency-Key', 'e2e-key-1');
+
+      expect(second.status).toBe(200);
+      expect(second.headers['idempotent-replayed']).toBe('true');
+      expect(second.body.orderId).toBe(1001);
+      expect(txMock.order.create).toHaveBeenCalledTimes(1);
     });
   });
 });
