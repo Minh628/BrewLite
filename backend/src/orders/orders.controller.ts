@@ -1,31 +1,124 @@
-import { Body, Controller, Headers, HttpStatus, Post, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiHeader,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
 import type { Response } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { ApiErrorDto } from '../common/dto/api-error.dto';
 import { BEARER_AUTH } from '../swagger';
 import { CreateOrderDto } from './dto/create-order.dto';
+import {
+  GetOrdersQueryDto,
+  OrderDetailDto,
+  PaginatedOrdersDto,
+  UpdatedOrderStatusDto,
+} from './dto/order-detail.dto';
 import { CreatedOrderDto, ReplayedOrderDto } from './dto/order-response.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrdersService } from './orders.service';
 
 /**
- * Controller xử lý đơn hàng (PB-06, mở rộng 10.2b + 10.4b).
+ * Controller xử lý đơn hàng (PB-06, mở rộng 9.1 + 10.1c).
  */
 @ApiTags('Orders')
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  /**
+   * Lấy danh sách đơn hàng của người dùng hiện tại (phân trang).
+   * PHẢI khai báo trước GET /:id để "me" không bị hiểu là param.
+   * @route GET /orders/me
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  @ApiBearerAuth(BEARER_AUTH)
+  @ApiOperation({
+    summary: 'Lịch sử đơn hàng của tôi (phân trang)',
+    description: 'Trả về danh sách đơn hàng của người dùng hiện tại, mới nhất trước.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiOkResponse({ type: PaginatedOrdersDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  async getMyOrders(
+    @CurrentUser('id') userId: number,
+    @Query() query: GetOrdersQueryDto,
+  ): Promise<PaginatedOrdersDto> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    return this.ordersService.findMyOrders(userId, page, limit);
+  }
+
+  /**
+   * Lấy chi tiết một đơn hàng theo ID (chỉ đơn của chính mình).
+   * @route GET /orders/:id
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  @ApiBearerAuth(BEARER_AUTH)
+  @ApiOperation({ summary: 'Chi tiết đơn hàng' })
+  @ApiOkResponse({ type: OrderDetailDto })
+  @ApiNotFoundResponse({ type: ApiErrorDto, description: 'Không tìm thấy đơn hàng' })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  async getOrderById(
+    @CurrentUser('id') userId: number,
+    @Param('id', ParseIntPipe) orderId: number,
+  ): Promise<OrderDetailDto> {
+    return this.ordersService.findById(userId, orderId);
+  }
+
+  /**
+   * Chuyển trạng thái đơn hàng — chỉ BARISTA / ADMIN.
+   * Trạng thái hợp lệ: PREPARING, READY, COMPLETED.
+   * State Machine kiểm tra cặp chuyển đổi; sai → 409 INVALID_TRANSITION.
+   * @route PATCH /orders/:id/status
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.BARISTA, Role.ADMIN)
+  @Patch(':id/status')
+  @ApiBearerAuth(BEARER_AUTH)
+  @ApiOperation({ summary: 'Quầy pha chế cập nhật trạng thái đơn (BARISTA/ADMIN)' })
+  @ApiOkResponse({ type: UpdatedOrderStatusDto })
+  @ApiBadRequestResponse({ type: ApiErrorDto })
+  @ApiForbiddenResponse({ type: ApiErrorDto, description: '403 FORBIDDEN_ROLE' })
+  @ApiConflictResponse({ type: ApiErrorDto, description: '409 INVALID_TRANSITION' })
+  @ApiNotFoundResponse({ type: ApiErrorDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  async updateStatus(
+    @Param('id', ParseIntPipe) orderId: number,
+    @Body() dto: UpdateOrderStatusDto,
+  ): Promise<UpdatedOrderStatusDto> {
+    return this.ordersService.updateStatus(orderId, dto.status);
+  }
 
   /**
    * Endpoint tạo đơn hàng từ giỏ hàng.

@@ -1,6 +1,14 @@
-import type { ApiErrorBody, Category, Product, ProductDetail, Topping, OrderDetail } from './types';
+import type {
+  ApiErrorBody,
+  Category,
+  Product,
+  ProductDetail,
+  Topping,
+  OrderDetail,
+  PaginatedOrders,
+} from './types';
 
-export type { Category, Product, ProductDetail, Topping, OrderDetail };
+export type { Category, Product, ProductDetail, Topping, OrderDetail, PaginatedOrders };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -148,4 +156,8 @@ export async function createOrder(items: CreateOrderItem[]): Promise<{
  */
 export function getOrderById(id: number | string): Promise<OrderDetail> {
   return apiFetch<OrderDetail>(`/orders/${id}`);
+}
+
+export function getMyOrders(page = 1, limit = 10): Promise<PaginatedOrders> {
+  return apiFetch<PaginatedOrders>(`/orders/me?page=${page}&limit=${limit}`);
 }

@@ -65,10 +65,11 @@ export class AuthService {
       throw error;
     }
 
-    // Bước 5: Ký JWT chứa thông tin định danh
+    // Bước 5: Ký JWT chứa thông tin định danh (bao gồm role cho RolesGuard)
     const accessToken = await this.jwtService.signAsync({
       sub: String(user.id),
       email: user.email,
+      role: 'CUSTOMER',
     });
 
     return {
@@ -89,13 +90,17 @@ export class AuthService {
    * @param pass Mật khẩu chưa băm
    * @returns Thông tin user context an toàn nếu khớp, ngược lại trả về null
    */
-  async validateUser(email: string, pass: string): Promise<{ id: number; email: string } | null> {
+  async validateUser(
+    email: string,
+    pass: string,
+  ): Promise<{ id: number; email: string; role: string } | null> {
     const user = await this.prisma.user.findUnique({
       where: { email },
       select: {
         id: true,
         email: true,
         passwordHash: true,
+        role: true,
       },
     });
 
@@ -113,6 +118,7 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
+      role: user.role,
     };
   }
 
@@ -121,7 +127,7 @@ export class AuthService {
    * @param user Thông tin user đã được xác thực qua LocalStrategy
    * @returns Đối tượng chứa accessToken, expiresIn (3600s) và user context
    */
-  async login(user: { id: number; email: string }): Promise<{
+  async login(user: { id: number; email: string; role?: string }): Promise<{
     accessToken: string;
     expiresIn: number;
     user: { id: number; email: string };
@@ -133,6 +139,7 @@ export class AuthService {
     const payload = {
       sub: String(user.id),
       email: user.email,
+      role: user.role ?? 'CUSTOMER',
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
@@ -168,6 +175,7 @@ export class AuthService {
         id: true,
         email: true,
         loyaltyPoints: true,
+        role: true,
         createdAt: true,
       },
     });
@@ -180,7 +188,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       loyaltyPoints: user.loyaltyPoints,
-      role: 'CUSTOMER',
+      role: user.role,
       createdAt: user.createdAt,
     };
   }

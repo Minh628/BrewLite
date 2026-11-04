@@ -6,6 +6,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 interface JwtPayload {
   sub: string;
   email: string;
+  role: string;
 }
 
 /**
@@ -27,13 +28,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   /**
    * Phương thức validate payload của token sau khi Passport giải mã thành công
-   * @param payload Dữ liệu định danh chứa sub (userId) và email
+   * @param payload Dữ liệu định danh chứa sub (userId), email và role
    * @returns User context gắn vào req.user
    */
-  validate(payload: JwtPayload): { id: number; email: string } {
+  validate(payload: JwtPayload): { id: number; email: string; role: string } {
     return {
       id: Number(payload.sub),
       email: payload.email,
+      role: payload.role ?? 'CUSTOMER',
     };
   }
 }

@@ -230,6 +230,7 @@ describe('Auth API (e2e)', () => {
         id: 'user-cuid-uuid',
         email: 'customer@brewlite.vn',
         loyaltyPoints: 10,
+        role: 'CUSTOMER',
         createdAt: mockCreatedAt,
       });
 

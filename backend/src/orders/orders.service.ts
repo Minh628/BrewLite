@@ -10,7 +10,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { StockService } from '../stock/stock.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { OrderDetailDto, PaginatedOrdersDto, UpdatedOrderStatusDto } from './dto/order-detail.dto';
+import { BaristaStatus } from './dto/update-order-status.dto';
 import { CreatedOrderDto } from './dto/order-response.dto';
+import { OrderStatusService } from './order-status.service';
 
 /**
  * Mã đơn hiển thị cho khách, ví dụ đơn id 1001 → "#1001"
@@ -46,6 +49,7 @@ export class OrdersService {
     private readonly pricingService: PricingService,
     private readonly promotionsService: PromotionsService,
     private readonly stockService: StockService,
+    private readonly orderStatusService: OrderStatusService,
   ) {}
 
   /**
@@ -153,6 +157,123 @@ export class OrdersService {
 
       throw this.mapPrismaError(error);
     }
+  }
+
+  /**
+   * Lấy danh sách đơn hàng của người dùng (phân trang, mới nhất trước) — Sub-task 9.1.
+   */
+  async findMyOrders(userId: number, page: number, limit: number): Promise<PaginatedOrdersDto> {
+    const skip = (page - 1) * limit;
+
+    const [orders, totalItems] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          status: true,
+          total: true,
+          createdAt: true,
+          _count: { select: { items: true } },
+        },
+      }),
+      this.prisma.order.count({ where: { userId } }),
+    ]);
+
+    return {
+      items: orders.map((o) => ({
+        orderId: o.id,
+        code: formatOrderCode(o.id),
+        status: o.status,
+        total: o.total,
+        itemCount: o._count.items,
+        createdAt: o.createdAt.toISOString(),
+      })),
+      page,
+      limit,
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit) || 1,
+    };
+  }
+
+  /**
+   * Lấy chi tiết đơn hàng theo ID, kiểm tra quyền sở hữu — Sub-task 9.1.
+   * Trả 404 nếu đơn không tồn tại hoặc không thuộc user.
+   */
+  async findById(userId: number, orderId: number): Promise<OrderDetailDto> {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, userId },
+      include: {
+        items: {
+          include: {
+            product: { select: { name: true } },
+            toppings: {
+              include: { topping: { select: { name: true } } },
+            },
+          },
+        },
+        payments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Không tìm thấy đơn hàng #${orderId}`);
+    }
+
+    const latestPayment = order.payments[0] ?? null;
+
+    return {
+      orderId: order.id,
+      code: formatOrderCode(order.id),
+      status: order.status,
+      subtotal: order.subtotal,
+      discount: order.discount,
+      promoCode: order.promoCode,
+      total: order.total,
+      pointsEarned: order.pointsEarned,
+      createdAt: order.createdAt.toISOString(),
+      items: order.items.map((item) => ({
+        productId: item.productId,
+        productName: item.product.name,
+        size: item.size,
+        qty: item.qty,
+        unitPrice: item.unitPrice,
+        lineTotal: item.lineTotal,
+        toppings: item.toppings.map((t) => ({
+          id: t.toppingId,
+          name: t.topping.name,
+          price: t.price,
+        })),
+      })),
+      payment: latestPayment
+        ? {
+            method: latestPayment.method,
+            cardLast4: latestPayment.cardLast4 ?? null,
+            paidAt: latestPayment.createdAt.toISOString(),
+          }
+        : null,
+    };
+  }
+
+  /**
+   * Chuyển trạng thái đơn hàng (BARISTA/ADMIN) — Sub-task 10.1c.
+   * Dùng OrderStatusService.transition() bên trong transaction để đảm bảo State Machine.
+   */
+  async updateStatus(orderId: number, toStatus: BaristaStatus): Promise<UpdatedOrderStatusDto> {
+    const updated = await this.prisma.$transaction(async (tx) => {
+      return this.orderStatusService.transition(tx, orderId, toStatus as OrderStatus);
+    });
+
+    return {
+      orderId: updated.id,
+      code: formatOrderCode(updated.id),
+      status: updated.status,
+    };
   }
 
   /** Tra cứu đơn đã tạo bằng (userId, idempotencyKey). */

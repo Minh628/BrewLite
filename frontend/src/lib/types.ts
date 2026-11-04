@@ -75,3 +75,20 @@ export type OrderDetail = {
   items: OrderItemDetail[];
   payment?: OrderPaymentInfo | null;
 };
+
+export type OrderSummary = {
+  orderId: number;
+  code: string;
+  status: OrderStatus;
+  total: number;
+  itemCount: number;
+  createdAt: string;
+};
+
+export type PaginatedOrders = {
+  items: OrderSummary[];
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+};

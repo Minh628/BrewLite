@@ -70,10 +70,11 @@ describe('AuthService (Unit Test)', () => {
         },
       });
 
-      // Đảm bảo ký JWT với payload sub và email
+      // Đảm bảo ký JWT với payload sub, email và role
       expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
         sub: '3',
         email: 'test@brewlite.vn',
+        role: 'CUSTOMER',
       });
 
       // Kiểm tra dữ liệu trả về chuẩn format
@@ -192,6 +193,7 @@ describe('AuthService (Unit Test)', () => {
       expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
         sub: '3',
         email: 'test@brewlite.vn',
+        role: 'CUSTOMER',
       });
 
       expect(result).toEqual({
@@ -230,6 +232,7 @@ describe('AuthService (Unit Test)', () => {
         id: 3,
         email: 'an@brewlite.vn',
         loyaltyPoints: 100,
+        role: 'CUSTOMER',
         createdAt: mockCreatedAt,
       });
 
@@ -253,6 +256,7 @@ describe('AuthService (Unit Test)', () => {
           id: true,
           email: true,
           loyaltyPoints: true,
+          role: true,
           createdAt: true,
         },
       });
