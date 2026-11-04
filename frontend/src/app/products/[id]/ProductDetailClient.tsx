@@ -20,6 +20,7 @@ interface Product {
   category?: string;
   imageUrl?: string;
   sizes?: AvailableSize[];
+  inStock?: boolean;
 }
 
 interface ProductDetailClientProps {
@@ -34,6 +35,7 @@ const DEFAULT_SIZES: AvailableSize[] = [
 
 export default function ProductDetailClient({ product }: ProductDetailClientProps) {
   const router = useRouter();
+  const outOfStock = product.inStock === false;
   const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L'>('S');
   const [selectedToppings, setSelectedToppings] = useState<SelectedTopping[]>([]);
   const { add } = useCart();
@@ -113,9 +115,15 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
         </div>
 
         <div className="pt-4 flex gap-4">
-          <Button onClick={handleAddToCart} className="flex-1" size="lg">
-            Thêm vào giỏ hàng
-          </Button>
+          {outOfStock ? (
+            <span className="flex-1 inline-flex items-center justify-center rounded-lg bg-espresso/20 px-4 py-3 text-sm font-semibold text-espresso/50 cursor-not-allowed">
+              Hết hàng
+            </span>
+          ) : (
+            <Button onClick={handleAddToCart} className="flex-1" size="lg">
+              Thêm vào giỏ hàng
+            </Button>
+          )}
           <Link
             href="/"
             className="px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition flex items-center justify-center"

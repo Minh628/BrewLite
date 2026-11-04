@@ -8,6 +8,7 @@ import { OrderStatus, Prisma } from '@prisma/client';
 import { OrderPricingResult, PricingService } from '../pricing/pricing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PromotionsService } from '../promotions/promotions.service';
+import { StockService } from '../stock/stock.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { CreatedOrderDto } from './dto/order-response.dto';
 
@@ -44,6 +45,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly pricingService: PricingService,
     private readonly promotionsService: PromotionsService,
+    private readonly stockService: StockService,
   ) {}
 
   /**
@@ -123,6 +125,12 @@ export class OrdersService {
             },
           });
         }
+
+        // Giữ tồn kho (optimistic locking) — 409 OUT_OF_STOCK nếu không đủ hàng (10.3b)
+        await this.stockService.reserve(
+          tx,
+          pricing.items.map((item) => ({ productId: item.productId, qty: item.qty })),
+        );
 
         // Tăng lượt dùng mã có điều kiện trong cùng transaction: hết lượt → rollback cả đơn
         if (promotion) {

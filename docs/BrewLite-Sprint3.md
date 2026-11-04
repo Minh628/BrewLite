@@ -242,8 +242,8 @@ Ký hiệu: **N1** = T2 02/11, **N2** = T3 03/11 · **[BE]** / **[FE]**.
 
 ### 🔸 Nền tảng chung (2 giờ đầu Ngày 1, mọi người phụ thuộc)
 
-- [ ] **C.3** · [BE] Chốt API contract v3 (Mục 11.2): POST /payments, POST /promotions/validate, GET /orders/me, GET /orders/:id, PATCH /orders/:id/status; header Idempotency-Key; mã lỗi mới · **M2** · 1h · N1 08:15–09:15 · ⇒ `docs/api-contract.md` v3 được cả nhóm duyệt **trước 09:30**
-- [ ] **E.3** · [BE] **Một** migration Sprint 3 + seed: `Product.version`, cột mới của `Order`, bảng `Promotion`, enum `PaymentStatus`, tài khoản `barista@brewlite.vn` và `admin@brewlite.vn`, mã BREW10/GIAM15K/HETHAN, sản phẩm "Bạc xỉu" tồn kho 0 · **M2** · 2h · N1 09:30–11:15 · ⇒ **Merge trước 11:15**; `prisma migrate dev` sạch
+- [x] **C.3** · [BE] Chốt API contract v3 (Mục 11.2): POST /payments, POST /promotions/validate, GET /orders/me, GET /orders/:id, PATCH /orders/:id/status; header Idempotency-Key; mã lỗi mới · **M2** · 1h · N1 08:15–09:15 · ⇒ `docs/api-contract.md` v3 được cả nhóm duyệt **trước 09:30**
+- [x] **E.3** · [BE] **Một** migration Sprint 3 + seed: `Product.version`, cột mới của `Order`, bảng `Promotion`, enum `PaymentStatus`, tài khoản `barista@brewlite.vn` và `admin@brewlite.vn`, mã BREW10/GIAM15K/HETHAN, sản phẩm "Bạc xỉu" tồn kho 0 · **M2** · 2h · N1 09:30–11:15 · ⇒ **Merge trước 11:15**; `prisma migrate dev` sạch
 
 ---
 
@@ -257,8 +257,8 @@ Ký hiệu: **N1** = T2 02/11, **N2** = T3 03/11 · **[BE]** / **[FE]**.
 
 #### 10.1 Order State Machine — M2 (+ M5)
 
-- [ ] **10.1a** · [BE] `orders/order-state-machine.ts`: bảng `TRANSITIONS` (Mục 6.1), `assertTransition(from, to)` ném 409 `INVALID_TRANSITION`; **test (a)** đủ 49 cặp · **M2** · 2,5h · N1 chiều + N2 sáng · ⇒ Test xanh
-- [ ] **10.1b** · [BE] `OrderStatusService.transition(tx, orderId, to)`: khóa dòng Order, gọi `assertTransition`, cập nhật trạng thái, chạy tác vụ đi kèm (PAID → `LoyaltyService.award`; CANCELLED → `StockService.release`, `LoyaltyService.revoke`). **Nơi duy nhất đổi `Order.status`** · **M2** · 1,5h · N1 · ⇒ **Merge trước 16:30 N1**
+- [x] **10.1a** · [BE] `orders/order-state-machine.ts`: bảng `TRANSITIONS` (Mục 6.1), `assertTransition(from, to)` ném 409 `INVALID_TRANSITION`; **test (a)** đủ 49 cặp · **M2** · 2,5h · N1 chiều + N2 sáng · ⇒ Test xanh
+- [x] **10.1b** · [BE] `OrderStatusService.transition(tx, orderId, to)`: khóa dòng Order, gọi `assertTransition`, cập nhật trạng thái, chạy tác vụ đi kèm (PAID → `LoyaltyService.award`; CANCELLED → `StockService.release`, `LoyaltyService.revoke`). **Nơi duy nhất đổi `Order.status`** · **M2** · 1,5h · N1 · ⇒ **Merge trước 16:30 N1**
 - [ ] **10.1c** · [BE] `RolesGuard` + `@Roles()`; thêm `role` vào JWT, `/auth/login`, `/auth/me`; `PATCH /orders/:id/status` (BARISTA/ADMIN; chỉ PREPARING/READY/COMPLETED); e2e: khách → 403, sai thứ tự → 409 · **M5** · 2h · N1 (guard) + N2 sáng (endpoint) · phụ thuộc 10.1b · ⇒ Quầy đổi trạng thái được qua Swagger
 
 #### 10.2 Thanh toán idempotent — M3 + M4
@@ -269,10 +269,10 @@ Ký hiệu: **N1** = T2 02/11, **N2** = T3 03/11 · **[BE]** / **[FE]**.
 
 #### 10.3 Tồn kho khi đặt đồng thời — M1
 
-- [ ] **10.3a** · [BE] `StockService.reserve(tx, items)`: gộp qty theo productId; `updateMany({ where: { id, version, stock: { gte: qty } }, data: { stock: { decrement: qty }, version: { increment: 1 } } })`; 0 dòng → đọc lại: hết hàng → 409 `OUT_OF_STOCK` kèm `productId`, xung đột phiên bản → thử lại tối đa 3 lần; `release(tx, orderId)` · **M1** · 2,5h · N1 sáng (viết với mock, rebase lên migration 11:15) · ⇒ `src/stock/stock.service.ts`
-- [ ] **10.3b** · [BE] Gọi `reserve` trong transaction của `OrdersService.create`; nối `release` vào tác vụ CANCELLED · **M1** · 1h · N1 13:10–14:10 · ⇒ **Merge trước 15:00 N1** (người đầu tiên sửa `OrdersService.create`)
-- [ ] **10.3c** · [BE] **Test (c):** 20 request POST /orders đồng thời (20 user test) mua 1 ly món tồn kho 5 → đúng 5 × 201, 15 × 409, tồn kho = 0, không âm; PostgreSQL thật trong CI · **M1** · 1,5h · N2 08:15–09:45 · ⇒ Test xanh 5 lần liên tiếp
-- [ ] **10.3d** · [FE] GET /products trả `inStock`; ProductCard + trang chi tiết hiện "Hết hàng", tắt nút thêm giỏ; `mapOrderError()` hiện "Món X vừa hết hàng" ở checkout · **M1** · 1,5h · N2 09:45–11:15 · ⇒ Không thêm được món hết hàng
+- [x] **10.3a** · [BE] `StockService.reserve(tx, items)`: gộp qty theo productId; `updateMany({ where: { id, version, stock: { gte: qty } }, data: { stock: { decrement: qty }, version: { increment: 1 } } })`; 0 dòng → đọc lại: hết hàng → 409 `OUT_OF_STOCK` kèm `productId`, xung đột phiên bản → thử lại tối đa 3 lần; `release(tx, orderId)` · **M1** · 2,5h · N1 sáng (viết với mock, rebase lên migration 11:15) · ⇒ `src/stock/stock.service.ts`
+- [x] **10.3b** · [BE] Gọi `reserve` trong transaction của `OrdersService.create`; nối `release` vào tác vụ CANCELLED · **M1** · 1h · N1 13:10–14:10 · ⇒ **Merge trước 15:00 N1** (người đầu tiên sửa `OrdersService.create`)
+- [x] **10.3c** · [BE] **Test (c):** 20 request POST /orders đồng thời (20 user test) mua 1 ly món tồn kho 5 → đúng 5 × 201, 15 × 409, tồn kho = 0, không âm; PostgreSQL thật trong CI · **M1** · 1,5h · N2 08:15–09:45 · ⇒ Test xanh 5 lần liên tiếp
+- [x] **10.3d** · [FE] GET /products trả `inStock`; ProductCard + trang chi tiết hiện "Hết hàng", tắt nút thêm giỏ; `mapOrderError()` hiện "Món X vừa hết hàng" ở checkout · **M1** · 1,5h · N2 09:45–11:15 · ⇒ Không thêm được món hết hàng
 
 #### 10.4 Khuyến mãi & điểm thưởng — M4
 

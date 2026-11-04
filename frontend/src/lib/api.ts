@@ -6,11 +6,15 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
+  errorBody?: Record<string, unknown>;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string, errorBody?: Record<string, unknown>) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.code = code;
+    this.errorBody = errorBody;
   }
 }
 
@@ -57,11 +61,15 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     let message = `Yêu cầu thất bại (${response.status}).`;
+    let code: string | undefined;
+    let errorBody: Record<string, unknown> | undefined;
     try {
-      const body = (await response.json()) as ApiErrorBody;
+      const body = (await response.json()) as ApiErrorBody & Record<string, unknown>;
       message = Array.isArray(body.message) ? body.message.join(', ') : (body.message ?? message);
+      if (typeof body.code === 'string') code = body.code;
+      errorBody = body as Record<string, unknown>;
     } catch {}
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, response.status, code, errorBody);
   }
 
   return response.json() as Promise<T>;
