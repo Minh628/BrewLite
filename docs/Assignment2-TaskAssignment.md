@@ -228,8 +228,8 @@ Assignment 2 nối tiếp đề tài BrewLite (Assignment 1) và yêu cầu nhó
 
 ### Task 3 — Hoàng Tịnh
 
-- [ ] T3.1 Architecture overview (PR: ___)
-- [ ] T3.1-b ADR ≥ 3 file (PR: ___)
+- [x] T3.1 Architecture overview (PR: ___)
+- [x] T3.1-b ADR ≥ 3 file (PR: ___)
 - [ ] T3.2 Deployment diagram + `docs/deployment.md` (PR: ___)
 
 ### Task 4 — Hoàng Tịnh + Trung Hiếu + Hải Lý
@@ -240,7 +240,7 @@ Assignment 2 nối tiếp đề tài BrewLite (Assignment 1) và yêu cầu nhó
 - [ ] T4.3-b Unit test BE products (PR: ___)
 - [ ] T4.3-c FE `/menu` + loading/empty/error (PR: ___)
 - [ ] T4.3-d Component test FE (PR: ___)
-- [ ] T4.4 CI xanh + screenshot CI đỏ chặn merge (PR: ___)
+- [x] T4.4 CI xanh + screenshot CI đỏ chặn merge (PR: ___)
 
 ### Task 5 — cả nhóm
 
