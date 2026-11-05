@@ -57,6 +57,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
       imageUrl: product.imageUrl ?? '',
       category: { id: 0, name: product.category ?? '' },
       isAvailable: true,
+      inStock: product.inStock ?? true,
       size: selectedSize,
       toppings: selectedToppings,
       unitPrice,

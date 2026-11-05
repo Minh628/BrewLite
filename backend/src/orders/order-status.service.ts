@@ -19,14 +19,18 @@ export interface OrderStatusHooks {
 export class OrderStatusService {
   private readonly logger = new Logger(OrderStatusService.name);
 
-  // Hook registry cho phép các service khác (Loyalty, Stock) tích hợp logic nghiệp vụ
-  private hooks: OrderStatusHooks = {};
+  // Nhiều service (Loyalty, Stock) cùng cần react tới PAID/CANCELLED, nên lưu mảng
+  // và chạy tuần tự thay vì spread-merge — spread-merge khiến đăng ký sau ghi đè đăng ký trước.
+  private onPaidHandlers: Array<NonNullable<OrderStatusHooks['onPaid']>> = [];
+  private onCancelledHandlers: Array<NonNullable<OrderStatusHooks['onCancelled']>> = [];
 
   /**
-   * Đăng ký hook nghiệp vụ đi kèm khi chuyển trạng thái
+   * Đăng ký hook nghiệp vụ đi kèm khi chuyển trạng thái.
+   * Có thể gọi nhiều lần; mỗi lần append thêm handler, không ghi đè handler cũ.
    */
   registerHooks(hooks: OrderStatusHooks): void {
-    this.hooks = { ...this.hooks, ...hooks };
+    if (hooks.onPaid) this.onPaidHandlers.push(hooks.onPaid);
+    if (hooks.onCancelled) this.onCancelledHandlers.push(hooks.onCancelled);
   }
 
   /**
@@ -91,8 +95,8 @@ export class OrderStatusService {
     this.logger.log(
       `Kích hoạt hook PAID cho đơn #${order.id}: Chuẩn bị tích lũy loyalty points cho User #${order.userId}`,
     );
-    if (this.hooks.onPaid) {
-      await this.hooks.onPaid(tx, order);
+    for (const handler of this.onPaidHandlers) {
+      await handler(tx, order);
     }
   }
 
@@ -108,8 +112,8 @@ export class OrderStatusService {
     this.logger.warn(
       `Kích hoạt hook CANCELLED cho đơn #${order.id}: Hoàn tồn kho và thu hồi loyalty points. Lý do: ${reason ?? 'Không nêu'}`,
     );
-    if (this.hooks.onCancelled) {
-      await this.hooks.onCancelled(tx, order, reason);
+    for (const handler of this.onCancelledHandlers) {
+      await handler(tx, order, reason);
     }
   }
 }
