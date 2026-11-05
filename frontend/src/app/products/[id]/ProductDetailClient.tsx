@@ -37,6 +37,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const router = useRouter();
   const outOfStock = product.inStock === false;
   const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L'>('S');
+  const [quantity, setQuantity] = useState(1);
   const [selectedToppings, setSelectedToppings] = useState<SelectedTopping[]>([]);
   const { add } = useCart();
   const { data: toppings, isLoading: isLoadingToppings } = useQuery({
@@ -50,17 +51,21 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const unitPrice = calcUnitPrice(product.price, sizeOption, selectedToppings);
 
   const handleAddToCart = () => {
-    add({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      imageUrl: product.imageUrl ?? '',
-      category: { id: 0, name: product.category ?? '' },
-      isAvailable: true,
-      size: selectedSize,
-      toppings: selectedToppings,
-      unitPrice,
-    });
+    add(
+      {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        imageUrl: product.imageUrl ?? '',
+        category: { id: 0, name: product.category ?? '' },
+        isAvailable: true,
+        inStock: !outOfStock,
+        size: selectedSize,
+        toppings: selectedToppings,
+        unitPrice,
+      },
+      quantity,
+    );
     router.push('/cart');
   };
 
@@ -112,6 +117,21 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
               onChangeToppings={(next) => setSelectedToppings(next)}
             />
           )}
+
+          <label className="mt-4 flex items-center gap-3 text-sm font-medium text-espresso">
+            Số lượng
+            <input
+              aria-label="Số lượng"
+              type="number"
+              min={1}
+              max={20}
+              value={quantity}
+              onChange={(event) =>
+                setQuantity(Math.max(1, Math.min(20, Number(event.target.value) || 1)))
+              }
+              className="w-20 rounded-lg border border-espresso/20 px-3 py-2"
+            />
+          </label>
         </div>
 
         <div className="pt-4 flex gap-4">

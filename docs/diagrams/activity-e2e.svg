@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1510" viewBox="0 0 1000 1510" role="img" aria-labelledby="title description">
+  <title id="title">BrewLite - Luồng đặt món và thanh toán</title>
+  <desc id="description">Activity diagram từ chọn món đến xác nhận hoặc thử lại thanh toán.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#60422f"/>
+    </marker>
+    <style>
+      text { font-family: Arial, sans-serif; fill: #34241c; }
+      .lane { fill: #fbf8f1; stroke: #c9b9a7; stroke-width: 2; }
+      .box { fill: #fff; stroke: #785638; stroke-width: 2; rx: 12; }
+      .decision { fill: #f3dfc5; stroke: #785638; stroke-width: 2; }
+      .edge { fill: none; stroke: #60422f; stroke-width: 2.5; marker-end: url(#arrow); }
+      .label { font-size: 15px; font-weight: bold; }
+      .small { font-size: 14px; }
+    </style>
+  </defs>
+  <rect width="1000" height="1510" fill="#f8f3e8"/>
+  <text x="500" y="42" text-anchor="middle" font-size="26" font-weight="bold">BrewLite - Luồng đặt món và thanh toán</text>
+
+  <rect class="lane" x="30" y="70" width="300" height="1400"/>
+  <rect class="lane" x="350" y="70" width="300" height="1400"/>
+  <rect class="lane" x="670" y="70" width="300" height="1400"/>
+  <text x="180" y="105" text-anchor="middle" font-size="20" font-weight="bold">Khách</text>
+  <text x="500" y="105" text-anchor="middle" font-size="20" font-weight="bold">Frontend</text>
+  <text x="820" y="105" text-anchor="middle" font-size="20" font-weight="bold">API / CSDL</text>
+
+  <circle cx="180" cy="145" r="13" fill="#34241c"/>
+  <path class="edge" d="M180 158 V185"/>
+  <rect class="box" x="75" y="185" width="210" height="55"/>
+  <text class="label" x="180" y="218" text-anchor="middle">Mở menu</text>
+  <path class="edge" d="M285 212 H390"/>
+  <rect class="box" x="390" y="185" width="220" height="55"/>
+  <text class="label" x="500" y="218" text-anchor="middle">GET /products</text>
+  <path class="edge" d="M500 240 V275"/>
+  <rect class="box" x="390" y="275" width="220" height="68"/>
+  <text class="label" x="500" y="303" text-anchor="middle">Hiển thị menu</text>
+  <text class="small" x="500" y="325" text-anchor="middle">loading / empty / error</text>
+  <path class="edge" d="M390 310 H285 V375"/>
+  <rect class="box" x="75" y="375" width="210" height="70"/>
+  <text class="label" x="180" y="404" text-anchor="middle">Chọn món, size,</text>
+  <text class="label" x="180" y="425" text-anchor="middle">topping, số lượng</text>
+  <path class="edge" d="M180 445 V480"/>
+  <path class="decision" d="M180 480 L250 525 L180 570 L110 525 Z"/>
+  <text class="small" x="180" y="530" text-anchor="middle">Còn hàng?</text>
+  <path class="edge" d="M110 525 H70 V620"/>
+  <text class="small" x="78" y="512">Không</text>
+  <rect class="box" x="45" y="620" width="210" height="55"/>
+  <text class="label" x="150" y="653" text-anchor="middle">Báo hết hàng</text>
+  <path class="edge" d="M250 525 H320 V725 H285"/>
+  <text class="small" x="260" y="512">Có</text>
+  <rect class="box" x="75" y="700" width="210" height="55"/>
+  <text class="label" x="180" y="733" text-anchor="middle">Thêm vào giỏ</text>
+  <path class="edge" d="M285 728 H390"/>
+  <rect class="box" x="390" y="700" width="220" height="55"/>
+  <text class="label" x="500" y="733" text-anchor="middle">Mở checkout</text>
+  <path class="edge" d="M500 755 V790"/>
+  <path class="decision" d="M500 790 L570 835 L500 880 L430 835 Z"/>
+  <text class="small" x="500" y="840" text-anchor="middle">Đã đăng nhập?</text>
+  <path class="edge" d="M430 835 H360 V920 H285"/>
+  <text class="small" x="368" y="822">Chưa</text>
+  <rect class="box" x="75" y="895" width="210" height="55"/>
+  <text class="label" x="180" y="928" text-anchor="middle">Đăng nhập / đăng ký</text>
+  <path class="edge" d="M285 922 H500 V890"/>
+  <text class="small" x="515" y="904">Rồi</text>
+  <rect class="box" x="390" y="935" width="220" height="55"/>
+  <text class="label" x="500" y="968" text-anchor="middle">Chọn Ví hoặc Thẻ</text>
+  <path class="edge" d="M500 880 V935"/>
+  <path class="edge" d="M610 962 H690"/>
+  <rect class="box" x="690" y="930" width="260" height="70"/>
+  <text class="label" x="820" y="958" text-anchor="middle">POST /orders</text>
+  <text class="small" x="820" y="980" text-anchor="middle">key theo phiên, lưu orderId</text>
+  <path class="edge" d="M820 1000 V1030"/>
+  <rect class="box" x="690" y="1030" width="260" height="60"/>
+  <text class="label" x="820" y="1067" text-anchor="middle">POST /payments (key mới)</text>
+  <path class="edge" d="M690 1060 H650 V1120 H610"/>
+  <path class="decision" d="M500 1100 L570 1145 L500 1190 L430 1145 Z"/>
+  <text class="small" x="500" y="1150" text-anchor="middle">Thanh toán?</text>
+  <path class="edge" d="M430 1145 H285 V1225"/>
+  <text class="small" x="330" y="1132">Thất bại</text>
+  <rect class="box" x="75" y="1225" width="210" height="75"/>
+  <text class="label" x="180" y="1254" text-anchor="middle">Giữ giỏ, hiện lỗi</text>
+  <text class="small" x="180" y="1277" text-anchor="middle">đổi phương thức / thử lại</text>
+  <path class="edge" d="M180 1300 V1340 H390"/>
+  <rect class="box" x="390" y="1310" width="220" height="70"/>
+  <text class="small" x="500" y="1338" text-anchor="middle">Lỗi mạng / timeout:</text>
+  <text class="small" x="500" y="1360" text-anchor="middle">cùng key và payload</text>
+  <path class="edge" d="M610 1345 H950 V1060"/>
+  <path class="edge" d="M570 1145 H640 V1410 H690"/>
+  <text class="small" x="580" y="1132">Thành công</text>
+  <rect class="box" x="690" y="1390" width="260" height="60"/>
+  <text class="label" x="820" y="1416" text-anchor="middle">PAID → xóa giỏ</text>
+  <text class="small" x="820" y="1437" text-anchor="middle">mở /orders/{id}</text>
+</svg>

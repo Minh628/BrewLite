@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { OrdersModule } from './orders/orders.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
+import { PaymentsModule } from './payments/payments.module';
 import { RequestLoggingMiddleware } from './common/logging/request-logging.middleware';
 
 @Module({
@@ -29,6 +30,7 @@ import { RequestLoggingMiddleware } from './common/logging/request-logging.middl
     OrdersModule,
     PromotionsModule,
     LoyaltyModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [

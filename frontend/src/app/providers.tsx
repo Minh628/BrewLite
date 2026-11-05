@@ -14,6 +14,14 @@ export function Providers({ children }: Readonly<{ children: React.ReactNode }>)
     setAuthTokenGetter(() => accessToken);
   }, [accessToken]);
 
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((error: unknown) => {
+        console.error('Không thể đăng ký service worker BrewLite:', error);
+      });
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       {children}

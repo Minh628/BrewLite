@@ -11,7 +11,7 @@ export type CartLine = Product & {
 
 type CartState = {
   lines: CartLine[];
-  add: (line: Omit<CartLine, 'quantity'>) => void;
+  add: (line: Omit<CartLine, 'quantity'>, quantity?: number) => void;
   updateQty: (
     productId: number,
     size: 'S' | 'M' | 'L',
@@ -36,18 +36,21 @@ export const useCart = create<CartState>()(
   persist(
     (set, get) => ({
       lines: [],
-      add: (line) =>
+      add: (line, quantity = 1) =>
         set((state) => {
+          const amount = Number.isFinite(quantity)
+            ? Math.max(1, Math.min(Math.floor(quantity), 20))
+            : 1;
           const key = cartKey(line);
           const existingIndex = state.lines.findIndex((l) => cartKey(l) === key);
           if (existingIndex >= 0) {
             return {
               lines: state.lines.map((l, i) =>
-                i === existingIndex ? { ...l, quantity: Math.min(l.quantity + 1, 20) } : l,
+                i === existingIndex ? { ...l, quantity: Math.min(l.quantity + amount, 20) } : l,
               ),
             };
           }
-          return { lines: [...state.lines, { ...line, quantity: 1 }] };
+          return { lines: [...state.lines, { ...line, quantity: amount }] };
         }),
       updateQty: (productId, size, toppings, qty) =>
         set((state) => {

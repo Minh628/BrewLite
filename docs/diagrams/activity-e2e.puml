@@ -1,0 +1,71 @@
+@startuml
+title BrewLite - Luồng đặt món và thanh toán
+
+|Khách|
+start
+:Mở menu;
+|Hệ thống|
+:GET /products;
+|Khách|
+:Chọn món, size, topping và số lượng;
+if (Món còn hàng?) then (có)
+  :Thêm món vào giỏ;
+else (hết)
+  |Hệ thống|
+  :Hiển thị "Hết hàng";
+  stop
+endif
+
+:Mở checkout;
+if (Đã đăng nhập?) then (rồi)
+else (chưa)
+  :Đăng nhập hoặc đăng ký;
+endif
+:Chọn Ví hoặc Thẻ;
+|API|
+:POST /orders\nIdempotency-Key theo phiên checkout;
+if (Tạo đơn thành công?) then (có)
+  :Lưu orderId;
+else (không)
+  |Khách|
+  :Giữ nguyên giỏ và hiển thị lỗi;
+  stop
+endif
+
+:POST /payments\nIdempotency-Key theo lần thử;
+if (Thanh toán thành công?) then (có)
+  :Ghi Payment SUCCEEDED;
+  :Chuyển đơn sang PAID;
+  |Hệ thống|
+  :Xóa giỏ;
+  :Chuyển tới /orders/{id};
+  stop
+else (thất bại)
+  :Ghi Payment FAILED;
+  :Chuyển đơn sang PAYMENT_FAILED;
+  |Khách|
+  :Giữ nguyên giỏ, hiển thị lý do;
+  if (Thử thanh toán lại?) then (có)
+    :Đổi phương thức hoặc giữ nguyên;
+    |API|
+    :Gửi key mới sau khi bị từ chối;
+    note right
+      Nếu timeout hoặc mất kết nối,
+      gửi lại cùng key và cùng payload.
+    end note
+    :POST /payments;
+    if (Thanh toán thành công?) then (có)
+      :Chuyển đơn sang PAID;
+      |Hệ thống|
+      :Xóa giỏ và mở trang xác nhận;
+      stop
+    else (thất bại)
+      |Khách|
+      :Hiển thị lý do, tiếp tục thử lại;
+      stop
+    endif
+  else (không)
+    stop
+  endif
+endif
+@enduml

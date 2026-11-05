@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, getOrderById, login, register, setAuthTokenGetter } from './api';
+import {
+  ApiError,
+  createOrder,
+  createPayment,
+  getOrderById,
+  login,
+  register,
+  setAuthTokenGetter,
+} from './api';
 import { useAuth } from '@/store/auth';
 
 type FetchArgs = { url: string; init: RequestInit | undefined };
@@ -124,6 +132,58 @@ describe('api client', () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(0);
     expect((error as ApiError).message).toContain('Không kết nối được máy chủ');
+  });
+
+  it('gửi idempotency key khi tạo đơn', async () => {
+    const spy = mockFetch(201, { orderId: 7, code: '#7', status: 'PENDING', total: 50000 });
+
+    await createOrder([{ productId: 1, size: 'M', qty: 2, toppingIds: [] }], 'order-key');
+
+    expect(lastFetchArgs(spy).init?.headers).toMatchObject({ 'Idempotency-Key': 'order-key' });
+  });
+
+  it('gửi payment method, card number và idempotency key', async () => {
+    const spy = mockFetch(201, {
+      orderId: 7,
+      amount: 50000,
+      method: 'CARD',
+      status: 'SUCCEEDED',
+      cardLast4: '4242',
+    });
+
+    await createPayment(7, 'CARD', 'payment-key', '4242 4242 4242 4242');
+
+    const { url, init } = lastFetchArgs(spy);
+    expect(url).toContain('/payments');
+    expect(init?.headers).toMatchObject({ 'Idempotency-Key': 'payment-key' });
+    expect(JSON.parse(init?.body as string)).toEqual({
+      orderId: 7,
+      method: 'CARD',
+      cardNumber: '4242 4242 4242 4242',
+    });
+  });
+
+  it('reports API timeouts separately from network failures', async () => {
+    vi.spyOn(globalThis, 'setTimeout').mockImplementation(((callback: TimerHandler) => {
+      if (typeof callback === 'function') callback();
+      return 1 as unknown as ReturnType<typeof setTimeout>;
+    }) as typeof setTimeout);
+    vi.spyOn(globalThis, 'fetch').mockImplementation((_input, init) => {
+      if (init?.signal?.aborted) {
+        return Promise.reject(new DOMException('Aborted', 'AbortError'));
+      }
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () =>
+          reject(new DOMException('Aborted', 'AbortError')),
+        );
+      });
+    });
+
+    await expect(login('a@b.com', 'password')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 0,
+      message: 'Yêu cầu đã quá thời gian chờ. Vui lòng thử lại.',
+    });
   });
 
   it('getOrderById gửi GET /orders/:id kèm Bearer token', async () => {

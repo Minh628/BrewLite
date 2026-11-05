@@ -215,8 +215,19 @@ npm run dev
 - Frontend: http://localhost:3000
 - Backend: http://localhost:3001
 - Health check: http://localhost:3001/health
-- Menu: http://localhost:3001/products
+- Menu: http://localhost:3000/menu
+- Products API: http://localhost:3001/products
 - Swagger: http://localhost:3001/api-docs
+
+Thanh toán mock dùng thẻ `4242 4242 4242 4242` để thành công và
+`4000 0000 0000 0002` để kiểm tra nhánh bị từ chối. Có thể đặt
+`MOCK_WALLET_FAIL=true` để mô phỏng ví bị từ chối.
+
+Chạy kiểm thử giao diện đầu-cuối (cần database đã migrate/seed và Chromium của Playwright):
+
+```powershell
+npm run test:e2e --workspace @brewlite/frontend
+```
 
 ## Chạy bằng Docker (dev)
 

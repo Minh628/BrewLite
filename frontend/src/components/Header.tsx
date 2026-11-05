@@ -23,7 +23,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-10 border-b border-espresso/10 bg-espresso text-crema">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 lg:px-10">
-        <Link href="/" className="flex items-center gap-2 text-lg font-black tracking-tight">
+        <Link href="/menu" className="flex items-center gap-2 text-lg font-black tracking-tight">
           <span aria-hidden="true" className="text-2xl">
             ☕
           </span>

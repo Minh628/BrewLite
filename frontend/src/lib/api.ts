@@ -38,6 +38,8 @@ export function getApiBaseUrl(): string {
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAccessToken();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(init?.headers ?? {}),
@@ -53,9 +55,15 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     response = await fetch(`${API_URL}${path}`, {
       ...init,
       headers,
+      signal: controller.signal,
     });
   } catch {
+    if (controller.signal.aborted) {
+      throw new ApiError('Yêu cầu đã quá thời gian chờ. Vui lòng thử lại.', 0);
+    }
     throw new ApiError('Không kết nối được máy chủ. Kiểm tra mạng và thử lại.', 0);
+  } finally {
+    clearTimeout(timeout);
   }
 
   if (response.status === 401) {
@@ -137,7 +145,10 @@ export type CreateOrderItem = {
   toppingIds: number[];
 };
 
-export async function createOrder(items: CreateOrderItem[]): Promise<{
+export async function createOrder(
+  items: CreateOrderItem[],
+  idempotencyKey?: string,
+): Promise<{
   orderId: number;
   code: string;
   status: string;
@@ -145,7 +156,32 @@ export async function createOrder(items: CreateOrderItem[]): Promise<{
 }> {
   return apiFetch('/orders', {
     method: 'POST',
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
     body: JSON.stringify({ items }),
+  });
+}
+
+export type PaymentMethod = 'CARD' | 'WALLET';
+
+export type PaymentResult = {
+  orderId: number;
+  amount: number;
+  method: PaymentMethod;
+  status: 'PAID' | 'PAYMENT_FAILED';
+  cardLast4?: string | null;
+  failureReason?: string | null;
+};
+
+export function createPayment(
+  orderId: number,
+  method: PaymentMethod,
+  idempotencyKey: string,
+  cardNumber?: string,
+): Promise<PaymentResult> {
+  return apiFetch('/payments', {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify({ orderId, method, ...(cardNumber ? { cardNumber } : {}) }),
   });
 }
 

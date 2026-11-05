@@ -376,7 +376,7 @@ Mọi phản hồi lỗi (4xx, 5xx) đều tuân theo định dạng JSON thốn
     "amount": 160200,
     "method": "CARD",
     "cardLast4": "4242",
-    "pointsEarned": 16
+    "failureReason": null
   }
   ```
 
@@ -386,7 +386,7 @@ Mọi phản hồi lỗi (4xx, 5xx) đều tuân theo định dạng JSON thốn
   {
     "orderId": 1001,
     "status": "PAYMENT_FAILED",
-    "reason": "Thẻ bị từ chối"
+    "failureReason": "Thẻ bị từ chối"
   }
   ```
 
@@ -399,3 +399,5 @@ Mọi phản hồi lỗi (4xx, 5xx) đều tuân theo định dạng JSON thốn
   - 404 Not Found: Đơn không tồn tại hoặc không thuộc user hiện tại.
   - 409 Conflict: Mã lỗi `ORDER_NOT_PAYABLE` (đơn không ở trạng thái `PENDING` hoặc `PAYMENT_FAILED`).
   - 422 Unprocessable Entity: Mã lỗi `IDEMPOTENCY_KEY_REUSED` (sử dụng lại `Idempotency-Key` với payload khác).
+- **Mock Gateway**: `4242 4242 4242 4242` thành công; `4000 0000 0000 0002` bị từ chối; ví bị từ chối khi `MOCK_WALLET_FAIL=true`. Chỉ lưu bốn số cuối thẻ.
+- **Kết quả**: `status` phản ánh trạng thái đơn (`PAID` hoặc `PAYMENT_FAILED`); `failureReason` có nội dung khi thanh toán thất bại.
