@@ -44,17 +44,16 @@ describe('LoyaltyHooksService (Sub-task 10.4c — nối vào State Machine)', ()
     loyaltyService.revoke = cancelled;
 
     const order = createOrder();
-    const registered = (
-      orderStatusService as unknown as {
-        hooks: {
-          onPaid?: (tx: never, o: Order) => Promise<void>;
-          onCancelled?: (tx: never, o: Order) => Promise<void>;
-        };
-      }
-    ).hooks;
+    const registered = orderStatusService as unknown as {
+      onPaidHandlers: Array<(tx: never, o: Order) => Promise<void>>;
+      onCancelledHandlers: Array<(tx: never, o: Order) => Promise<void>>;
+    };
 
-    await registered.onPaid!(undefined as never, order);
-    await registered.onCancelled!(undefined as never, order);
+    expect(registered.onPaidHandlers.length).toBeGreaterThan(0);
+    expect(registered.onCancelledHandlers.length).toBeGreaterThan(0);
+
+    await registered.onPaidHandlers[0](undefined as never, order);
+    await registered.onCancelledHandlers[0](undefined as never, order);
 
     expect(paid).toHaveBeenCalledWith(undefined, {
       id: 1001,

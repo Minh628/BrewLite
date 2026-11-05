@@ -19,6 +19,10 @@ describe('Orders API (e2e) - POST /orders (Sub-task 6.6)', () => {
       update: jest.fn(),
       updateMany: jest.fn(),
     },
+    product: {
+      findUnique: jest.fn(),
+      updateMany: jest.fn(),
+    },
   };
 
   const prismaMock = {
@@ -61,6 +65,8 @@ describe('Orders API (e2e) - POST /orders (Sub-task 6.6)', () => {
     );
     txMock.order.updateMany.mockResolvedValue({ count: 1 });
     txMock.orderItem.create.mockResolvedValue({});
+    txMock.product.findUnique.mockResolvedValue({ stock: 100, version: 1 });
+    txMock.product.updateMany.mockResolvedValue({ count: 1 });
   });
 
   /** Cấu hình mã giảm giá giả lập cho DB (mặc định không có mã). */

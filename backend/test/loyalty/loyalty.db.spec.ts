@@ -22,12 +22,15 @@ describe('Loyalty ↔ State Machine trên DB thật (Sub-task 10.4c)', () => {
   let orderId: number;
 
   beforeAll(async () => {
-    app = await NestFactory.createApplicationContext(AppModule, { logger: false });
-    prisma = app.get(PrismaService);
-    orderStatus = app.get(OrderStatusService);
-    loyalty = app.get(LoyaltyService);
-
+    if (!process.env.DATABASE_URL) {
+      available = false;
+      return;
+    }
     try {
+      app = await NestFactory.createApplicationContext(AppModule, { logger: false });
+      prisma = app.get(PrismaService);
+      orderStatus = app.get(OrderStatusService);
+      loyalty = app.get(LoyaltyService);
       await prisma.$queryRawUnsafe('SELECT 1');
       available = true;
     } catch {

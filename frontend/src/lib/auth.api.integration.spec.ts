@@ -16,7 +16,7 @@ async function rawPost(path: string, body: unknown): Promise<{ status: number; b
   return { status: response.status, body: await response.json().catch(() => null) };
 }
 
-describe.skipIf(!API_URL)('tích hợp API thật (API_E2E_URL)', () => {
+describe.skipIf(!process.env.API_E2E_URL)('tích hợp API thật (API_E2E_URL)', () => {
   let email = '';
 
   beforeAll(() => {

@@ -1,9 +1,11 @@
 import { DiscountType, Prisma } from '@prisma/client';
 import { LoyaltyService } from '../../src/loyalty/loyalty.service';
+import { OrderStatusService } from '../../src/orders/order-status.service';
 import { OrdersService } from '../../src/orders/orders.service';
 import { PricingService } from '../../src/pricing/pricing.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { PromotionsService } from '../../src/promotions/promotions.service';
+import { StockService } from '../../src/stock/stock.service';
 import { findProductsByIds, validOrderBody } from '../orders/order-fixtures';
 
 /**
@@ -214,10 +216,19 @@ function promoRow(overrides: Row = {}) {
 function buildService(promotions: Row[] = []) {
   const fake = createPrismaForIdempotency(promotions);
   const prisma = fake.prisma as unknown as PrismaService;
+  const stockService = {
+    reserve: jest.fn().mockResolvedValue(undefined),
+    release: jest.fn().mockResolvedValue(undefined),
+  } as unknown as StockService;
+  const orderStatusService = {
+    transition: jest.fn().mockResolvedValue(undefined),
+  } as unknown as OrderStatusService;
   const service = new OrdersService(
     prisma,
     new PricingService(prisma),
     new PromotionsService(prisma),
+    stockService,
+    orderStatusService,
   );
   return { ...fake, service };
 }
