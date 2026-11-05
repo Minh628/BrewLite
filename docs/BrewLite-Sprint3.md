@@ -259,7 +259,7 @@ Ký hiệu: **N1** = T2 02/11, **N2** = T3 03/11 · **[BE]** / **[FE]**.
 
 - [x] **10.1a** · [BE] `orders/order-state-machine.ts`: bảng `TRANSITIONS` (Mục 6.1), `assertTransition(from, to)` ném 409 `INVALID_TRANSITION`; **test (a)** đủ 49 cặp · **M2** · 2,5h · N1 chiều + N2 sáng · ⇒ Test xanh
 - [x] **10.1b** · [BE] `OrderStatusService.transition(tx, orderId, to)`: khóa dòng Order, gọi `assertTransition`, cập nhật trạng thái, chạy tác vụ đi kèm (PAID → `LoyaltyService.award`; CANCELLED → `StockService.release`, `LoyaltyService.revoke`). **Nơi duy nhất đổi `Order.status`** · **M2** · 1,5h · N1 · ⇒ **Merge trước 16:30 N1**
-- [ ] **10.1c** · [BE] `RolesGuard` + `@Roles()`; thêm `role` vào JWT, `/auth/login`, `/auth/me`; `PATCH /orders/:id/status` (BARISTA/ADMIN; chỉ PREPARING/READY/COMPLETED); e2e: khách → 403, sai thứ tự → 409 · **M5** · 2h · N1 (guard) + N2 sáng (endpoint) · phụ thuộc 10.1b · ⇒ Quầy đổi trạng thái được qua Swagger
+- [x] **10.1c** · [BE] `RolesGuard` + `@Roles()`; thêm `role` vào JWT, `/auth/login`, `/auth/me`; `PATCH /orders/:id/status` (BARISTA/ADMIN; chỉ PREPARING/READY/COMPLETED); e2e: khách → 403, sai thứ tự → 409 · **M5** · 2h · N1 (guard) + N2 sáng (endpoint) · phụ thuộc 10.1b · ⇒ Quầy đổi trạng thái được qua Swagger
 
 #### 10.2 Thanh toán idempotent — M3 + M4
 
@@ -311,11 +311,11 @@ Ký hiệu: **N1** = T2 02/11, **N2** = T3 03/11 · **[BE]** / **[FE]**.
 
 **Tiêu chí gốc (nguyên văn đề):** Màn hình xác nhận (mã đơn, trạng thái) và GET /orders/me (lịch sử đơn); docker-compose chạy cả 3 (frontend, backend, DB); README; demo end-to-end.
 
-- [ ] **9.1** · [BE] `GET /orders/me?page=1&limit=10` (limit ≤ 50, mới nhất trước, chỉ đơn của user, trả `totalItems`, `totalPages`); `GET /orders/:id` (món, topping, subtotal, discount, promoCode, pointsEarned, lần thanh toán gần nhất); đơn của người khác → 404 · **M5** · 3h · N1 11:15–15:30 · phụ thuộc E.3 · ⇒ Merge trước 15:30 N1
-- [ ] **9.2** · [BE] Test: phân trang, thứ tự, không thấy đơn người khác, 401, 404 · **M5** · 1h · N2 08:15–09:15 · ⇒ Test xanh
-- [ ] **9.3** · [FE] Trang `/orders/[id]`: mã `#1001`, `StatusBadge` (7 trạng thái, nhãn tiếng Việt), danh sách món, tạm tính / giảm giá / tổng, điểm nhận được, nút "Về trang chủ"; loading/lỗi/404 · **M2** · 3h · N2 08:45–11:45 · phụ thuộc 9.1 · ⇒ Màn hình xác nhận đúng tiêu chí gốc
-- [ ] **9.4** · [FE] Trang `/orders` "Đơn của tôi": danh sách phân trang (mã, ngày, tổng, trạng thái), empty state "Chưa có đơn"; link từ Header · **M5** · 2,5h · N2 10:45–14:30 · phụ thuộc 9.1 · ⇒ Lịch sử đơn chạy với API thật
-- [ ] **9.5** · [BE] docker-compose bàn giao: Dockerfile production FE (Next standalone) + BE (multi-stage); backend chạy `prisma migrate deploy` + seed (idempotent) trước khi start; healthcheck 3 dịch vụ; `depends_on: service_healthy`; chạy được từ clone sạch + `.env.example` · **M5** · 3h · N1 08:15–09:30 + 15:30–17:00, N2 09:45–10:45 thử clone sạch · M2 review · ⇒ 3 container healthy
+- [x] **9.1** · [BE] `GET /orders/me?page=1&limit=10` (limit ≤ 50, mới nhất trước, chỉ đơn của user, trả `totalItems`, `totalPages`); `GET /orders/:id` (món, topping, subtotal, discount, promoCode, pointsEarned, lần thanh toán gần nhất); đơn của người khác → 404 · **M5** · 3h · N1 11:15–15:30 · phụ thuộc E.3 · ⇒ Merge trước 15:30 N1
+- [x] **9.2** · [BE] Test: phân trang, thứ tự, không thấy đơn người khác, 401, 404 · **M5** · 1h · N2 08:15–09:15 · ⇒ Test xanh
+- [x] **9.3** · [FE] Trang `/orders/[id]`: mã `#1001`, `StatusBadge` (7 trạng thái, nhãn tiếng Việt), danh sách món, tạm tính / giảm giá / tổng, điểm nhận được, nút "Về trang chủ"; loading/lỗi/404 · **M2** · 3h · N2 08:45–11:45 · phụ thuộc 9.1 · ⇒ Màn hình xác nhận đúng tiêu chí gốc
+- [x] **9.4** · [FE] Trang `/orders` "Đơn của tôi": danh sách phân trang (mã, ngày, tổng, trạng thái), empty state "Chưa có đơn"; link từ Header · **M5** · 2,5h · N2 10:45–14:30 · phụ thuộc 9.1 · ⇒ Lịch sử đơn chạy với API thật
+- [x] **9.5** · [BE] docker-compose bàn giao: Dockerfile production FE (Next standalone) + BE (multi-stage); backend chạy `prisma migrate deploy` + seed (idempotent) trước khi start; healthcheck 3 dịch vụ; `depends_on: service_healthy`; chạy được từ clone sạch + `.env.example` · **M5** · 3h · N1 08:15–09:30 + 15:30–17:00, N2 09:45–10:45 thử clone sạch · M2 review · ⇒ 3 container healthy
 
 ---
 
