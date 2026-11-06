@@ -27,7 +27,6 @@ describe('ProductsService', () => {
         price: 40000,
         imageUrl: '/americano.svg',
         isActive: true,
-        stock: 10,
         category: { id: 1, name: 'Cà phê' },
       },
     ];
@@ -41,7 +40,6 @@ describe('ProductsService', () => {
         imageUrl: '/americano.svg',
         category: { id: 1, name: 'Cà phê' },
         isAvailable: true,
-        inStock: true,
       },
     ]);
     expect(prisma.product.findMany).toHaveBeenCalledWith(
@@ -65,7 +63,6 @@ describe('ProductsService', () => {
       price: 40000,
       imageUrl: '/americano.svg',
       isActive: true,
-      stock: 10,
       category: { id: 1, name: 'Cà phê' },
       sizes: [
         { size: 'L', extraPrice: 10000 },
@@ -82,7 +79,6 @@ describe('ProductsService', () => {
       imageUrl: '/americano.svg',
       category: { id: 1, name: 'Cà phê' },
       isAvailable: true,
-      inStock: true,
       sizes: [
         { code: 'S', extra: 0 },
         { code: 'M', extra: 5000 },

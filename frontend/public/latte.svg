@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <!-- Nền hình tròn màu kem ấm -->
+  <circle cx="120" cy="120" r="108" fill="#FDFBF7" stroke="#E6DFD5" stroke-width="3"/>
+  <circle cx="120" cy="120" r="95" fill="#F7F3EB"/>
+  
+  <!-- Đĩa lót ly -->
+  <ellipse cx="120" cy="192" rx="60" ry="12" fill="#E6DFD5"/>
+  <ellipse cx="120" cy="190" rx="54" ry="9" fill="#FFFFFF"/>
+  
+  <!-- Thân ly thủy tinh cao cho Latte -->
+  <path d="M82 75 L92 180 C93 186 98 190 105 190 L135 190 C142 190 147 186 148 180 L158 75 Z" fill="#F4EFE6" stroke="#D8CEBF" stroke-width="2"/>
+  
+  <!-- Các lớp phân tầng của Latte: Sữa nóng, Espresso, Lớp bọt sữa -->
+  <!-- Lớp sữa nóng dưới đáy -->
+  <path d="M92 150 L93 180 C94 185 98 188 105 188 L135 188 C142 188 146 185 147 180 L148 150 Z" fill="#FFFBF5"/>
+  <!-- Lớp cà phê hòa quyện sữa ở giữa -->
+  <path d="M88 105 L92 150 L148 150 L152 105 Z" fill="#C99765"/>
+  <!-- Lớp cà phê đậm -->
+  <path d="M85 90 L88 105 L152 105 L155 90 Z" fill="#7D4E31"/>
+  <!-- Lớp bọt sữa mượt mà trên cùng (Microfoam) -->
+  <path d="M82 75 L85 90 L155 90 L158 75 Z" fill="#FFFFFF"/>
+  <ellipse cx="120" cy="75" rx="38" ry="10" fill="#FFFDF9"/>
+  
+  <!-- Latte Art hình lá dương xỉ / Rosetta tinh tế -->
+  <path d="M120 81 C115 78 112 73 120 70 C128 73 125 78 120 81 Z" fill="#C68A4C"/>
+  <path d="M120 75 C116 73 115 69 120 67 C125 69 124 73 120 75 Z" fill="#C68A4C"/>
+  <line x1="120" y1="83" x2="120" y2="67" stroke="#C68A4C" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- Hơi ấm nhẹ nhàng -->
+  <path d="M115 60 C110 50 118 42 114 32" stroke="#C68A4C" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.6"/>
+  <path d="M128 58 C123 48 131 40 127 30" stroke="#C68A4C" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.6"/>
+</svg>
+

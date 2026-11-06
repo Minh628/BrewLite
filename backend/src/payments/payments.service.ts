@@ -127,6 +127,70 @@ export class PaymentsService {
     }
   }
 
+  /**
+   * API mô phỏng webhook/cổng thanh toán bên thứ ba (VNPay/Mock) cập nhật trạng thái đơn (PAID hoặc PAYMENT_FAILED).
+   * Phục vụ kiểm thử Swagger linh hoạt theo yêu cầu.
+   */
+  async simulate(dto: { orderId: number; status: 'PAID' | 'PAYMENT_FAILED' }) {
+    const toStatus = dto.status === 'PAID' ? OrderStatus.PAID : OrderStatus.PAYMENT_FAILED;
+
+    return await this.prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<LockedOrder[]>`
+        SELECT id, "userId", status, total
+        FROM "Order"
+        WHERE id = ${dto.orderId}
+        FOR UPDATE
+      `;
+      const order = rows[0];
+      if (!order) {
+        throw new NotFoundException(`Không tìm thấy đơn hàng #${dto.orderId}`);
+      }
+
+      // Kiểm tra trạng thái hiện tại theo đúng sơ đồ State Machine
+      if (toStatus === OrderStatus.PAID) {
+        if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.PAYMENT_FAILED) {
+          throw new ConflictException({
+            code: 'ORDER_NOT_PAYABLE',
+            message: `Không thể chuyển sang PAID từ trạng thái ${order.status}`,
+            currentStatus: order.status,
+          });
+        }
+      } else if (toStatus === OrderStatus.PAYMENT_FAILED) {
+        if (order.status !== OrderStatus.PENDING) {
+          throw new ConflictException({
+            code: 'INVALID_TRANSITION',
+            message: `Không thể chuyển sang PAYMENT_FAILED từ trạng thái ${order.status}`,
+            currentStatus: order.status,
+          });
+        }
+      }
+
+      // Chuyển trạng thái qua OrderStatusService để kích hoạt hooks (loyalty tích điểm khi PAID)
+      const updatedOrder = await this.orderStatusService.transition(tx, order.id, toStatus);
+
+      // Ghi nhận bản ghi thanh toán mô phỏng
+      await tx.payment.create({
+        data: {
+          idempotencyKey: `simulate-${order.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          orderId: order.id,
+          amount: order.total,
+          method: PaymentMethod.CARD,
+          status: toStatus === OrderStatus.PAID ? PaymentStatus.SUCCEEDED : PaymentStatus.FAILED,
+          requestHash: `sim-hash-${order.id}-${Date.now()}`,
+          cardLast4: '4242',
+          failureReason:
+            toStatus === OrderStatus.PAYMENT_FAILED ? 'Mô phỏng thanh toán thất bại' : null,
+        },
+      });
+
+      return {
+        orderId: updatedOrder.id,
+        status: updatedOrder.status,
+        message: `Đã cập nhật trạng thái đơn #${order.id} sang ${updatedOrder.status} thành công`,
+      };
+    });
+  }
+
   private toResponse(payment: {
     orderId: number;
     amount: number;

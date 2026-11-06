@@ -14,6 +14,7 @@ import { OrderStatus } from '@prisma/client';
 export const TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   [OrderStatus.PENDING]: [OrderStatus.PAID, OrderStatus.PAYMENT_FAILED, OrderStatus.CANCELLED],
   [OrderStatus.PAYMENT_FAILED]: [
+    OrderStatus.PENDING, // Thử lại thanh toán quay về PENDING (chuẩn theo sơ đồ Definition of Done của thầy)
     OrderStatus.PAID,
     OrderStatus.PAYMENT_FAILED, // Cho phép thử lại thanh toán nhưng vẫn tiếp tục lỗi
     OrderStatus.CANCELLED,

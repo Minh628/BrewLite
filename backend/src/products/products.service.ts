@@ -26,7 +26,6 @@ export class ProductsService {
         price: true,
         imageUrl: true,
         isActive: true,
-        stock: true,
         category: {
           select: { id: true, name: true },
         },
@@ -38,10 +37,9 @@ export class ProductsService {
 
     return products
       .filter((product) => !keyword || matchesSearch(product.name, keyword))
-      .map(({ isActive, stock, ...product }) => ({
+      .map(({ isActive, ...product }) => ({
         ...product,
         isAvailable: isActive,
-        inStock: stock > 0,
       }));
   }
 
@@ -67,7 +65,6 @@ export class ProductsService {
         price: true,
         imageUrl: true,
         isActive: true,
-        stock: true,
         category: {
           select: { id: true, name: true },
         },
@@ -91,7 +88,6 @@ export class ProductsService {
       imageUrl: product.imageUrl,
       category: product.category,
       isAvailable: product.isActive,
-      inStock: product.stock > 0,
       sizes: product.sizes
         .map(({ size, extraPrice }) => ({ code: size as 'S' | 'M' | 'L', extra: extraPrice }))
         .sort((left, right) => sizeOrder.indexOf(left.code) - sizeOrder.indexOf(right.code)),

@@ -10,7 +10,6 @@ export type Product = {
   imageUrl: string | null;
   category: Category;
   isAvailable: boolean;
-  inStock: boolean;
 };
 
 export type ProductSize = {

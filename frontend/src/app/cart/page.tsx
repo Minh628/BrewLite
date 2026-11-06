@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/store/cart';
 import { formatVND } from '@/lib/format';
@@ -8,6 +9,24 @@ import { EmptyState } from '@/components/EmptyState';
 
 export default function CartPage() {
   const { lines, total, updateQty, remove, count, clear } = useCart();
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Đợi Client Component mount hoàn tất để đọc dữ liệu giỏ hàng từ localStorage (chống hydration mismatch)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <main className="flex-1 py-8 px-4">
+        <div className="mx-auto max-w-3xl animate-pulse space-y-4">
+          <div className="h-8 bg-espresso/10 rounded w-1/4" />
+          <div className="h-4 bg-espresso/5 rounded w-1/3 mb-6" />
+          <div className="h-48 bg-white rounded-2xl border border-espresso/10" />
+        </div>
+      </main>
+    );
+  }
 
   if (lines.length === 0) {
     return (
@@ -80,7 +99,7 @@ export default function CartPage() {
                         onClick={() =>
                           updateQty(line.id, line.size, line.toppings, line.quantity + 1)
                         }
-                        disabled={line.quantity >= 20}
+                        disabled={line.quantity >= 999}
                         className="px-3 py-1.5 text-espresso hover:bg-espresso/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         aria-label="Tăng số lượng"
                       >

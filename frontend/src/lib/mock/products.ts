@@ -8,7 +8,6 @@ export const mockProducts: Product[] = [
     imageUrl: '/images/ca-phe-sua.jpg',
     category: { id: 1, name: 'Cà phê' },
     isAvailable: true,
-    inStock: true,
   },
   {
     id: 2,
@@ -17,7 +16,6 @@ export const mockProducts: Product[] = [
     imageUrl: '/images/americano.jpg',
     category: { id: 1, name: 'Cà phê' },
     isAvailable: true,
-    inStock: true,
   },
   {
     id: 3,
@@ -26,7 +24,6 @@ export const mockProducts: Product[] = [
     imageUrl: '/images/cappuccino.jpg',
     category: { id: 1, name: 'Cà phê' },
     isAvailable: true,
-    inStock: true,
   },
   {
     id: 4,
@@ -35,7 +32,6 @@ export const mockProducts: Product[] = [
     imageUrl: '/images/latte.jpg',
     category: { id: 1, name: 'Cà phê' },
     isAvailable: true,
-    inStock: true,
   },
   {
     id: 5,
@@ -44,7 +40,6 @@ export const mockProducts: Product[] = [
     imageUrl: '/images/tra-dao.jpg',
     category: { id: 2, name: 'Trà' },
     isAvailable: true,
-    inStock: true,
   },
   {
     id: 6,
@@ -53,7 +48,6 @@ export const mockProducts: Product[] = [
     imageUrl: '/images/tra-vai.jpg',
     category: { id: 2, name: 'Trà' },
     isAvailable: true,
-    inStock: true,
   },
   {
     id: 7,
@@ -62,7 +56,6 @@ export const mockProducts: Product[] = [
     imageUrl: '/images/tra-dao-cam-sa.jpg',
     category: { id: 2, name: 'Trà' },
     isAvailable: true,
-    inStock: true,
   },
   {
     id: 8,
@@ -71,7 +64,6 @@ export const mockProducts: Product[] = [
     imageUrl: '/images/matcha-da-xay.jpg',
     category: { id: 3, name: 'Đá xay' },
     isAvailable: true,
-    inStock: true,
   },
 ];
 

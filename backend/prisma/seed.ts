@@ -22,40 +22,35 @@ async function main() {
     });
   }
 
-  // 2. Seed Products (id: 1..5) - bao gồm món "Bạc xỉu" hết hàng (stock: 0) để kiểm thử UI
+  // 2. Seed Products (id: 1..5)
   const products = [
     {
       name: 'Ca phe sua',
       price: 35000,
-      stock: 100,
       imageUrl: '/coffee-milk.svg',
       categoryId: 1,
     },
     {
       name: 'Americano',
       price: 40000,
-      stock: 100,
       imageUrl: '/americano.svg',
       categoryId: 1,
     },
     {
       name: 'Cappuccino',
       price: 45000,
-      stock: 100,
       imageUrl: '/cappuccino.svg',
       categoryId: 1,
     },
     {
       name: 'Tra dao',
       price: 39000,
-      stock: 100,
       imageUrl: '/peach-tea.svg',
       categoryId: 2,
     },
     {
       name: 'Bạc xỉu',
       price: 35000,
-      stock: 0, // Tồn kho 0 để phục vụ kiểm thử tính năng hiển thị "Hết hàng" (Task 10.3)
       imageUrl: '/coffee-milk.svg',
       categoryId: 1,
     },

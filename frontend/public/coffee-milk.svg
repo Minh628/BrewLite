@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <!-- Nền hình tròn màu kem ấm -->
+  <circle cx="120" cy="120" r="108" fill="#FDFBF7" stroke="#E6DFD5" stroke-width="3"/>
+  <circle cx="120" cy="120" r="95" fill="#F7F3EB"/>
+  
+  <!-- Đĩa lót ly cà phê -->
+  <ellipse cx="120" cy="190" rx="65" ry="14" fill="#E6DFD5"/>
+  <ellipse cx="120" cy="188" rx="58" ry="10" fill="#FFFFFF"/>
+  
+  <!-- Quai ly -->
+  <path d="M155 110 C185 110 185 155 155 155" stroke="#34241C" stroke-width="8" stroke-linecap="round" fill="none"/>
+  
+  <!-- Thân ly cà phê sữa -->
+  <path d="M80 90 L88 175 C89 182 96 186 104 186 L136 186 C144 186 151 182 152 175 L160 90 Z" fill="#34241C"/>
+  
+  <!-- Các tầng lớp cà phê và sữa tươi đặc trưng của Cà phê sữa / Bạc xỉu -->
+  <!-- Lớp sữa đặc dưới đáy -->
+  <path d="M88 158 L89 175 C90 181 96 185 104 185 L136 185 C144 185 150 181 151 175 L152 158 Z" fill="#FFF8EE"/>
+  <!-- Lớp cà phê thơm đậm ở giữa -->
+  <path d="M85 125 L88 158 L152 158 L155 125 Z" fill="#C68A4C"/>
+  <!-- Lớp bọt sữa / kem mịn phía trên -->
+  <ellipse cx="120" cy="90" rx="40" ry="12" fill="#EAD9C3"/>
+  <ellipse cx="120" cy="89" rx="34" ry="9" fill="#FFF9F2"/>
+  
+  <!-- Hạt cà phê trang trí -->
+  <path d="M117 86 C117 83 123 83 123 86 C123 89 117 89 117 86 Z" fill="#34241C"/>
+  <path d="M120 84 Q120 86 120 88" stroke="#FFF9F2" stroke-width="1"/>
+  
+  <!-- Làn khói hương thơm cà phê bay lên nhẹ nhàng -->
+  <path d="M105 70 C100 58 110 50 106 38" stroke="#C68A4C" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.6"/>
+  <path d="M120 66 C115 54 125 46 121 34" stroke="#C68A4C" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.8"/>
+  <path d="M135 70 C130 58 140 50 136 38" stroke="#C68A4C" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.6"/>
+</svg>
+

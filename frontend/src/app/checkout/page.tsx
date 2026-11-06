@@ -4,7 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { useCart } from '@/store/cart';
-import { ApiError, createOrder, createPayment, type PaymentMethod } from '@/lib/api';
+import {
+  ApiError,
+  createOrder,
+  createPayment,
+  validatePromotion,
+  type PaymentMethod,
+  type ValidatedPromotion,
+} from '@/lib/api';
 import { formatVND } from '@/lib/format';
 import type { CartLine } from '@/store/cart';
 import { Button } from '@/components/Button';
@@ -18,16 +25,11 @@ type CheckoutSession = {
   paymentKey?: string;
   paymentMethod?: PaymentMethod;
   paymentCardLast4?: string | null;
+  promoCode?: string;
+  discount?: number;
 };
 
-function mapOrderError(err: unknown, lines: CartLine[]): string {
-  if (err instanceof ApiError && err.code === 'OUT_OF_STOCK') {
-    const productId = err.errorBody?.productId as number | undefined;
-    const productName = productId
-      ? (lines.find((l) => l.id === productId)?.name ?? 'Một món')
-      : 'Một món';
-    return `${productName} vừa hết hàng. Vui lòng kiểm tra lại giỏ hàng.`;
-  }
+function mapOrderError(err: unknown): string {
   return err instanceof Error ? err.message : 'Đặt hàng thất bại. Vui lòng thử lại.';
 }
 
@@ -47,7 +49,16 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryingSameAttempt, setRetryingSameAttempt] = useState(false);
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<ValidatedPromotion | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const submitting = useRef(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -63,6 +74,9 @@ export default function CheckoutPage() {
           if (typeof parsed.orderKey === 'string') {
             setSession(parsed);
             if (parsed.paymentMethod) setMethod(parsed.paymentMethod);
+            if (parsed.promoCode && parsed.discount) {
+              setAppliedPromo({ code: parsed.promoCode, discount: parsed.discount });
+            }
             setRetryingSameAttempt(!!parsed.paymentKey);
           }
         } catch {
@@ -72,6 +86,43 @@ export default function CheckoutPage() {
     }
     setSessionLoaded(true);
   }, [isAuthenticated, router, storageKey]);
+
+  const handleApplyPromo = async () => {
+    const code = promoCodeInput.trim().toUpperCase();
+    if (!code) {
+      setPromoError('Vui lòng nhập mã khuyến mãi.');
+      return;
+    }
+    setIsValidatingPromo(true);
+    setPromoError(null);
+    try {
+      const result = await validatePromotion(code, total());
+      setAppliedPromo(result);
+      setPromoError(null);
+    } catch (err: unknown) {
+      setAppliedPromo(null);
+      if (err instanceof ApiError) {
+        if (err.code === 'PROMO_NOT_FOUND') setPromoError('Mã khuyến mãi không tồn tại.');
+        else if (err.code === 'PROMO_INACTIVE') setPromoError('Mã khuyến mãi đang tạm ngưng.');
+        else if (err.code === 'PROMO_EXPIRED') setPromoError('Mã khuyến mãi đã hết hạn.');
+        else if (err.code === 'PROMO_MIN_ORDER')
+          setPromoError('Đơn hàng chưa đủ giá trị tối thiểu.');
+        else if (err.code === 'PROMO_EXHAUSTED')
+          setPromoError('Mã khuyến mãi đã hết lượt sử dụng.');
+        else setPromoError(err.message || 'Mã khuyến mãi không hợp lệ.');
+      } else {
+        setPromoError('Không thể áp dụng mã. Vui lòng thử lại.');
+      }
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoCodeInput('');
+    setPromoError(null);
+  };
 
   const saveSession = (next: CheckoutSession) => {
     setSession(next);
@@ -95,6 +146,9 @@ export default function CheckoutPage() {
     setError(null);
     try {
       let checkout = session ?? { orderKey: newIdempotencyKey() };
+      if (appliedPromo) {
+        checkout = { ...checkout, promoCode: appliedPromo.code, discount: appliedPromo.discount };
+      }
       saveSession(checkout);
 
       if (!checkout.order) {
@@ -104,7 +158,7 @@ export default function CheckoutPage() {
           qty: line.quantity,
           toppingIds: line.toppings.map((t) => t.id),
         }));
-        const order = await createOrder(items, checkout.orderKey);
+        const order = await createOrder(items, checkout.orderKey, appliedPromo?.code);
         checkout = { ...checkout, order };
         saveSession(checkout);
       }
@@ -153,12 +207,16 @@ export default function CheckoutPage() {
       router.push(`/orders/${order.orderId}`);
     } catch (err) {
       setRetryingSameAttempt(true);
-      setError(mapOrderError(err, lines));
+      setError(mapOrderError(err));
     } finally {
       submitting.current = false;
       setIsSubmitting(false);
     }
   };
+
+  const subtotal = total();
+  const discountAmount = appliedPromo?.discount ?? 0;
+  const finalTotal = session?.order ? session.order.total : Math.max(0, subtotal - discountAmount);
 
   return (
     <main className="flex-1 py-8 px-4">
@@ -168,8 +226,11 @@ export default function CheckoutPage() {
           <p className="text-espresso/60 mt-1">Xác nhận giỏ hàng và chọn phương thức thanh toán</p>
         </header>
 
-        {!sessionLoaded ? (
-          <p role="status">Đang khôi phục phiên thanh toán...</p>
+        {!isMounted || !sessionLoaded ? (
+          <div className="animate-pulse space-y-4">
+            <div className="h-6 bg-espresso/10 rounded w-1/4" />
+            <div className="h-64 bg-white rounded-2xl border border-espresso/10" />
+          </div>
         ) : lines.length === 0 && !session?.order ? (
           <EmptyState
             icon="🛍️"
@@ -212,10 +273,93 @@ export default function CheckoutPage() {
                     </div>
                   ))}
                 </div>
-                <div className="border-t border-espresso/10 bg-espresso/5 p-4">
-                  <div className="flex justify-between text-lg font-semibold text-espresso">
-                    <span>Tổng cộng</span>
-                    <span>{formatVND(total())}</span>
+
+                {/* Ô nhập mã khuyến mãi / Voucher */}
+                <div className="border-t border-espresso/10 p-4 bg-crema/20">
+                  <label
+                    htmlFor="promo-input"
+                    className="block text-sm font-semibold text-espresso mb-2"
+                  >
+                    Mã khuyến mãi
+                  </label>
+                  {appliedPromo ? (
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xl">🎟️</span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-emerald-800 text-sm tracking-wide font-mono">
+                              {appliedPromo.code}
+                            </span>
+                            <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-800">
+                              Đã áp dụng
+                            </span>
+                          </div>
+                          <p className="text-xs text-emerald-700 mt-0.5">
+                            Giảm {formatVND(appliedPromo.discount)} cho đơn hàng
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemovePromo}
+                        disabled={isSubmitting || !!session?.order}
+                        className="text-xs font-semibold text-red-600 hover:text-red-800 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        Bỏ mã
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          id="promo-input"
+                          type="text"
+                          value={promoCodeInput}
+                          onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                          placeholder="Nhập mã khuyến mãi"
+                          disabled={isSubmitting || isValidatingPromo || !!session?.order}
+                          className="flex-1 rounded-xl border border-espresso/20 bg-white px-3.5 py-2.5 text-sm uppercase font-mono font-medium tracking-wider focus:outline-none focus:ring-2 focus:ring-caramel/50 focus:border-caramel shadow-sm transition"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleApplyPromo}
+                          loading={isValidatingPromo}
+                          disabled={
+                            isSubmitting ||
+                            isValidatingPromo ||
+                            !promoCodeInput.trim() ||
+                            !!session?.order
+                          }
+                          className="px-5 text-sm font-semibold rounded-xl shadow-sm"
+                        >
+                          Áp dụng
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {promoError && (
+                    <p className="mt-2 text-xs font-medium text-red-600" role="alert">
+                      {promoError}
+                    </p>
+                  )}
+                </div>
+
+                <div className="border-t border-espresso/10 bg-espresso/5 p-4 space-y-2">
+                  <div className="flex justify-between text-sm text-espresso/70">
+                    <span>Tạm tính (Subtotal)</span>
+                    <span className="font-medium text-espresso">{formatVND(subtotal)}</span>
+                  </div>
+                  {appliedPromo && (
+                    <div className="flex justify-between text-sm text-emerald-700 font-semibold">
+                      <span>Giảm giá khuyến mãi</span>
+                      <span>-{formatVND(appliedPromo.discount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-lg font-bold text-espresso pt-2 border-t border-espresso/10">
+                    <span>Tổng thanh toán</span>
+                    <span className="text-caramel font-black text-xl">{formatVND(finalTotal)}</span>
                   </div>
                 </div>
               </>
@@ -229,48 +373,95 @@ export default function CheckoutPage() {
             )}
 
             <section
-              className="space-y-4 border-t border-espresso/10 p-4"
+              className="space-y-5 border-t border-espresso/10 p-5 bg-white"
               aria-label="Phương thức thanh toán"
             >
               <fieldset disabled={isSubmitting || !!session?.paymentKey} className="space-y-3">
-                <legend className="mb-2 font-semibold text-espresso">Chọn phương thức</legend>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="payment-method"
-                    value="CARD"
-                    checked={method === 'CARD'}
-                    onChange={() => setMethod('CARD')}
-                  />
-                  Thẻ ngân hàng
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="payment-method"
-                    value="WALLET"
-                    checked={method === 'WALLET'}
-                    onChange={() => setMethod('WALLET')}
-                  />
-                  Ví điện tử
-                </label>
+                <legend className="mb-3 font-bold text-espresso text-base">
+                  Phương thức thanh toán
+                </legend>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label
+                    className={`flex items-center gap-3.5 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                      method === 'CARD'
+                        ? 'border-caramel bg-caramel/5 ring-2 ring-caramel/30 font-semibold text-espresso shadow-sm'
+                        : 'border-espresso/15 bg-cream/20 hover:bg-cream/40 text-espresso/80'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      value="CARD"
+                      checked={method === 'CARD'}
+                      onChange={() => setMethod('CARD')}
+                      className="accent-caramel h-4 w-4"
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">💳</span>
+                      <div>
+                        <div className="font-semibold text-sm">Thẻ ngân hàng</div>
+                        <div className="text-[11px] text-espresso/60">Visa, Mastercard, ATM</div>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`flex items-center gap-3.5 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                      method === 'WALLET'
+                        ? 'border-caramel bg-caramel/5 ring-2 ring-caramel/30 font-semibold text-espresso shadow-sm'
+                        : 'border-espresso/15 bg-cream/20 hover:bg-cream/40 text-espresso/80'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      value="WALLET"
+                      checked={method === 'WALLET'}
+                      onChange={() => setMethod('WALLET')}
+                      className="accent-caramel h-4 w-4"
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">📱</span>
+                      <div>
+                        <div className="font-semibold text-sm">Ví điện tử</div>
+                        <div className="text-[11px] text-espresso/60">Ví BrewLite Pay</div>
+                      </div>
+                    </div>
+                  </label>
+                </div>
               </fieldset>
 
               {method === 'CARD' && (
-                <label className="block text-sm font-medium text-espresso">
-                  Số thẻ
+                <div className="rounded-xl border border-espresso/15 bg-cream/10 p-4 space-y-2">
+                  <label
+                    htmlFor="card-number-input"
+                    className="block text-sm font-semibold text-espresso"
+                  >
+                    Số thẻ thanh toán
+                  </label>
                   <input
+                    id="card-number-input"
                     autoComplete="cc-number"
                     inputMode="numeric"
                     value={cardNumber}
                     onChange={(event) => setCardNumber(event.target.value)}
                     placeholder="4242 4242 4242 4242"
-                    className="mt-1 w-full rounded-lg border border-espresso/20 px-3 py-2"
+                    className="w-full rounded-xl border border-espresso/20 bg-white px-3.5 py-2.5 font-mono text-sm tracking-wider focus:outline-none focus:ring-2 focus:ring-caramel/50 focus:border-caramel shadow-sm transition"
                   />
-                  <span className="mt-1 block text-xs text-espresso/60">
-                    Thẻ thử thành công: 4242 4242 4242 4242 · Bị từ chối: 4000 0000 0000 0002
-                  </span>
-                </label>
+                  <div className="flex items-center gap-2 pt-1 text-[11px] text-espresso/60">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span>
+                      Thẻ thành công:{' '}
+                      <code className="font-mono font-semibold text-espresso">
+                        4242 4242 4242 4242
+                      </code>
+                    </span>
+                    <span>·</span>
+                    <span>
+                      Thẻ từ chối: <code className="font-mono text-espresso">4000...0002</code>
+                    </span>
+                  </div>
+                </div>
               )}
 
               {error && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
 import { useCart } from '@/store/cart';
@@ -11,6 +11,12 @@ export function Header() {
   const { user, isAuthenticated, clearAuth } = useAuth();
   const { lines, total } = useCart();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Đảm bảo chỉ render dữ liệu nhạy cảm với hydration (như số lượng giỏ hàng) ở client
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleLogout = () => {
     clearAuth();
@@ -18,7 +24,7 @@ export function Header() {
     window.location.href = '/';
   };
 
-  const cartCount = lines.reduce((sum, line) => sum + line.quantity, 0);
+  const cartCount = isMounted ? lines.reduce((sum, line) => sum + line.quantity, 0) : 0;
 
   return (
     <header className="sticky top-0 z-10 border-b border-espresso/10 bg-espresso text-crema">

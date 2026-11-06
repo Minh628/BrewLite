@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <!-- Nền hình tròn màu kem ấm -->
+  <circle cx="120" cy="120" r="108" fill="#FDFBF7" stroke="#E6DFD5" stroke-width="3"/>
+  <circle cx="120" cy="120" r="95" fill="#F7F3EB"/>
+  
+  <!-- Đĩa lót ly sứ -->
+  <ellipse cx="120" cy="190" rx="70" ry="14" fill="#E6DFD5"/>
+  <ellipse cx="120" cy="188" rx="64" ry="10" fill="#FFFFFF"/>
+  
+  <!-- Quai ly cong tròn -->
+  <path d="M158 115 C190 115 190 155 158 155" stroke="#C68A4C" stroke-width="8" stroke-linecap="round" fill="none"/>
+  
+  <!-- Tách Cappuccino miệng rộng -->
+  <path d="M72 105 C75 165 95 186 120 186 C145 186 165 165 168 105 Z" fill="#FFFFFF" stroke="#E6DFD5" stroke-width="2"/>
+  
+  <!-- Cà phê Espresso nâu vàng bên dưới bọt sữa -->
+  <ellipse cx="120" cy="106" rx="46" ry="14" fill="#6F432A"/>
+  
+  <!-- Lớp bọt sữa bông dày đặc trưng của Cappuccino -->
+  <ellipse cx="120" cy="103" rx="43" ry="12" fill="#FDF8F2"/>
+  
+  <!-- Nghệ thuật tạo hình Latte Art bọt sữa hình trái tim -->
+  <path d="M120 108 C116 104 108 97 113 93 C117 90 120 94 120 95 C120 94 123 90 127 93 C132 97 124 104 120 108 Z" fill="#C68A4C"/>
+  <circle cx="120" cy="91" r="1.5" fill="#C68A4C"/>
+  
+  <!-- Bột quế/cacao rắc nhẹ trang trí -->
+  <circle cx="102" cy="104" r="1" fill="#7A4B2F" opacity="0.7"/>
+  <circle cx="106" cy="100" r="1.2" fill="#7A4B2F" opacity="0.6"/>
+  <circle cx="134" cy="101" r="1" fill="#7A4B2F" opacity="0.6"/>
+  <circle cx="138" cy="105" r="1.3" fill="#7A4B2F" opacity="0.7"/>
+  
+  <!-- Làn khói hương thơm -->
+  <path d="M110 80 C105 68 114 60 110 46" stroke="#C68A4C" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.6"/>
+  <path d="M126 76 C121 64 130 56 126 42" stroke="#C68A4C" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.8"/>
+</svg>
+

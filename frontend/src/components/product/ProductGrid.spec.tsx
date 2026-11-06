@@ -12,7 +12,6 @@ const product: Product = {
   imageUrl: null,
   category: { id: 1, name: 'Cà phê' },
   isAvailable: true,
-  inStock: true,
 };
 
 describe('ProductGrid', () => {
@@ -28,11 +27,11 @@ describe('ProductGrid', () => {
 });
 
 describe('ProductCard', () => {
-  it('shows the out-of-stock label and availability message', () => {
-    const markup = renderToStaticMarkup(<ProductCard product={{ ...product, inStock: false }} />);
+  it('renders product card with name, price and link', () => {
+    const markup = renderToStaticMarkup(<ProductCard product={product} />);
 
-    expect(markup).toContain('Hết hàng');
-    expect(markup).toContain('Hiện đang hết hàng');
+    expect(markup).toContain('Bạc xỉu');
+    expect(markup).toContain('Pha mới theo lựa chọn của bạn');
     expect(markup).toContain('href="/products/1"');
   });
 });

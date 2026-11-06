@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <!-- Nền hình tròn màu kem ấm -->
+  <circle cx="120" cy="120" r="108" fill="#FDFBF7" stroke="#E6DFD5" stroke-width="3"/>
+  <circle cx="120" cy="120" r="95" fill="#F7F3EB"/>
+  
+  <!-- Đĩa lót ly cà phê -->
+  <ellipse cx="120" cy="190" rx="65" ry="14" fill="#E6DFD5"/>
+  <ellipse cx="120" cy="188" rx="58" ry="10" fill="#FFFFFF"/>
+  
+  <!-- Quai ly -->
+  <path d="M155 105 C185 105 185 150 155 150" stroke="#34241C" stroke-width="8" stroke-linecap="round" fill="none"/>
+  
+  <!-- Thân ly sứ trắng -->
+  <path d="M80 85 L88 175 C89 182 96 186 104 186 L136 186 C144 186 151 182 152 175 L160 85 Z" fill="#FFFFFF" stroke="#E6DFD5" stroke-width="2"/>
+  
+  <!-- Lớp Americano đen đậm nguyên chất -->
+  <path d="M82 95 L88 174 C89 180 95 184 103 184 L137 184 C145 184 151 180 152 174 L158 95 Z" fill="#241711"/>
+  
+  <!-- Mặt nước cà phê với lớp crema mỏng cánh gián -->
+  <ellipse cx="120" cy="95" rx="38" ry="10" fill="#3D261C"/>
+  <ellipse cx="120" cy="94" rx="32" ry="7" fill="#8C5835" opacity="0.6"/>
+  <ellipse cx="115" cy="93" rx="14" ry="4" fill="#C68A4C" opacity="0.7"/>
+  
+  <!-- Làn khói hương thơm nóng -->
+  <path d="M110 75 C105 60 115 50 110 35" stroke="#7D8B6F" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.7"/>
+  <path d="M125 70 C120 55 130 45 125 30" stroke="#7D8B6F" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.8"/>
+</svg>
+

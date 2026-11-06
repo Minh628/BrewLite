@@ -27,6 +27,7 @@ import { ApiErrorDto } from '../common/dto/api-error.dto';
 import { BEARER_AUTH } from '../swagger';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
+import { SimulatePaymentDto, SimulatePaymentResponseDto } from './dto/simulate-payment.dto';
 import { PaymentsService } from './payments.service';
 
 @ApiTags('Payments')
@@ -56,5 +57,22 @@ export class PaymentsController {
     response.status(result.replayed ? HttpStatus.OK : HttpStatus.CREATED);
     if (result.replayed) response.setHeader('Idempotent-Replayed', 'true');
     return result.payment;
+  }
+
+  @Post('simulate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Mô phỏng cổng thanh toán bên thứ 3 (VNPay/Mock) đổi trạng thái (Test qua Swagger)',
+    description:
+      'Chuyển trạng thái đơn: PENDING -> PAID hoặc PAYMENT_FAILED; hoặc PAYMENT_FAILED -> PAID. Kích hoạt hook tích điểm khi PAID.',
+  })
+  @ApiOkResponse({
+    type: SimulatePaymentResponseDto,
+    description: 'Trạng thái đơn hàng sau khi đổi thành công',
+  })
+  @ApiNotFoundResponse({ type: ApiErrorDto, description: 'Không tìm thấy đơn hàng' })
+  @ApiConflictResponse({ type: ApiErrorDto, description: 'Chuyển trạng thái không hợp lệ' })
+  async simulate(@Body() dto: SimulatePaymentDto): Promise<SimulatePaymentResponseDto> {
+    return this.paymentsService.simulate(dto);
   }
 }

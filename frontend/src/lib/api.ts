@@ -148,16 +148,37 @@ export type CreateOrderItem = {
 export async function createOrder(
   items: CreateOrderItem[],
   idempotencyKey?: string,
+  promoCode?: string,
 ): Promise<{
   orderId: number;
   code: string;
   status: string;
   total: number;
+  subtotal?: number;
+  discount?: number;
 }> {
   return apiFetch('/orders', {
     method: 'POST',
     headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
-    body: JSON.stringify({ items }),
+    body: JSON.stringify({
+      items,
+      ...(promoCode ? { promoCode } : {}),
+    }),
+  });
+}
+
+export type ValidatedPromotion = {
+  code: string;
+  discount: number;
+};
+
+export async function validatePromotion(
+  code: string,
+  subtotal: number,
+): Promise<ValidatedPromotion> {
+  return apiFetch<ValidatedPromotion>('/promotions/validate', {
+    method: 'POST',
+    body: JSON.stringify({ code, subtotal }),
   });
 }
 

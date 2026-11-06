@@ -7,7 +7,6 @@ import { PricingService } from '../../src/pricing/pricing.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { PromotionsService } from '../../src/promotions/promotions.service';
 import { PROMO_ERROR } from '../../src/promotions/promotion-rules';
-import { StockService } from '../../src/stock/stock.service';
 import { EXPECTED_TOTAL, findProductsByIds, validOrderBody } from './order-fixtures';
 
 type Row = Record<string, unknown>;
@@ -199,10 +198,6 @@ describe('OrdersService (PB-06 / Sub-task 6.3, 6.5)', () => {
   function setup(promotions: Row[] = []) {
     fake = createPrismaFake(promotions);
     const prisma = fake.prisma as unknown as PrismaService;
-    const stockService = {
-      reserve: jest.fn().mockResolvedValue(undefined),
-      release: jest.fn().mockResolvedValue(undefined),
-    } as unknown as StockService;
     const orderStatusService = {
       transition: jest.fn().mockResolvedValue(undefined),
     } as unknown as OrderStatusService;
@@ -210,7 +205,6 @@ describe('OrdersService (PB-06 / Sub-task 6.3, 6.5)', () => {
       prisma,
       new PricingService(prisma),
       new PromotionsService(prisma),
-      stockService,
       orderStatusService,
     );
   }

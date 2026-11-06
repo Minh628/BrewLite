@@ -34,12 +34,6 @@ export class ProductDto {
 
   @ApiProperty({ description: 'Sản phẩm còn bán hay không', example: true })
   isAvailable!: boolean;
-
-  @ApiProperty({
-    description: 'Còn tồn kho (stock > 0) — dùng để hiện nhãn "Hết hàng"',
-    example: true,
-  })
-  inStock!: boolean;
 }
 
 export class ProductSizeDto {

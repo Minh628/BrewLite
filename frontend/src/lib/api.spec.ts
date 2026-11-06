@@ -167,7 +167,7 @@ describe('api client', () => {
     vi.spyOn(globalThis, 'setTimeout').mockImplementation(((callback: TimerHandler) => {
       if (typeof callback === 'function') callback();
       return 1 as unknown as ReturnType<typeof setTimeout>;
-    }) as typeof setTimeout);
+    }) as unknown as typeof setTimeout);
     vi.spyOn(globalThis, 'fetch').mockImplementation((_input, init) => {
       if (init?.signal?.aborted) {
         return Promise.reject(new DOMException('Aborted', 'AbortError'));

@@ -39,14 +39,14 @@ export const useCart = create<CartState>()(
       add: (line, quantity = 1) =>
         set((state) => {
           const amount = Number.isFinite(quantity)
-            ? Math.max(1, Math.min(Math.floor(quantity), 20))
+            ? Math.max(1, Math.min(Math.floor(quantity), 999))
             : 1;
           const key = cartKey(line);
           const existingIndex = state.lines.findIndex((l) => cartKey(l) === key);
           if (existingIndex >= 0) {
             return {
               lines: state.lines.map((l, i) =>
-                i === existingIndex ? { ...l, quantity: Math.min(l.quantity + amount, 20) } : l,
+                i === existingIndex ? { ...l, quantity: Math.min(l.quantity + amount, 999) } : l,
               ),
             };
           }
@@ -60,7 +60,7 @@ export const useCart = create<CartState>()(
           }
           return {
             lines: state.lines.map((l) =>
-              cartKey(l) === key ? { ...l, quantity: Math.min(qty, 20) } : l,
+              cartKey(l) === key ? { ...l, quantity: Math.min(qty, 999) } : l,
             ),
           };
         }),
@@ -75,7 +75,15 @@ export const useCart = create<CartState>()(
     }),
     {
       name: 'brewlite-cart',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() =>
+        typeof window !== 'undefined'
+          ? window.localStorage
+          : {
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {},
+            },
+      ),
       version: 1,
       partialize: (state) => ({ lines: state.lines }),
     },
