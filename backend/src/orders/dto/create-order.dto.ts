@@ -20,7 +20,7 @@ export const ORDER_SIZES = ['S', 'M', 'L'] as const;
 export type OrderSize = (typeof ORDER_SIZES)[number];
 
 export const MIN_QTY = 1;
-export const MAX_QTY = 999;
+export const MAX_QTY = 20;
 
 /**
  * Một dòng món trong giỏ hàng gửi lên POST /orders (Sub-task 6.1)
