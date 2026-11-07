@@ -18,7 +18,7 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const returnUrl = searchParams.get('returnUrl') ?? '/checkout';
+  const returnUrl = searchParams.get('returnUrl') ?? '/menu';
 
   const {
     register,
