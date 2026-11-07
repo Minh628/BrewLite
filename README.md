@@ -48,6 +48,39 @@ BrewLite/
 - **Thiết kế CSDL (ERD):** [`docs/erd/erd.md`](./docs/erd/erd.md)
 - **Quy ước API (API Conventions):** [`docs/api-conventions.md`](./docs/api-conventions.md)
 
+## Giao diện quầy pha chế & tài khoản test
+
+### Tách port giữa khách và quầy
+
+Khách và nhân viên dùng **cùng codebase Next.js** nhưng chạy 2 instance khác port để `localStorage`/`cookie` tách riêng — login song song 2 tài khoản trong cùng browser không đụng nhau.
+
+| URL                            | Vai trò          | Chạy bằng              |
+| ------------------------------ | ---------------- | ---------------------- |
+| http://localhost:3000          | Khách hàng       | `npm run dev`          |
+| http://localhost:3001          | Backend API      | `npm run dev` (chung)  |
+| http://localhost:3002/barista  | Nhân viên quầy   | `npm run dev:barista`  |
+| http://localhost:8080          | Adminer (xem DB) | `npm run dev:db` (kèm) |
+| http://localhost:3001/api-docs | Swagger          | `npm run dev` (chung)  |
+
+Backend chỉ cần 1 instance — cả 2 FE gọi chung backend ở `:3001`. Đơn hàng tự sync vì cùng DB (`barista` polling 10 s, trang xác nhận khách polling 5 s).
+
+### Tài khoản seed (chạy `npm run db:seed`)
+
+| Vai trò  | Email                  | Mật khẩu      |
+| -------- | ---------------------- | ------------- |
+| CUSTOMER | `customer@brewlite.vn` | `Password123` |
+| BARISTA  | `barista@brewlite.vn`  | `matkhau123`  |
+| ADMIN    | `admin@brewlite.vn`    | `matkhau123`  |
+
+### Luồng demo end-to-end
+
+1. Khách `:3000/menu` → chọn món → cart → checkout → thanh toán (thẻ `4242 4242 4242 4242` thành công).
+2. Khách tự chuyển `/orders/{id}` — badge "Đã thanh toán - Mời tới quầy lấy nước".
+3. Quầy `:3002/barista` (login `barista@brewlite.vn`) — đơn xuất hiện cột **Chờ pha** trong ≤10 s → bấm **Nhận pha** → **Hoàn tất pha** → **Đã giao khách**.
+4. Khách thấy badge chuyển **Đang pha chế** → **Sẵn sàng** + banner "Đồ uống đã sẵn sàng!" trong ≤5 s.
+
+Có thể bỏ qua UI quầy bằng cách gọi trực tiếp `PATCH /orders/:id/status` qua Swagger (Authorize bằng JWT barista).
+
 ## Thay đổi gần đây
 
 - **PB-23 (Sub-task 23.1 & 23.2): Log request & mã tương quan `X-Request-Id`**
@@ -202,22 +235,24 @@ Biến tùy chọn: `PERF_BASE_URL`, `PERF_DURATION` (giây, mặc định 20), 
 
 Yêu cầu: Node.js 20+, npm 10+, Docker Desktop.
 
-```powershell
-Copy-Item .env.example .env
+```bash
+cp .env.example .env
+cp backend/.env.example backend/.env
 npm install
-npm run dev:db
+npm run dev:db        # Postgres :5433 + Adminer :8080
 npm run db:generate
 npm run db:migrate
-npm run db:seed
-npm run dev
+npm run db:seed       # tạo 3 tài khoản test (customer/barista/admin)
+npm run dev           # Terminal A: backend :3001 + FE khách :3000
+# Mở Terminal B để chạy FE quầy pha chế:
+npm run dev:barista   # FE quầy :3002 (chung backend/DB với :3000)
 ```
 
-- Frontend: http://localhost:3000
-- Backend: http://localhost:3001
-- Health check: http://localhost:3001/health
-- Menu: http://localhost:3000/menu
-- Products API: http://localhost:3001/products
+- FE khách: http://localhost:3000/menu
+- FE quầy: http://localhost:3002/barista (login `barista@brewlite.vn` / `matkhau123`)
+- Backend API: http://localhost:3001 — `GET /health`, `GET /products`
 - Swagger: http://localhost:3001/api-docs
+- Adminer (xem DB): http://localhost:8080 (server `postgres`, user/db `brewlite`)
 
 Thanh toán mock dùng thẻ `4242 4242 4242 4242` để thành công và
 `4000 0000 0000 0002` để kiểm tra nhánh bị từ chối. Có thể đặt
@@ -252,14 +287,23 @@ docker compose up --build
 
 ## Lộ trình API MVP
 
+**Public:**
+
 - `GET /health`
-- `GET /products`
-- `GET /products/:id`
-- `POST /auth/register`
-- `POST /auth/login`
-- `POST /orders`
-- `POST /payments` với header `Idempotency-Key`
-- `GET /orders/me`
+- `GET /products`, `GET /products/:id`, `GET /categories`, `GET /toppings`
+- `POST /auth/register`, `POST /auth/login`
+- `POST /promotions/validate`
+
+**Cần JWT (CUSTOMER):**
+
+- `GET /auth/me`
+- `POST /orders` (header `Idempotency-Key`), `GET /orders/me`, `GET /orders/:id`
+- `POST /payments` (header `Idempotency-Key`)
+
+**Cần JWT role BARISTA/ADMIN:**
+
+- `GET /orders/queue` — hàng đợi quầy (đơn PAID/PREPARING/READY, FIFO)
+- `PATCH /orders/:id/status` — chuyển trạng thái (PREPARING / READY / COMPLETED)
 
 ## Lệnh hữu ích
 
