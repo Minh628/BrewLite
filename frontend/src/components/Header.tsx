@@ -25,6 +25,13 @@ export function Header() {
   };
 
   const cartCount = isMounted ? lines.reduce((sum, line) => sum + line.quantity, 0) : 0;
+  const isStaff = isAuthenticated && (user?.role === 'BARISTA' || user?.role === 'ADMIN');
+  const roleLabel =
+    user?.role === 'ADMIN'
+      ? 'Quản trị viên'
+      : user?.role === 'BARISTA'
+        ? 'Nhân viên quầy'
+        : 'Khách hàng';
 
   return (
     <header className="sticky top-0 z-10 border-b border-espresso/10 bg-espresso text-crema">
@@ -37,6 +44,14 @@ export function Header() {
         </Link>
 
         <div className="flex items-center gap-4">
+          {isMounted && isStaff && (
+            <Link
+              href="/barista"
+              className="rounded-lg border border-caramel/60 bg-caramel/10 px-3 py-2 text-sm font-semibold text-crema transition-colors hover:bg-caramel/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-caramel"
+            >
+              Quầy pha chế
+            </Link>
+          )}
           <Link
             href="/cart"
             aria-label={`Xem giỏ hàng, ${cartCount} món`}
@@ -92,7 +107,7 @@ export function Header() {
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-espresso/10 py-2 z-50 animate-in fade-in-0 zoom-in-95">
                     <div className="px-4 py-3 border-b border-espresso/10">
                       <p className="font-semibold text-espresso truncate">{user.email}</p>
-                      <p className="text-xs text-espresso/50 mt-0.5">Khách hàng</p>
+                      <p className="text-xs text-espresso/50 mt-0.5">{roleLabel}</p>
                     </div>
                     <Link
                       href="/orders"

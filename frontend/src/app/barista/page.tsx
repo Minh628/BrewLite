@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, BaristaStatus, getBaristaQueue, updateOrderStatus } from '@/lib/api';
@@ -115,13 +116,21 @@ export default function BaristaPage() {
               Đăng nhập: <strong>{user.email}</strong> · {user.role} · Tự làm mới mỗi 10s
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="self-start rounded-full border border-espresso/20 bg-white px-4 py-2 text-sm font-medium text-espresso hover:bg-caramel/10"
-          >
-            Làm mới ngay
-          </button>
+          <div className="flex items-center gap-2 self-start">
+            <Link
+              href="/menu"
+              className="rounded-full border border-espresso/20 bg-white px-4 py-2 text-sm font-medium text-espresso hover:bg-caramel/10"
+            >
+              ← Về trang khách
+            </Link>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="rounded-full border border-espresso/20 bg-white px-4 py-2 text-sm font-medium text-espresso hover:bg-caramel/10"
+            >
+              Làm mới ngay
+            </button>
+          </div>
         </header>
 
         {isError && (
