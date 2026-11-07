@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import type { Product } from '@/lib/api';
 import { formatVND } from '@/lib/format';
 
@@ -11,14 +12,26 @@ function categoryEmoji(categoryName: string) {
 }
 
 export function ProductCard({ product }: { product: Product }) {
+  const [imageError, setImageError] = useState(false);
+  const hasImage = Boolean(product.imageUrl) && !imageError;
+
   return (
     <article className="group overflow-hidden rounded-[2rem] border border-espresso/15 bg-white/70 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
       <Link href={`/products/${product.id}`} className="block">
-        <div
-          className="relative flex h-52 items-center justify-center bg-caramel/20 text-7xl transition group-hover:bg-caramel/30"
-          aria-hidden="true"
-        >
-          {categoryEmoji(product.category.name)}
+        <div className="relative flex h-52 items-center justify-center bg-caramel/20 transition group-hover:bg-caramel/30">
+          {hasImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={product.imageUrl as string}
+              alt={product.name}
+              className="max-h-44 max-w-[75%] object-contain"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <span aria-hidden="true" className="text-7xl">
+              {categoryEmoji(product.category.name)}
+            </span>
+          )}
         </div>
         <div className="space-y-1 px-5 pt-5 pb-5">
           <div className="flex items-start justify-between gap-3">
