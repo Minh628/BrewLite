@@ -53,11 +53,11 @@ export default function BaristaPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.replace('/login?next=/barista');
+      router.replace('/login?returnUrl=/barista');
       return;
     }
     if (user && !isStaff) {
-      router.replace('/login?next=/barista&forbidden=1');
+      router.replace('/login?returnUrl=/barista&forbidden=1');
     }
   }, [isAuthenticated, isStaff, user, router]);
 
