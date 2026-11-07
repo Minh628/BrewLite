@@ -253,6 +253,62 @@ export class OrdersService {
   }
 
   /**
+   * Hàng đợi quầy pha chế (BARISTA/ADMIN) — PB-32a.
+   * Trả tất cả đơn đang ở PAID/PREPARING/READY, cũ nhất trước (FIFO).
+   * FE nhóm theo status để dựng Kanban 3 cột.
+   */
+  async getQueue(): Promise<OrderDetailDto[]> {
+    const orders = await this.prisma.order.findMany({
+      where: { status: { in: [OrderStatus.PAID, OrderStatus.PREPARING, OrderStatus.READY] } },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        items: {
+          include: {
+            product: { select: { name: true } },
+            toppings: { include: { topping: { select: { name: true } } } },
+          },
+        },
+        payments: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+    });
+
+    return orders.map((order) => {
+      const latestPayment = order.payments[0] ?? null;
+      return {
+        orderId: order.id,
+        code: formatOrderCode(order.id),
+        status: order.status,
+        subtotal: order.subtotal,
+        discount: order.discount,
+        promoCode: order.promoCode,
+        total: order.total,
+        pointsEarned: order.pointsEarned,
+        createdAt: order.createdAt.toISOString(),
+        items: order.items.map((item) => ({
+          productId: item.productId,
+          productName: item.product.name,
+          size: item.size,
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          lineTotal: item.lineTotal,
+          toppings: item.toppings.map((t) => ({
+            id: t.toppingId,
+            name: t.topping.name,
+            price: t.price,
+          })),
+        })),
+        payment: latestPayment
+          ? {
+              method: latestPayment.method,
+              cardLast4: latestPayment.cardLast4 ?? null,
+              paidAt: latestPayment.createdAt.toISOString(),
+            }
+          : null,
+      };
+    });
+  }
+
+  /**
    * Chuyển trạng thái đơn hàng (BARISTA/ADMIN) — Sub-task 10.1c.
    * Dùng OrderStatusService.transition() bên trong transaction để đảm bảo State Machine.
    */

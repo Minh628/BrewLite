@@ -79,6 +79,23 @@ export class OrdersController {
   }
 
   /**
+   * Hàng đợi quầy pha chế (PB-32a): trả tất cả đơn ở PAID/PREPARING/READY, FIFO.
+   * Chỉ BARISTA/ADMIN. PHẢI khai báo trước GET /:id để "queue" không bị parse thành :id.
+   * @route GET /orders/queue
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.BARISTA, Role.ADMIN)
+  @Get('queue')
+  @ApiBearerAuth(BEARER_AUTH)
+  @ApiOperation({ summary: 'Hàng đợi quầy pha chế (BARISTA/ADMIN)' })
+  @ApiOkResponse({ type: OrderDetailDto, isArray: true })
+  @ApiForbiddenResponse({ type: ApiErrorDto, description: '403 FORBIDDEN_ROLE' })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  async getBaristaQueue(): Promise<OrderDetailDto[]> {
+    return this.ordersService.getQueue();
+  }
+
+  /**
    * Lấy chi tiết một đơn hàng theo ID (chỉ đơn của chính mình).
    * @route GET /orders/:id
    */

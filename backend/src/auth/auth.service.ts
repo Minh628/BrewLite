@@ -27,7 +27,7 @@ export class AuthService {
    * 5. Ký và phát hành ngay accessToken JWT.
    */
   async register(dto: RegisterDto): Promise<{
-    user: { id: number; email: string };
+    user: { id: number; email: string; role: string };
     accessToken: string;
   }> {
     // Bước 1: Fast Pre-check bảo vệ tài nguyên tính toán của CPU
@@ -76,6 +76,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
+        role: 'CUSTOMER',
       },
       accessToken,
     };
@@ -130,7 +131,7 @@ export class AuthService {
   async login(user: { id: number; email: string; role?: string }): Promise<{
     accessToken: string;
     expiresIn: number;
-    user: { id: number; email: string };
+    user: { id: number; email: string; role: string };
   }> {
     if (!user || !user.id || !user.email) {
       throw new UnauthorizedException('Invalid credentials');
@@ -150,6 +151,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
+        role: user.role ?? 'CUSTOMER',
       },
     };
   }

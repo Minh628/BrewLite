@@ -55,6 +55,7 @@ describe('AuthService', () => {
         user: {
           id: 3,
           email: 'test@brewlite.vn',
+          role: 'CUSTOMER',
         },
         accessToken: 'jwt-mock-token-xyz',
       });
@@ -206,6 +207,7 @@ describe('AuthService', () => {
         user: {
           id: 3,
           email: 'test@brewlite.vn',
+          role: 'CUSTOMER',
         },
       });
     });

@@ -68,6 +68,7 @@ describe('Auth API (e2e)', () => {
         user: {
           id: 'user-cuid-uuid',
           email: 'customer@brewlite.vn',
+          role: 'CUSTOMER',
         },
         accessToken: expect.any(String),
       });
@@ -174,6 +175,7 @@ describe('Auth API (e2e)', () => {
         user: {
           id: 'user-cuid-uuid',
           email: 'customer@brewlite.vn',
+          role: 'CUSTOMER',
         },
       });
     });

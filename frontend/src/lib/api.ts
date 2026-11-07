@@ -115,7 +115,7 @@ export async function register(
   email: string,
   password: string,
 ): Promise<{
-  user: { id: number; email: string };
+  user: { id: number; email: string; role: string };
   accessToken: string;
 }> {
   return apiFetch('/auth/register', {
@@ -130,7 +130,7 @@ export async function login(
 ): Promise<{
   accessToken: string;
   expiresIn: number;
-  user: { id: number; email: string };
+  user: { id: number; email: string; role: string };
 }> {
   return apiFetch('/auth/login', {
     method: 'POST',
@@ -217,4 +217,28 @@ export function getOrderById(id: number | string): Promise<OrderDetail> {
 
 export function getMyOrders(page = 1, limit = 10): Promise<PaginatedOrders> {
   return apiFetch<PaginatedOrders>(`/orders/me?page=${page}&limit=${limit}`);
+}
+
+/**
+ * Hàng đợi quầy pha chế — PB-32a (yêu cầu role BARISTA/ADMIN).
+ * Trả tất cả đơn ở PAID/PREPARING/READY, cũ nhất trước.
+ */
+export function getBaristaQueue(): Promise<OrderDetail[]> {
+  return apiFetch<OrderDetail[]>('/orders/queue');
+}
+
+export type BaristaStatus = 'PREPARING' | 'READY' | 'COMPLETED';
+
+/**
+ * Quầy chuyển trạng thái đơn — Sub-task 10.1c.
+ * State Machine: PAID → PREPARING → READY → COMPLETED.
+ */
+export function updateOrderStatus(
+  id: number,
+  status: BaristaStatus,
+): Promise<{ orderId: number; code: string; status: string }> {
+  return apiFetch(`/orders/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
 }
