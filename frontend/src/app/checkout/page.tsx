@@ -8,6 +8,7 @@ import {
   ApiError,
   createOrder,
   createPayment,
+  createVnpayPaymentUrl,
   validatePromotion,
   type PaymentMethod,
   type ValidatedPromotion,
@@ -132,12 +133,7 @@ export default function CheckoutPage() {
   if (!isAuthenticated) return null;
 
   const handlePay = async () => {
-    if (lines.length === 0 || submitting.current || (method === 'CARD' && !cardNumber.trim())) {
-      if (method === 'CARD' && !cardNumber.trim()) setError('Vui lòng nhập số thẻ.');
-      return;
-    }
-    if (method === 'CARD' && !/^\d{16}$/.test(cardNumber.replace(/\s/g, ''))) {
-      setError('Số thẻ phải gồm 16 chữ số.');
+    if (lines.length === 0 || submitting.current) {
       return;
     }
 
@@ -151,6 +147,7 @@ export default function CheckoutPage() {
       }
       saveSession(checkout);
 
+      // 1. Tạo đơn hàng mới nếu chưa có đơn trong checkout session
       if (!checkout.order) {
         const items = lines.map((line) => ({
           productId: line.id,
@@ -163,52 +160,63 @@ export default function CheckoutPage() {
         saveSession(checkout);
       }
       if (!checkout.order) {
-        throw new Error('Không thể khôi phục đơn hàng. Vui lòng thử lại.');
+        throw new Error('Không thể khởi tạo đơn hàng. Vui lòng thử lại.');
       }
-      const order = checkout.order;
+      let order = checkout.order;
 
-      const paymentKey = checkout.paymentKey ?? newIdempotencyKey();
-      const cardLast4 = method === 'CARD' ? cardNumber.replace(/\s/g, '').slice(-4) : null;
-      if (checkout.paymentKey && checkout.paymentCardLast4 !== cardLast4) {
-        throw new Error('Nhập lại đúng phương thức và số thẻ đã dùng ở yêu cầu trước.');
+      // 2. Tạo URL thanh toán VNPay Sandbox v2.1.0 cho cả CARD và WALLET
+      let paymentUrl = '';
+      try {
+        const res = await createVnpayPaymentUrl(order.orderId, method);
+        paymentUrl = res.paymentUrl;
+      } catch (urlErr: unknown) {
+        const msg = urlErr instanceof Error ? urlErr.message : '';
+        // Tự phục hồi: Nếu đơn cũ trong session đã thanh toán (PAID) hoặc không thể thanh toán tiếp,
+        // tự động dọn sạch session cũ và tạo ngay một đơn hàng mới toanh cho giỏ hàng hiện tại!
+        if (
+          msg.includes('PAID') ||
+          msg.includes('không thể thanh toán tiếp') ||
+          msg.includes('Không tìm thấy')
+        ) {
+          if (storageKey) sessionStorage.removeItem(storageKey);
+          checkout = { orderKey: newIdempotencyKey() };
+          if (appliedPromo) {
+            checkout = {
+              ...checkout,
+              promoCode: appliedPromo.code,
+              discount: appliedPromo.discount,
+            };
+          }
+          const items = lines.map((line) => ({
+            productId: line.id,
+            size: line.size,
+            qty: line.quantity,
+            toppingIds: line.toppings.map((t) => t.id),
+          }));
+          const newOrder = await createOrder(items, checkout.orderKey, appliedPromo?.code);
+          checkout = { ...checkout, order: newOrder };
+          saveSession(checkout);
+          order = newOrder;
+
+          const res = await createVnpayPaymentUrl(order.orderId, method);
+          paymentUrl = res.paymentUrl;
+        } else {
+          throw urlErr;
+        }
       }
+
+      // Lưu lại trạng thái checkout session trước khi redirect sang cổng VNPay
       checkout = {
         ...checkout,
-        paymentKey,
         paymentMethod: method,
-        paymentCardLast4: cardLast4,
       };
       saveSession(checkout);
-      setRetryingSameAttempt(false);
 
-      const payment = await createPayment(
-        order.orderId,
-        method,
-        paymentKey,
-        method === 'CARD' ? cardNumber : undefined,
-      );
-
-      if (payment.status === 'PAYMENT_FAILED') {
-        const message = payment.failureReason ?? 'Thanh toán thất bại.';
-        checkout = {
-          ...checkout,
-          paymentKey: undefined,
-          paymentMethod: undefined,
-          paymentCardLast4: undefined,
-        };
-        saveSession(checkout);
-        setRetryingSameAttempt(false);
-        setError(`${message}. Bạn có thể đổi phương thức hoặc thử lại.`);
-        return;
-      }
-
-      clear();
-      if (storageKey) sessionStorage.removeItem(storageKey);
-      router.push(`/orders/${order.orderId}`);
+      // 3. Chuyển hướng người dùng sang cổng thanh toán VNPay Sandbox
+      window.location.href = paymentUrl;
     } catch (err) {
       setRetryingSameAttempt(true);
       setError(mapOrderError(err));
-    } finally {
       submitting.current = false;
       setIsSubmitting(false);
     }
@@ -366,19 +374,34 @@ export default function CheckoutPage() {
             )}
 
             {session?.order && (
-              <p className="border-t border-espresso/10 p-4 text-sm text-espresso/70">
-                Đơn #{session.order.code || session.order.orderId} đã được tạo. Tiếp tục thanh toán
-                để hoàn tất.
-              </p>
+              <div className="flex items-center justify-between border-t border-espresso/10 p-4 text-xs sm:text-sm text-espresso/70 bg-amber-50/50">
+                <span>
+                  Đơn <strong>#{session.order.code || session.order.orderId}</strong> đang được liên
+                  kết với lượt thanh toán này.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (storageKey) sessionStorage.removeItem(storageKey);
+                    setSession(null);
+                  }}
+                  className="text-xs text-caramel hover:underline font-semibold ml-2 flex-shrink-0"
+                >
+                  Làm mới đơn
+                </button>
+              </div>
             )}
 
             <section
               className="space-y-5 border-t border-espresso/10 p-5 bg-white"
               aria-label="Phương thức thanh toán"
             >
-              <fieldset disabled={isSubmitting || !!session?.paymentKey} className="space-y-3">
-                <legend className="mb-3 font-bold text-espresso text-base">
-                  Phương thức thanh toán
+              <fieldset disabled={isSubmitting} className="space-y-3">
+                <legend className="mb-3 font-bold text-espresso text-base flex items-center justify-between">
+                  <span>Phương thức thanh toán</span>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                    Cổng VNPay Sandbox
+                  </span>
                 </legend>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label
@@ -399,8 +422,10 @@ export default function CheckoutPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-xl">💳</span>
                       <div>
-                        <div className="font-semibold text-sm">Thẻ ngân hàng</div>
-                        <div className="text-[11px] text-espresso/60">Visa, Mastercard, ATM</div>
+                        <div className="font-semibold text-sm">Thẻ ngân hàng (CARD)</div>
+                        <div className="text-[11px] text-espresso/60">
+                          ATM nội địa, Visa, Mastercard
+                        </div>
                       </div>
                     </div>
                   </label>
@@ -423,46 +448,73 @@ export default function CheckoutPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-xl">📱</span>
                       <div>
-                        <div className="font-semibold text-sm">Ví điện tử</div>
-                        <div className="text-[11px] text-espresso/60">Ví BrewLite Pay</div>
+                        <div className="font-semibold text-sm">Ví điện tử (WALLET)</div>
+                        <div className="text-[11px] text-espresso/60">
+                          Quét mã VNPAY-QR / Ví điện tử
+                        </div>
                       </div>
                     </div>
                   </label>
                 </div>
               </fieldset>
 
-              {method === 'CARD' && (
-                <div className="rounded-xl border border-espresso/15 bg-cream/10 p-4 space-y-2">
-                  <label
-                    htmlFor="card-number-input"
-                    className="block text-sm font-semibold text-espresso"
+              {/* Hộp thông tin thẻ thử nghiệm VNPay Sandbox */}
+              <div className="rounded-xl border border-blue-200/90 bg-blue-50/60 p-4 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between font-bold text-blue-900 flex-wrap gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span aria-hidden="true">🛡️</span>
+                    <span>Cổng thanh toán VNPay Sandbox v2.1.0</span>
+                  </div>
+                  <a
+                    href="https://sandbox.vnpayment.vn/apis/vnpay-demo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 hover:text-blue-900 underline hover:no-underline"
                   >
-                    Số thẻ thanh toán
-                  </label>
-                  <input
-                    id="card-number-input"
-                    autoComplete="cc-number"
-                    inputMode="numeric"
-                    value={cardNumber}
-                    onChange={(event) => setCardNumber(event.target.value)}
-                    placeholder="4242 4242 4242 4242"
-                    className="w-full rounded-xl border border-espresso/20 bg-white px-3.5 py-2.5 font-mono text-sm tracking-wider focus:outline-none focus:ring-2 focus:ring-caramel/50 focus:border-caramel shadow-sm transition"
-                  />
-                  <div className="flex items-center gap-2 pt-1 text-[11px] text-espresso/60">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    <span>
-                      Thẻ thành công:{' '}
-                      <code className="font-mono font-semibold text-espresso">
-                        4242 4242 4242 4242
-                      </code>
-                    </span>
-                    <span>·</span>
-                    <span>
-                      Thẻ từ chối: <code className="font-mono text-espresso">4000...0002</code>
-                    </span>
+                    <span>Tra cứu thẻ test Sandbox</span>
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                </div>
+
+                <p className="text-blue-900/80 leading-relaxed">
+                  Khi sang giao diện VNPay, chọn tab{' '}
+                  <strong>&quot;Thẻ nội địa và tài khoản ngân hàng&quot;</strong> &rarr; Chọn logo{' '}
+                  <strong>NCB</strong> và nhập thông tin test:
+                </p>
+
+                <div className="bg-white rounded-lg p-3 border border-blue-200 font-mono text-[11px] space-y-1.5 text-espresso">
+                  <div className="flex items-center justify-between">
+                    <span>Số thẻ (viết liền):</span>
+                    <strong className="text-blue-900 font-bold tracking-wider select-all">
+                      9704198526191432198
+                    </strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Tên chủ thẻ:</span>
+                    <strong className="select-all">NGUYEN VAN A</strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Ngày phát hành:</span>
+                    <strong className="select-all">07/15</strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Mã OTP xác thực:</span>
+                    <strong className="select-all">123456</strong>
                   </div>
                 </div>
-              )}
+
+                <div className="pt-1 text-[11px] text-blue-900/70 flex items-center justify-between flex-wrap gap-1">
+                  <span>💡 Hoặc quét VNPAY-QR và bấm giả lập thanh toán thành công.</span>
+                  <a
+                    href="https://sandbox.vnpayment.vn/apis/vnpay-demo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-700 hover:underline font-medium"
+                  >
+                    sandbox.vnpayment.vn/apis/vnpay-demo
+                  </a>
+                </div>
+              </div>
 
               {error && (
                 <div
@@ -476,18 +528,12 @@ export default function CheckoutPage() {
 
               <Button
                 onClick={handlePay}
-                className="w-full"
+                className="w-full bg-caramel hover:bg-caramel-strong text-white font-bold"
                 size="lg"
                 loading={isSubmitting}
                 disabled={!sessionLoaded || isSubmitting || (lines.length === 0 && !session?.order)}
               >
-                {isSubmitting
-                  ? 'Đang xử lý thanh toán...'
-                  : retryingSameAttempt
-                    ? 'Thử lại cùng yêu cầu'
-                    : session?.order
-                      ? 'Thanh toán'
-                      : 'Tạo đơn và thanh toán'}
+                {isSubmitting ? 'Đang kết nối cổng VNPay...' : 'Tiến hành thanh toán qua VNPay'}
               </Button>
               <p className="text-center text-sm text-espresso/50">
                 Giỏ hàng chỉ được xóa sau khi thanh toán thành công.{' '}

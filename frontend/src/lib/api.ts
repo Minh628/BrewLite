@@ -281,3 +281,16 @@ export function cancelOrder(
     body: JSON.stringify({ reason }),
   });
 }
+
+/**
+ * Tạo URL thanh toán VNPay Sandbox v2.1.0
+ */
+export function createVnpayPaymentUrl(
+  orderId: number,
+  method: PaymentMethod,
+): Promise<{ paymentUrl: string }> {
+  return apiFetch<{ paymentUrl: string }>('/payments/vnpay/create-url', {
+    method: 'POST',
+    body: JSON.stringify({ orderId, method }),
+  });
+}
