@@ -1,5 +1,10 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
-import { DiscountType, Prisma } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+import { DiscountType, OrderStatus, Prisma, Role } from '@prisma/client';
 import { CreateOrderDto } from '../../src/orders/dto/create-order.dto';
 import { OrderStatusService } from '../../src/orders/order-status.service';
 import { formatOrderCode, OrdersService } from '../../src/orders/orders.service';
@@ -47,14 +52,25 @@ function createPrismaFake(promotions: Row[] = []) {
         ({
           where,
         }: {
-          where: { userId_idempotencyKey: { userId: number; idempotencyKey: string } };
-        }) =>
-          Promise.resolve(
-            findOrderByKey(
-              where.userId_idempotencyKey.userId,
-              where.userId_idempotencyKey.idempotencyKey,
-            ),
-          ),
+          where: {
+            userId_idempotencyKey?: { userId: number; idempotencyKey: string };
+            id?: number;
+          };
+        }) => {
+          if (where.id != null) {
+            const hit = db.orders.find((o) => o.id === where.id);
+            return Promise.resolve(hit ? { ...hit } : null);
+          }
+          if (where.userId_idempotencyKey) {
+            return Promise.resolve(
+              findOrderByKey(
+                where.userId_idempotencyKey.userId,
+                where.userId_idempotencyKey.idempotencyKey,
+              ),
+            );
+          }
+          return Promise.resolve(null);
+        },
       ),
     },
     promotion: {
@@ -199,7 +215,9 @@ describe('OrdersService (PB-06 / Sub-task 6.3, 6.5)', () => {
     fake = createPrismaFake(promotions);
     const prisma = fake.prisma as unknown as PrismaService;
     const orderStatusService = {
-      transition: jest.fn().mockResolvedValue(undefined),
+      transition: jest
+        .fn()
+        .mockImplementation((_tx, id, toStatus) => Promise.resolve({ id, status: toStatus })),
     } as unknown as OrderStatusService;
     service = new OrdersService(
       prisma,
@@ -472,6 +490,48 @@ describe('OrdersService (PB-06 / Sub-task 6.3, 6.5)', () => {
 
       expect(fake.db.orders).toHaveLength(2);
       expect(fake.db.orders[0].idempotencyKey).toBeNull();
+    });
+  });
+
+  describe('cancel (Hủy đơn hàng - Task 10)', () => {
+    it('chủ đơn hàng hủy đơn thành công khi ở trạng thái PENDING/PAID', async () => {
+      const order = await service.create(7, dto());
+      const result = await service.cancel(7, Role.CUSTOMER, order.orderId, 'Khách muốn đổi món');
+
+      expect(result).toEqual({
+        orderId: order.orderId,
+        code: `#${order.orderId}`,
+        status: OrderStatus.CANCELLED,
+      });
+    });
+
+    it('Barista hoặc Admin có quyền hủy đơn của khách', async () => {
+      const order = await service.create(7, dto());
+      const result = await service.cancel(99, Role.BARISTA, order.orderId, 'Hết nguyên liệu');
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+    });
+
+    it('người dùng khác không có quyền hủy đơn của người khác -> 403 Forbidden', async () => {
+      const order = await service.create(7, dto());
+      await expect(
+        service.cancel(8, Role.CUSTOMER, order.orderId, 'Cố tình hủy đơn người khác'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('hủy đơn không tồn tại -> 404 NotFound', async () => {
+      await expect(service.cancel(7, Role.CUSTOMER, 99999, 'Đơn không có thật')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('khi hủy đơn có mã giảm giá, hoàn lại lượt dùng', async () => {
+      setup([promoRow({ code: 'DISC20', usageLimit: 5, usedCount: 1 })]);
+      const created = await service.create(7, dto({ ...validOrderBody, promoCode: 'DISC20' }));
+      expect(fake.db.promotions[0].usedCount).toBe(2);
+
+      await service.cancel(7, Role.CUSTOMER, created.orderId);
+      expect(fake.db.promotions[0].usedCount).toBe(1);
     });
   });
 

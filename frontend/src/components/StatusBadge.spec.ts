@@ -13,7 +13,7 @@ describe('StatusBadge component (Sub-task 9.3)', () => {
 
   it('hiển thị đúng nhãn đầy đủ cho trạng thái PAID theo yêu cầu Wireframe', () => {
     const html = renderToStaticMarkup(React.createElement(StatusBadge, { status: 'PAID' }));
-    expect(html).toContain('Đã thanh toán - Mời tới quầy lấy nước');
+    expect(html).toContain('Đã thanh toán - Đợi nhân viên pha chế');
     expect(html).toContain('bg-emerald-50');
     expect(html).toContain('text-emerald-900');
   });
@@ -23,7 +23,7 @@ describe('StatusBadge component (Sub-task 9.3)', () => {
       React.createElement(StatusBadge, { status: 'PAID', compact: true }),
     );
     expect(html).toContain('Đã thanh toán');
-    expect(html).not.toContain('Mời tới quầy lấy nước');
+    expect(html).not.toContain('Đợi nhân viên pha chế');
   });
 
   it('hiển thị đúng nhãn và màu đỏ cho trạng thái PAYMENT_FAILED', () => {

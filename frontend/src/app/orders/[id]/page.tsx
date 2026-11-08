@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { getOrderById } from '@/lib/api';
+import { cancelOrder, getOrderById } from '@/lib/api';
 import { formatVND } from '@/lib/format';
 import type { OrderDetail } from '@/lib/types';
 import { useAuth } from '@/store/auth';
@@ -76,6 +76,33 @@ export default function OrderConfirmationPage() {
     },
   });
 
+  // Quản lý Modal và trạng thái hủy đơn hàng (Sub-task 10.1 & F&B flow)
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  /**
+   * Gọi API hủy đơn và cập nhật lại giao diện ngay lập tức
+   */
+  const handleCancelOrder = async () => {
+    try {
+      setIsCancelling(true);
+      setCancelError(null);
+      await cancelOrder(orderId, cancelReason.trim() || undefined);
+      setIsCancelModalOpen(false);
+      await refetch();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Không thể hủy đơn hàng vào lúc này. Vui lòng thử lại!';
+      setCancelError(message);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   // 1. Trạng thái Loading hoặc đang khởi tạo Client Component (Skeleton Loading)
   if (!isMounted || (isLoading && !order)) {
     return (
@@ -145,8 +172,11 @@ export default function OrderConfirmationPage() {
 
   // 3. Màn hình Chi tiết Xác nhận Đơn hàng Hợp lệ
   const isPaid = order.status === 'PAID';
+  const isPreparing = order.status === 'PREPARING';
   const isReady = order.status === 'READY';
+  const isCancelled = order.status === 'CANCELLED';
   const isPaymentFailed = order.status === 'PAYMENT_FAILED';
+  const canCancel = ['PENDING', 'PAYMENT_FAILED', 'PAID'].includes(order.status);
 
   return (
     <main className="flex-1 py-8 px-4 bg-crema/20 min-h-screen">
@@ -173,7 +203,7 @@ export default function OrderConfirmationPage() {
           </div>
         </section>
 
-        {/* Dòng thông báo nổi bật (Prominent Notification Banners theo Wireframe) */}
+        {/* Dòng thông báo nổi bật theo trạng thái đơn hàng */}
         {isPaid && (
           <div className="bg-emerald-50 border border-emerald-200/90 rounded-2xl p-4 md:p-5 flex items-start sm:items-center gap-3.5 text-emerald-950 shadow-xs">
             <span aria-hidden="true" className="text-2xl flex-shrink-0">
@@ -181,11 +211,27 @@ export default function OrderConfirmationPage() {
             </span>
             <div>
               <h2 className="font-bold text-base md:text-lg text-emerald-900 leading-snug">
-                Mời quý khách tới quầy nhận nước
+                Đã thanh toán thành công!
               </h2>
               <p className="text-xs sm:text-sm text-emerald-800/80 mt-0.5">
-                Đơn hàng đã thanh toán thành công. Barista đang tiếp nhận và pha chế đồ uống cho
+                Đơn hàng đã được chuyển tới quầy Barista. Vui lòng đợi nhân viên pha chế đồ uống cho
                 bạn.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isPreparing && (
+          <div className="bg-sky-50 border border-sky-300 rounded-2xl p-4 md:p-5 flex items-start sm:items-center gap-3.5 text-sky-950 shadow-xs">
+            <span aria-hidden="true" className="text-2xl flex-shrink-0">
+              🧋
+            </span>
+            <div>
+              <h2 className="font-bold text-base md:text-lg text-sky-900 leading-snug">
+                Đang pha chế đồ uống
+              </h2>
+              <p className="text-xs sm:text-sm text-sky-800/80 mt-0.5">
+                Barista đang chuẩn bị món cho bạn. Đồ uống sẽ sớm hoàn thành, vui lòng đợi giây lát!
               </p>
             </div>
           </div>
@@ -198,7 +244,7 @@ export default function OrderConfirmationPage() {
             </span>
             <div>
               <h2 className="font-bold text-base md:text-lg text-teal-900 leading-snug">
-                Đồ uống đã sẵn sàng!
+                Đồ uống đã sẵn sàng! Mời quý khách tới quầy nhận nước
               </h2>
               <p className="text-xs sm:text-sm text-teal-800/80 mt-0.5">
                 Mời quý khách vui lòng tới quầy pha chế xuất trình mã đơn hàng để nhận món.
@@ -219,6 +265,23 @@ export default function OrderConfirmationPage() {
               <p className="text-xs sm:text-sm text-rose-800/80 mt-0.5">
                 Giao dịch thanh toán chưa thể hoàn tất. Quý khách có thể kiểm tra lại số dư thẻ hoặc
                 ví điện tử.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isCancelled && (
+          <div className="bg-stone-100 border border-stone-300 rounded-2xl p-4 md:p-5 flex items-start sm:items-center gap-3.5 text-stone-800 shadow-xs">
+            <span aria-hidden="true" className="text-2xl flex-shrink-0">
+              🛑
+            </span>
+            <div>
+              <h2 className="font-bold text-base md:text-lg text-stone-900 leading-snug">
+                Đơn hàng đã được hủy
+              </h2>
+              <p className="text-xs sm:text-sm text-stone-600 mt-0.5">
+                Đơn hàng này đã kết thúc. Nếu đơn đã thanh toán hoặc có sử dụng mã ưu đãi, các quyền
+                lợi tích lũy và mã giảm giá đã được tự động hoàn lại.
               </p>
             </div>
           </div>
@@ -341,8 +404,93 @@ export default function OrderConfirmationPage() {
               Xem đơn của tôi
             </Button>
           </Link>
+          {canCancel && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => {
+                setCancelError(null);
+                setIsCancelModalOpen(true);
+              }}
+              className="sm:w-auto border-rose-300 text-rose-600 hover:bg-rose-50 hover:border-rose-400 focus:ring-rose-400"
+            >
+              Hủy đơn hàng
+            </Button>
+          )}
         </section>
       </div>
+
+      {/* Modal xác nhận hủy đơn (Khách hàng hoặc Barista) */}
+      {isCancelModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
+        >
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-espresso/10 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl" aria-hidden="true">
+                ⚠️
+              </span>
+              <div>
+                <h3 className="font-bold text-lg text-espresso">Xác nhận hủy đơn hàng</h3>
+                <p className="text-xs text-espresso/60">
+                  {order.code || `#${order.orderId}`} — Trạng thái hiện tại: {order.status}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-espresso/80 leading-relaxed">
+              Bạn có chắc chắn muốn hủy đơn hàng này không? Sau khi hủy, đơn hàng sẽ dừng xử lý và
+              quyền lợi tích lũy hoặc mã giảm giá (nếu có) sẽ được hoàn trả.
+            </p>
+
+            <div>
+              <label
+                htmlFor="cancel-reason"
+                className="block text-xs font-semibold text-espresso/70 mb-1"
+              >
+                Lý do hủy (không bắt buộc):
+              </label>
+              <textarea
+                id="cancel-reason"
+                rows={2}
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Ví dụ: Đổi món khác, bận việc đột xuất..."
+                className="w-full text-sm rounded-lg border border-espresso/20 p-2.5 focus:border-caramel focus:outline-none focus:ring-1 focus:ring-caramel"
+              />
+            </div>
+
+            {cancelError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
+                {cancelError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button
+                variant="ghost"
+                size="md"
+                disabled={isCancelling}
+                onClick={() => setIsCancelModalOpen(false)}
+              >
+                Giữ đơn hàng
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                loading={isCancelling}
+                disabled={isCancelling}
+                onClick={handleCancelOrder}
+                className="bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                Xác nhận hủy
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

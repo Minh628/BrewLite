@@ -43,6 +43,7 @@ import {
 } from './dto/order-detail.dto';
 import { CreatedOrderDto, ReplayedOrderDto } from './dto/order-response.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
 import { OrdersService } from './orders.service';
 
 /**
@@ -135,6 +136,39 @@ export class OrdersController {
     @Body() dto: UpdateOrderStatusDto,
   ): Promise<UpdatedOrderStatusDto> {
     return this.ordersService.updateStatus(orderId, dto.status);
+  }
+
+  /**
+   * Hủy đơn hàng — Khách hàng (hủy đơn của mình) hoặc Barista/Admin (hủy tại quầy).
+   * Chỉ cho phép hủy khi đơn ở PENDING, PAYMENT_FAILED hoặc PAID.
+   * State Machine chặn nếu đơn đã sang PREPARING/READY/COMPLETED/CANCELLED.
+   * @route POST /orders/:id/cancel
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/cancel')
+  @ApiBearerAuth(BEARER_AUTH)
+  @ApiOperation({
+    summary: 'Hủy đơn hàng (Khách hàng hoặc Barista)',
+    description:
+      'Chỉ hủy được khi đơn ở PENDING, PAYMENT_FAILED hoặc PAID. Khi đơn PAID bị hủy, điểm thưởng và mã giảm giá sẽ được tự động hoàn trả.',
+  })
+  @ApiOkResponse({
+    type: UpdatedOrderStatusDto,
+    description: 'Đơn hàng đã được chuyển sang CANCELLED',
+  })
+  @ApiForbiddenResponse({ type: ApiErrorDto, description: 'Không có quyền hủy đơn hàng này' })
+  @ApiConflictResponse({
+    type: ApiErrorDto,
+    description: '409 INVALID_TRANSITION khi đơn đã bắt đầu pha chế',
+  })
+  @ApiNotFoundResponse({ type: ApiErrorDto, description: 'Không tìm thấy đơn hàng' })
+  async cancelOrder(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('role') role: string | undefined,
+    @Param('id', ParseIntPipe) orderId: number,
+    @Body() dto: CancelOrderDto,
+  ): Promise<UpdatedOrderStatusDto> {
+    return this.ordersService.cancel(userId, role, orderId, dto.reason);
   }
 
   /**

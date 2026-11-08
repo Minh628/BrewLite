@@ -17,8 +17,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="vi">
-      <body className="flex min-h-screen flex-col bg-crema text-espresso">
+    <html lang="vi" suppressHydrationWarning>
+      <body className="flex min-h-screen flex-col bg-crema text-espresso" suppressHydrationWarning>
         <Providers>
           <Header />
           <div className="flex-1">{children}</div>

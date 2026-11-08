@@ -13,9 +13,11 @@ type AuthState = {
   accessToken: string | null;
   user: User | null;
   isAuthenticated: boolean;
+  hasHydrated: boolean;
   setAuth: (token: string, user: User) => void;
   clearAuth: () => void;
   hydrate: () => void;
+  setHasHydrated: (state: boolean) => void;
 };
 
 function setAuthCookie(token: string | null) {
@@ -40,6 +42,7 @@ export const useAuth = create<AuthState>()(
       accessToken: null,
       user: null,
       isAuthenticated: false,
+      hasHydrated: false,
 
       setAuth: (token: string, user: User) => {
         setAuthCookie(token);
@@ -49,6 +52,10 @@ export const useAuth = create<AuthState>()(
       clearAuth: () => {
         setAuthCookie(null);
         set({ accessToken: null, user: null, isAuthenticated: false });
+      },
+
+      setHasHydrated: (hasHydrated: boolean) => {
+        set({ hasHydrated });
       },
 
       hydrate: () => {
@@ -69,8 +76,10 @@ export const useAuth = create<AuthState>()(
         accessToken: state.accessToken,
         user: state.user,
       }),
+      // Khi Zustand nạp xong dữ liệu từ localStorage, đánh dấu hasHydrated = true
       onRehydrateStorage: () => (state) => {
         if (state) {
+          state.setHasHydrated(true);
           state.hydrate();
         }
       },

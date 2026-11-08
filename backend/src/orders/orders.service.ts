@@ -1,10 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { OrderStatus, Prisma } from '@prisma/client';
+import { OrderStatus, Prisma, Role } from '@prisma/client';
 import { OrderPricingResult, PricingService } from '../pricing/pricing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PromotionsService } from '../promotions/promotions.service';
@@ -315,6 +316,59 @@ export class OrdersService {
   async updateStatus(orderId: number, toStatus: BaristaStatus): Promise<UpdatedOrderStatusDto> {
     const updated = await this.prisma.$transaction(async (tx) => {
       return this.orderStatusService.transition(tx, orderId, toStatus as OrderStatus);
+    });
+
+    return {
+      orderId: updated.id,
+      code: formatOrderCode(updated.id),
+      status: updated.status,
+    };
+  }
+
+  /**
+   * Hủy đơn hàng — Người dùng (chủ đơn) hoặc Barista/Admin (Task 10 & F&B workflow).
+   * Kiểm tra quyền sở hữu đơn hàng trước khi cho phép hủy.
+   * State machine chỉ cho phép hủy khi đơn ở PENDING, PAYMENT_FAILED hoặc PAID.
+   * Nếu đơn đã sang PREPARING/READY/COMPLETED/CANCELLED -> transition sẽ ném 409 INVALID_TRANSITION.
+   * Khi hủy đơn có mã giảm giá -> hoàn trả lượt dùng (releaseUsage).
+   * Khi hủy đơn PAID -> hook onCancelled sẽ tự động thu hồi điểm loyalty.
+   */
+  async cancel(
+    userId: number,
+    role: string | undefined,
+    orderId: number,
+    reason?: string,
+  ): Promise<UpdatedOrderStatusDto> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, userId: true, promoCode: true, status: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Đơn hàng #${orderId} không tồn tại`);
+    }
+
+    // Kiểm tra quyền: chỉ chủ đơn hàng hoặc nhân viên (BARISTA/ADMIN) mới có quyền hủy
+    const isOwner = order.userId === userId;
+    const isStaff = role === Role.BARISTA || role === Role.ADMIN;
+    if (!isOwner && !isStaff) {
+      throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const updatedOrder = await this.orderStatusService.transition(
+        tx,
+        orderId,
+        OrderStatus.CANCELLED,
+        { reason },
+      );
+
+      // Nếu đơn có áp dụng voucher, hoàn trả 1 lượt sử dụng cho hệ thống
+      if (order.promoCode) {
+        await this.promotionsService.releaseUsage(tx, order.promoCode);
+      }
+
+      return updatedOrder;
     });
 
     return {

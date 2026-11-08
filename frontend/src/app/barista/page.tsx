@@ -49,10 +49,14 @@ export default function BaristaPage() {
   const user = useAuth((s) => s.user);
   const isAuthenticated = useAuth((s) => s.isAuthenticated);
   const accessToken = useAuth((s) => s.accessToken);
+  const hasHydrated = useAuth((s) => s.hasHydrated);
 
   const isStaff = user?.role === 'BARISTA' || user?.role === 'ADMIN';
 
+  // Chỉ kiểm tra chuyển hướng khi Zustand đã hoàn tất nạp từ localStorage để tránh flash redirect
   useEffect(() => {
+    if (!hasHydrated) return;
+
     if (!isAuthenticated) {
       router.replace('/login?returnUrl=/barista');
       return;
@@ -60,7 +64,7 @@ export default function BaristaPage() {
     if (user && !isStaff) {
       router.replace('/login?returnUrl=/barista&forbidden=1');
     }
-  }, [isAuthenticated, isStaff, user, router]);
+  }, [hasHydrated, isAuthenticated, isStaff, user, router]);
 
   const {
     data: orders,
@@ -71,7 +75,7 @@ export default function BaristaPage() {
   } = useQuery<OrderDetail[], Error>({
     queryKey: ['barista-queue', accessToken],
     queryFn: getBaristaQueue,
-    enabled: isAuthenticated && isStaff,
+    enabled: hasHydrated && isAuthenticated && isStaff,
     refetchInterval: 10_000,
     refetchOnWindowFocus: true,
   });
@@ -98,7 +102,7 @@ export default function BaristaPage() {
     return buckets;
   }, [orders]);
 
-  if (!isAuthenticated || !user || !isStaff) {
+  if (!hasHydrated || !isAuthenticated || !user || !isStaff) {
     return (
       <main className="flex-1 py-12 px-4 bg-crema/30 min-h-screen">
         <p className="mx-auto max-w-md text-center text-sage">Đang kiểm tra quyền truy cập…</p>

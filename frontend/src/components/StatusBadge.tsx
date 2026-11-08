@@ -9,7 +9,7 @@ export interface StatusBadgeProps {
   /** Class tùy chỉnh bổ sung cho badge */
   className?: string;
   /**
-   * Chế độ rút gọn: Khi true, nhãn dài của PAID ("Đã thanh toán - Mời tới quầy lấy nước")
+   * Chế độ rút gọn: Khi true, nhãn dài của PAID ("Đã thanh toán - Đợi nhân viên pha chế")
    * sẽ hiển thị ngắn gọn thành "Đã thanh toán" (thích hợp cho danh sách lịch sử đơn).
    * Mặc định: false (hiển thị đầy đủ nhãn theo tiêu chí Sprint 3).
    */
@@ -34,7 +34,7 @@ const STATUS_CONFIGS: Record<string, StatusConfig> = {
     dotClass: 'bg-amber-500 animate-pulse',
   },
   PAID: {
-    fullLabel: 'Đã thanh toán - Mời tới quầy lấy nước',
+    fullLabel: 'Đã thanh toán - Đợi nhân viên pha chế',
     compactLabel: 'Đã thanh toán',
     badgeClass: 'bg-emerald-50 text-emerald-900 border-emerald-300',
     dotClass: 'bg-emerald-500',

@@ -32,12 +32,35 @@ export function setAuthTokenGetter(getter: () => string | null) {
   getAccessToken = getter;
 }
 
+/**
+ * Lấy token xác thực:
+ * 1. Ưu tiên getter tuỳ chỉnh (dành cho Unit Tests).
+ * 2. Fallback đọc trực tiếp từ localStorage để chống race condition khi React useEffect chưa kịp chạy.
+ */
+function resolveToken(): string | null {
+  const custom = getAccessToken();
+  if (custom) return custom;
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('brewlite-auth');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.state?.accessToken) {
+          return parsed.state.accessToken as string;
+        }
+      }
+    } catch {}
+  }
+  return null;
+}
+
 export function getApiBaseUrl(): string {
   return API_URL;
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = getAccessToken();
+  const token = resolveToken();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   const headers: HeadersInit = {
@@ -67,7 +90,9 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (response.status === 401) {
-    if (typeof window !== 'undefined') {
+    // Chỉ xoá session khi request này THỰC SỰ ĐÃ GỬI TOKEN mà backend từ chối
+    // Tránh việc xoá nhầm localStorage khi request vừa mount chưa kịp gắn token
+    if (typeof window !== 'undefined' && token) {
       const { useAuth } = await import('@/store/auth');
       useAuth.getState().clearAuth();
       window.location.href = `/login?returnUrl=${encodeURIComponent(window.location.pathname)}`;
@@ -240,5 +265,19 @@ export function updateOrderStatus(
   return apiFetch(`/orders/${id}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  });
+}
+
+/**
+ * Hủy đơn hàng (Khách hàng hoặc Barista) — Task 10.
+ * Hỗ trợ các trạng thái PENDING, PAYMENT_FAILED, PAID chuyển sang CANCELLED.
+ */
+export function cancelOrder(
+  id: number,
+  reason?: string,
+): Promise<{ orderId: number; code: string; status: string }> {
+  return apiFetch(`/orders/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
   });
 }
