@@ -30,7 +30,14 @@ type CheckoutSession = {
   discount?: number;
 };
 
-function mapOrderError(err: unknown): string {
+function mapOrderError(err: unknown, lines?: CartLine[]): string {
+  if (err instanceof ApiError && err.code === 'OUT_OF_STOCK') {
+    const productId = err.errorBody?.productId as number | undefined;
+    const productName = productId
+      ? (lines?.find((l) => l.id === productId)?.name ?? 'Một món')
+      : 'Một món';
+    return `${productName} vừa hết hàng. Vui lòng kiểm tra lại giỏ hàng.`;
+  }
   return err instanceof Error ? err.message : 'Đặt hàng thất bại. Vui lòng thử lại.';
 }
 
@@ -216,7 +223,7 @@ export default function CheckoutPage() {
       window.location.href = paymentUrl;
     } catch (err) {
       setRetryingSameAttempt(true);
-      setError(mapOrderError(err));
+      setError(mapOrderError(err, lines));
       submitting.current = false;
       setIsSubmitting(false);
     }

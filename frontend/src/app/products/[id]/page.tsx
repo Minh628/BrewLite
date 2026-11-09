@@ -52,6 +52,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     category: product.category.name,
     imageUrl: product.imageUrl ?? '',
     sizes: product.sizes.map((s) => ({ size: s.code, extraPrice: s.extra })),
+    inStock: product.inStock,
   };
 
   return (

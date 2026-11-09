@@ -20,6 +20,7 @@ interface Product {
   category?: string;
   imageUrl?: string;
   sizes?: AvailableSize[];
+  inStock?: boolean;
 }
 
 interface ProductDetailClientProps {
@@ -34,6 +35,7 @@ const DEFAULT_SIZES: AvailableSize[] = [
 
 export default function ProductDetailClient({ product }: ProductDetailClientProps) {
   const router = useRouter();
+  const outOfStock = product.inStock === false;
   const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L'>('S');
   const [quantity, setQuantity] = useState(1);
   const [selectedToppings, setSelectedToppings] = useState<SelectedTopping[]>([]);
@@ -160,9 +162,19 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
         </div>
 
         <div className="pt-4 flex gap-4">
-          <Button onClick={handleAddToCart} className="flex-1 shadow-md hover:shadow-lg" size="lg">
-            Thêm vào giỏ hàng • {formatVND(unitPrice * quantity)}
-          </Button>
+          {outOfStock ? (
+            <span className="flex-1 inline-flex items-center justify-center rounded-xl bg-espresso/20 px-5 py-3.5 text-base font-bold text-espresso/50 cursor-not-allowed shadow-inner">
+              Hết hàng
+            </span>
+          ) : (
+            <Button
+              onClick={handleAddToCart}
+              className="flex-1 shadow-md hover:shadow-lg"
+              size="lg"
+            >
+              Thêm vào giỏ hàng • {formatVND(unitPrice * quantity)}
+            </Button>
+          )}
           <Link
             href="/"
             className="px-5 py-3 border border-espresso/20 text-espresso font-semibold rounded-xl hover:bg-cream/50 transition flex items-center justify-center shadow-sm"

@@ -13,6 +13,7 @@ describe('Products API (e2e)', () => {
     price: 40000,
     imageUrl: '/americano.svg',
     isActive: true,
+    stock: 10,
     category: { id: 1, name: 'Cà phê' },
   };
   const detailedProduct = {
@@ -83,6 +84,7 @@ describe('Products API (e2e)', () => {
         imageUrl: product.imageUrl,
         category: product.category,
         isAvailable: true,
+        inStock: true,
       },
     ]);
   });
@@ -101,6 +103,7 @@ describe('Products API (e2e)', () => {
       imageUrl: detailedProduct.imageUrl,
       category: detailedProduct.category,
       isAvailable: true,
+      inStock: true,
       sizes: [{ code: 'S', extra: 0 }],
     });
   });

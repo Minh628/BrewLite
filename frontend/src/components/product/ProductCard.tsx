@@ -14,9 +14,14 @@ function categoryEmoji(categoryName: string) {
 export function ProductCard({ product }: { product: Product }) {
   const [imageError, setImageError] = useState(false);
   const hasImage = Boolean(product.imageUrl) && !imageError;
+  const outOfStock = product.inStock === false;
 
   return (
-    <article className="group overflow-hidden rounded-[2rem] border border-espresso/15 bg-white/70 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+    <article
+      className={`group overflow-hidden rounded-[2rem] border border-espresso/15 bg-white/70 shadow-sm transition ${
+        outOfStock ? 'opacity-60' : 'hover:-translate-y-1 hover:shadow-xl'
+      }`}
+    >
       <Link href={`/products/${product.id}`} className="block">
         <div className="relative flex h-52 items-center justify-center bg-caramel/20 transition group-hover:bg-caramel/30">
           {hasImage ? (
@@ -32,6 +37,11 @@ export function ProductCard({ product }: { product: Product }) {
               {categoryEmoji(product.category.name)}
             </span>
           )}
+          {outOfStock && (
+            <span className="absolute top-3 right-3 rounded-full bg-espresso/80 px-3 py-1 text-xs font-bold text-white shadow-xs">
+              Hết hàng
+            </span>
+          )}
         </div>
         <div className="space-y-1 px-5 pt-5 pb-5">
           <div className="flex items-start justify-between gap-3">
@@ -40,7 +50,9 @@ export function ProductCard({ product }: { product: Product }) {
               {formatVND(product.price)}
             </span>
           </div>
-          <p className="text-sm text-sage">Pha mới theo lựa chọn của bạn</p>
+          <p className="text-sm text-sage">
+            {outOfStock ? 'Hiện đang hết hàng' : 'Pha mới theo lựa chọn của bạn'}
+          </p>
         </div>
       </Link>
     </article>
