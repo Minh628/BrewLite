@@ -106,38 +106,57 @@ if (Phương thức chọn là Cổng VNPay Sandbox?) then (VNPay)
   :Xác nhận thanh toán / Nhập mã OTP (123456);
 else (Mock Gateway)
   |Giao diện Next.js (Web/PWA)|
-  :Gửi POST /payments { orderId, method, cardNumber };
+  :Gửi POST /payments { orderId, method, cardNumber }\n(Idempotency-Key theo lần thử);
   |Hệ thống NestJS (API & Services)|
   :MockPaymentGateway xử lý kiểm tra số thẻ;
 endif
 
 |Hệ thống NestJS (API & Services)|
 if (Giao dịch thanh toán được chấp thuận?) then (Thành công)
+  :Ghi Payment SUCCEEDED;
   :Chuyển trạng thái đơn sang PAID;
-  :Tạo bản ghi Payment (SUCCEEDED);
   :Kích hoạt Loyalty Hook cộng điểm thưởng;
   |Cơ sở dữ liệu (PostgreSQL)|
   :Cập nhật User.loyaltyPoints;
   |Giao diện Next.js (Web/PWA)|
   :Xóa giỏ hàng (Clear Zustand Store);
-  :Điều hướng sang /orders/{id} (Trang xác nhận);
+  :Chuyển tới /orders/{id} (Trang xác nhận);
   |Hệ thống NestJS (API & Services)|
   :Đơn hàng chuyển cho Barista pha chế\n(PAID -> PREPARING -> READY -> COMPLETED);
   |Khách hàng (Customer)|
   :Nhận đồ uống tại quầy;
   stop
 else (Thất bại / Khách hủy)
+  :Ghi Payment FAILED;
   :Chuyển trạng thái đơn sang PAYMENT_FAILED;
-  :Tạo bản ghi Payment (FAILED);
   |Giao diện Next.js (Web/PWA)|
-  :Hiển thị thông báo lỗi thanh toán, giữ nguyên giỏ;
+  :Giữ nguyên giỏ, hiển thị lý do lỗi;
   |Khách hàng (Customer)|
-  if (Khách chọn thử lại thanh toán?) then (Thử lại)
-    :Đổi phương thức hoặc nhập lại thông tin thẻ;
+  if (Thử thanh toán lại?) then (Có)
+    :Đổi phương thức hoặc giữ nguyên;
     |Giao diện Next.js (Web/PWA)|
-    :Tạo Idempotency-Key mới cho lần thanh toán tiếp theo;
-    detach
-  else (Hủy bỏ đơn hàng)
+    :Gửi key mới sau khi bị từ chối;
+    note right
+      Nếu timeout hoặc mất kết nối,
+      gửi lại cùng key và cùng payload.
+    end note
+    |Hệ thống NestJS (API & Services)|
+    :POST /payments;
+    if (Thanh toán thành công?) then (Có)
+      :Ghi Payment SUCCEEDED;
+      :Chuyển đơn sang PAID;
+      :Kích hoạt Loyalty Hook cộng điểm thưởng;
+      |Cơ sở dữ liệu (PostgreSQL)|
+      :Cập nhật User.loyaltyPoints;
+      |Giao diện Next.js (Web/PWA)|
+      :Xóa giỏ và mở trang xác nhận /orders/{id};
+      stop
+    else (Thất bại)
+      |Khách hàng (Customer)|
+      :Hiển thị lý do, tiếp tục thử lại;
+      stop
+    endif
+  else (Không / Hủy bỏ đơn hàng)
     |Giao diện Next.js (Web/PWA)|
     :Gửi yêu cầu hủy đơn hàng;
     |Hệ thống NestJS (API & Services)|
