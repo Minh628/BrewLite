@@ -1,6 +1,6 @@
 // Nạp biến môi trường từ file .env vào process.env khi chạy script
 import 'dotenv/config';
-import { DiscountType, PrismaClient, Role } from '@prisma/client';
+import { DiscountType, PrismaClient, Role, Size } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -68,10 +68,11 @@ async function main() {
       create: product,
     });
 
+    // Khởi tạo cấu hình 3 size chuẩn theo enum Size đã ràng buộc trong schema
     for (const [size, extraPrice] of [
-      ['S', 0],
-      ['M', 5000],
-      ['L', 10000],
+      [Size.S, 0],
+      [Size.M, 5000],
+      [Size.L, 10000],
     ] as const) {
       await prisma.productSize.upsert({
         where: { productId_size: { productId: savedProduct.id, size } },

@@ -81,8 +81,8 @@ class Product {
 }
 
 class ProductSize {
-  +productId: Int <<PK, FK>>
-  +size: String <<PK>>
+  +productId: Int <<PK, FK, Cascade>>
+  +size: Size <<PK>>
   +extraPrice: Int
 }
 
@@ -96,21 +96,21 @@ class Topping {
 }
 
 class ProductTopping {
-  +productId: Int <<PK, FK>>
-  +toppingId: Int <<PK, FK>>
+  +productId: Int <<PK, FK, Cascade>>
+  +toppingId: Int <<PK, FK, Cascade>>
 }
 
 class Order {
   +id: Int <<PK>>
-  +userId: Int <<FK>>
-  +status: OrderStatus
+  +userId: Int <<FK, Index>>
+  +status: OrderStatus <<Index>>
   +total: Int
   +subtotal: Int
   +discount: Int
   +promoCode: String?
   +pointsEarned: Int
   +idempotencyKey: String? <<Unique per User>>
-  +createdAt: DateTime
+  +createdAt: DateTime <<Index>>
   +updatedAt: DateTime
   --
   +calculateTotal(): Int
@@ -119,8 +119,8 @@ class Order {
 
 class OrderItem {
   +id: Int <<PK>>
-  +orderId: Int <<FK>>
-  +productId: Int <<FK>>
+  +orderId: Int <<FK, Cascade, Index>>
+  +productId: Int <<FK, Restrict, Index>>
   +size: Size
   +qty: Int
   +unitPrice: Int
@@ -128,17 +128,16 @@ class OrderItem {
 }
 
 class OrderItemTopping {
-  +orderItemId: Int <<PK, FK>>
-  +toppingId: Int <<PK, FK>>
+  +orderItemId: Int <<PK, FK, Cascade>>
+  +toppingId: Int <<PK, FK, Restrict>>
   +price: Int
 }
 
 class Payment {
-  +id: Int <<PK>>
-  +idempotencyKey: String <<Unique>>
-  +orderId: Int <<FK>>
+  +idempotencyKey: String <<PK>>
+  +orderId: Int <<FK, Restrict, Index>>
   +amount: Int
-  +method: String
+  +method: PaymentMethod
   +status: PaymentStatus
   +requestHash: String
   +cardLast4: String?
@@ -179,9 +178,9 @@ Promotion "0..1" ..> Order : áp dụng giảm giá
 ' Enum Usages
 User .up.> Role
 Order .right.> OrderStatus
+ProductSize .down.> Size
 OrderItem .down.> Size
 Payment .down.> PaymentStatus
 Payment .down.> PaymentMethod
 Promotion .down.> DiscountType
 @enduml
-

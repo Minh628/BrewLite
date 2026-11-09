@@ -47,7 +47,7 @@ function newIdempotencyKey(): string {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, hasHydrated } = useAuth();
   const { lines, total, clear } = useCart();
   const storageKey = user ? `brewlite-checkout:${user.id}` : null;
   const [session, setSession] = useState<CheckoutSession | null>(null);
@@ -69,6 +69,9 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
+    // Đợi Zustand hoàn tất rehydrate từ localStorage trước khi kiểm tra đăng nhập
+    if (!hasHydrated) return;
+
     if (!isAuthenticated) {
       router.push(`/login?returnUrl=${encodeURIComponent('/checkout')}`);
       return;
@@ -93,7 +96,7 @@ export default function CheckoutPage() {
       }
     }
     setSessionLoaded(true);
-  }, [isAuthenticated, router, storageKey]);
+  }, [hasHydrated, isAuthenticated, router, storageKey]);
 
   const handleApplyPromo = async () => {
     const code = promoCodeInput.trim().toUpperCase();
@@ -383,8 +386,8 @@ export default function CheckoutPage() {
             {session?.order && (
               <div className="flex items-center justify-between border-t border-espresso/10 p-4 text-xs sm:text-sm text-espresso/70 bg-amber-50/50">
                 <span>
-                  Đơn <strong>#{session.order.code || session.order.orderId}</strong> đang được liên
-                  kết với lượt thanh toán này.
+                  Đơn <strong>{session.order.code || `#${session.order.orderId}`}</strong> đang được
+                  liên kết với lượt thanh toán này.
                 </span>
                 <button
                   type="button"

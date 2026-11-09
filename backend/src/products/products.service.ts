@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Size } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CategoryDto, ProductDetailDto, ProductDto, ToppingDto } from './dto/product.dto';
 import { ProductsQueryDto } from './dto/products-query.dto';
@@ -81,7 +82,8 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
-    const sizeOrder = ['S', 'M', 'L'];
+    // Thứ tự chuẩn S -> M -> L dựa trên enum Size đã được ràng buộc trực tiếp ở tầng Prisma Schema
+    const sizeOrder: readonly Size[] = [Size.S, Size.M, Size.L];
 
     return {
       id: product.id,
@@ -93,7 +95,7 @@ export class ProductsService {
       isAvailable: product.isActive,
       inStock: product.stock > 0,
       sizes: product.sizes
-        .map(({ size, extraPrice }) => ({ code: size as 'S' | 'M' | 'L', extra: extraPrice }))
+        .map(({ size, extraPrice }) => ({ code: size, extra: extraPrice }))
         .sort((left, right) => sizeOrder.indexOf(left.code) - sizeOrder.indexOf(right.code)),
     };
   }

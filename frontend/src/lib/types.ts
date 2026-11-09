@@ -31,6 +31,7 @@ export type Topping = {
 
 export type ApiErrorBody = {
   statusCode: number;
+  code?: string;
   message: string | string[];
   error: string;
   path: string;
@@ -57,7 +58,7 @@ export type OrderItemDetail = {
 };
 
 export type OrderPaymentInfo = {
-  method: 'CARD' | 'WALLET' | string;
+  method: 'CARD' | 'WALLET';
   cardLast4?: string | null;
   paidAt?: string | null;
 };

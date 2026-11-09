@@ -71,7 +71,16 @@ export const useAuth = create<AuthState>()(
     }),
     {
       name: 'brewlite-auth',
-      storage: createJSONStorage(() => localStorage),
+      // Bảo vệ SSR trên Node 22+ để không phát sinh ExperimentalWarning: localStorage is not available
+      storage: createJSONStorage(() =>
+        typeof window !== 'undefined'
+          ? window.localStorage
+          : {
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {},
+            },
+      ),
       partialize: (state) => ({
         accessToken: state.accessToken,
         user: state.user,

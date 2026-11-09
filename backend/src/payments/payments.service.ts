@@ -194,7 +194,7 @@ export class PaymentsService {
   private toResponse(payment: {
     orderId: number;
     amount: number;
-    method: string;
+    method: PaymentMethod;
     status: PaymentStatus;
     cardLast4: string | null;
     failureReason: string | null;
@@ -202,7 +202,8 @@ export class PaymentsService {
     return {
       orderId: payment.orderId,
       amount: payment.amount,
-      method: payment.method as PaymentMethod,
+      // Kiểu method đã được đảm bảo bởi enum PaymentMethod từ tầng Prisma Schema
+      method: payment.method,
       status:
         payment.status === PaymentStatus.SUCCEEDED ? OrderStatus.PAID : OrderStatus.PAYMENT_FAILED,
       cardLast4: payment.cardLast4,

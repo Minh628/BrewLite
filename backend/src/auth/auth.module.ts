@@ -22,12 +22,19 @@ import { LocalStrategy } from './strategies/local.strategy';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET', 'brewlite_jwt_secret_dev_key_2026'),
-        signOptions: {
-          expiresIn: 3600,
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const envSecret = configService.get<string>('JWT_SECRET');
+        // Trên môi trường production, bắt buộc phải cấu hình JWT_SECRET riêng biệt
+        if (process.env.NODE_ENV === 'production' && !envSecret) {
+          throw new Error('Bắt buộc phải cấu hình biến môi trường JWT_SECRET trên production');
+        }
+        return {
+          secret: envSecret || 'brewlite_jwt_secret_dev_key_2026',
+          signOptions: {
+            expiresIn: 3600,
+          },
+        };
+      },
     }),
   ],
   controllers: [AuthController],

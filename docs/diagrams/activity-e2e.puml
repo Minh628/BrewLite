@@ -1,42 +1,47 @@
 @startuml
-title Activity Diagram - Quy trình Đặt món và Thanh toán (BrewLite E2E)
+title Activity Diagram - Quy trình Đặt món và Thanh toán End-to-End (BrewLite)
 skinparam conditionStyle insideCondition
 skinparam shadowing false
 skinparam defaultTextAlignment center
+skinparam ArrowColor #2C3E50
+skinparam ActivityBorderColor #2C3E50
+skinparam ActivityBackgroundColor #FFFFFF
 
 |#E8F5E9|Khách hàng (Customer)|
-|#E3F2FD|Giao diện Next.js (Web/PWA)|
+|#E3F2FD|Giao diện Next.js (Web Frontend)|
 |#FFF3E0|Hệ thống NestJS (API & Services)|
 |#F3E5F5|Cơ sở dữ liệu (PostgreSQL)|
 |#FBE9E7|Cổng thanh toán (VNPay / Mock)|
+|#E0F2F1|Nhân viên pha chế (Barista)|
 
 |Khách hàng (Customer)|
 start
-:Mở ứng dụng BrewLite;
+:Mở ứng dụng Web BrewLite;
 
-|Giao diện Next.js (Web/PWA)|
-:Gửi yêu cầu tải thực đơn;
+|Giao diện Next.js (Web Frontend)|
+:Gửi yêu cầu tải thực đơn (GET /products);
 
 |Hệ thống NestJS (API & Services)|
-:Xử lý GET /products;
+:Xử lý truy vấn danh mục, sản phẩm & tồn kho;
 
 |Cơ sở dữ liệu (PostgreSQL)|
-:Truy vấn danh mục, sản phẩm và tồn kho;
+:SELECT * FROM "Product" WHERE "isActive" = true;
 
-|Giao diện Next.js (Web/PWA)|
+|Giao diện Next.js (Web Frontend)|
 :Hiển thị trang /menu (danh sách món kèm trạng thái tồn kho);
 
 |Khách hàng (Customer)|
-:Chọn sản phẩm xem chi tiết;
-:Tùy chọn Size (S/M/L) và Topping;
-if (Sản phẩm còn hàng (stock > 0)?) then (Có)
+:Chọn sản phẩm, tùy biến Size (S/M/L) và Topping;
+
+' === NHÁNH 1: KIỂM TRA TỒN KHO TRÊN GIAO DIỆN ===
+if (Sản phẩm còn hàng (stock > 0)?) then (Còn hàng)
   :Nhấn "Thêm vào giỏ hàng";
-  |Giao diện Next.js (Web/PWA)|
+  |Giao diện Next.js (Web Frontend)|
   :Cập nhật state giỏ hàng (Zustand Store);
   :Hiển thị Badge số lượng trên Header;
 else (Hết hàng)
-  |Giao diện Next.js (Web/PWA)|
-  :Hiển thị nhãn "Hết hàng" (Vô hiệu nút bấm);
+  |Giao diện Next.js (Web Frontend)|
+  :Hiển thị badge "Hết hàng" (Disable nút thêm);
   |Khách hàng (Customer)|
   :Chọn món khác hoặc thoát;
   stop
@@ -44,128 +49,135 @@ endif
 
 :Chuyển đến màn hình /checkout;
 
-|Giao diện Next.js (Web/PWA)|
-if (Khách hàng đã đăng nhập?) then (Chưa)
-  :Điều hướng sang trang /login hoặc /register;
+' === NHÁNH 2: KIỂM TRA ĐĂNG NHẬP / XÁC THỰC ===
+|Giao diện Next.js (Web Frontend)|
+if (Khách hàng đã đăng nhập?) then (Đã đăng nhập)
+  ' Người dùng đã có token hợp lệ
+else (Chưa đăng nhập)
+  :Điều hướng sang trang /login;
   |Khách hàng (Customer)|
-  :Nhập email và mật khẩu;
+  :Nhập Email và Mật khẩu;
   |Hệ thống NestJS (API & Services)|
-  :Xác thực mật khẩu (bcrypt) và cấp JWT Token;
-  |Giao diện Next.js (Web/PWA)|
-  :Lưu token vào Cookie/LocalStorage và quay lại /checkout;
-else (Đã đăng nhập)
+  :Xác thực mật khẩu (bcrypt) & Cấp JWT Bearer Token;
+  |Giao diện Next.js (Web Frontend)|
+  :Lưu JWT vào Cookie/LocalStorage & Chuyển hướng lại /checkout;
 endif
 
 |Khách hàng (Customer)|
 :Nhập mã khuyến mãi (PromoCode - nếu có);
-:Chọn phương thức thanh toán (Ví điện tử hoặc Thẻ ngân hàng);
+:Chọn phương thức thanh toán (VNPay hoặc Thẻ/Ví);
 :Nhấn nút "Xác nhận đặt hàng";
 
-|Giao diện Next.js (Web/PWA)|
-:Gửi POST /orders\n(Header: Bearer JWT, Idempotency-Key);
+|Giao diện Next.js (Web Frontend)|
+:Gửi POST /orders\n(Header: Bearer JWT, Idempotency-Key: UUID);
 
 |Hệ thống NestJS (API & Services)|
 :Kiểm tra Idempotency-Key trong Database;
-if (Khóa đã tồn tại?) then (Đã tạo trước đó)
-  :Trả về dữ liệu đơn hàng đã tạo (chống trùng lặp);
-else (Khóa mới)
+if (Khóa Idempotency đã tồn tại?) then (Đã tạo trước đó)
+  :Trả về đơn hàng cũ (replayed = true, chống duplicate);
+else (Khóa mới hợp lệ)
   :Mở Database Transaction ($transaction);
-  :Khóa dòng và kiểm tra tồn kho (Optimistic Locking);
+  :Khóa dòng & kiểm tra tồn kho (Optimistic Locking - OCC);
   |Cơ sở dữ liệu (PostgreSQL)|
   :UPDATE "Product" SET stock = stock - qty, version = version + 1\nWHERE id = ? AND version = ? AND stock >= qty;
   |Hệ thống NestJS (API & Services)|
-  if (Trừ kho thành công?) then (Thành công)
-    :Tạo Order trạng thái PENDING và các OrderItem;
-    :Áp dụng giảm giá và tính lại Total;
+  
+  ' === NHÁNH 1B: XUNG ĐỘT KHO / HẾT HÀNG KHI ĐẶT HÀNG ===
+  if (Trừ kho OCC thành công?) then (Thành công)
+    :Tạo Order PENDING và các OrderItem;
+    if (Có mã giảm giá hợp lệ?) then (Có)
+      :Tính số tiền giảm & tăng usageCount của Promotion;
+    else (Không)
+    endif
     |Cơ sở dữ liệu (PostgreSQL)|
-    :Commit Transaction tạo đơn hàng;
+    :Commit Transaction đơn hàng;
     |Hệ thống NestJS (API & Services)|
-    :Trả về mã đơn hàng (orderId);
-  else (Xung đột version / Không đủ số lượng)
+    :Trả về mã đơn hàng (orderId) & tổng tiền;
+  else (Xung đột version / Hết hàng)
     |Cơ sở dữ liệu (PostgreSQL)|
     :Rollback Transaction;
     |Hệ thống NestJS (API & Services)|
     :Ném ngoại lệ 409 OUT_OF_STOCK;
-    |Giao diện Next.js (Web/PWA)|
-    :Hiển thị thông báo "Món vừa hết hàng", giữ nguyên giỏ;
+    |Giao diện Next.js (Web Frontend)|
+    :Hiển thị lỗi "Món vừa hết hàng, vui lòng điều chỉnh giỏ";
     stop
   endif
 endif
 
-|Giao diện Next.js (Web/PWA)|
-if (Phương thức chọn là Cổng VNPay Sandbox?) then (VNPay)
-  :Gửi POST /payments/vnpay/create-url { orderId, method };
+' === LUỒNG THANH TOÁN (PAYMENT GATEWAY) ===
+|Giao diện Next.js (Web Frontend)|
+if (Phương thức thanh toán là VNPay Sandbox?) then (VNPay)
+  :Gửi POST /payments/vnpay/create-url { orderId, method: 'CARD' };
   |Hệ thống NestJS (API & Services)|
   :Tạo vnp_ExpireDate (+15p) & Ký số HMAC-SHA512;
   :Trả về Payment URL;
-  |Giao diện Next.js (Web/PWA)|
-  :Chuyển hướng trình duyệt sang VNPay;
+  |Giao diện Next.js (Web Frontend)|
+  :Chuyển hướng trình duyệt sang cổng VNPay Sandbox;
   |Cổng thanh toán (VNPay / Mock)|
-  :Hiển thị giao diện Quét mã QR hoặc Nhập thẻ test NCB;
+  :Khách hàng quét mã QR hoặc nhập thẻ test (NCB);
   |Khách hàng (Customer)|
-  :Xác nhận thanh toán / Nhập mã OTP (123456);
-else (Mock Gateway)
-  |Giao diện Next.js (Web/PWA)|
-  :Gửi POST /payments { orderId, method, cardNumber }\n(Idempotency-Key theo lần thử);
+  :Xác nhận thanh toán / Nhập OTP (123456);
+else (Mock/Card Trực tiếp)
+  |Giao diện Next.js (Web Frontend)|
+  :Gửi POST /payments { orderId, method, cardNumber };
   |Hệ thống NestJS (API & Services)|
-  :MockPaymentGateway xử lý kiểm tra số thẻ;
+  :Xử lý thanh toán thẻ nội bộ;
 endif
 
+' === NHÁNH 3: KẾT QUẢ THANH TOÁN & XỬ LÝ FAIL / RETRY ===
 |Hệ thống NestJS (API & Services)|
-if (Giao dịch thanh toán được chấp thuận?) then (Thành công)
-  :Ghi Payment SUCCEEDED;
-  :Chuyển trạng thái đơn sang PAID;
-  :Kích hoạt Loyalty Hook cộng điểm thưởng;
+if (Giao dịch thanh toán thành công?) then (Thành công)
+  :Ghi nhận Payment SUCCEEDED;
+  :Cập nhật trạng thái Order -> PAID;
+  :Kích hoạt Loyalty Hook tính điểm thưởng;
   |Cơ sở dữ liệu (PostgreSQL)|
-  :Cập nhật User.loyaltyPoints;
-  |Giao diện Next.js (Web/PWA)|
+  :Cập nhật User.loyaltyPoints (tích điểm);
+  |Giao diện Next.js (Web Frontend)|
   :Xóa giỏ hàng (Clear Zustand Store);
-  :Chuyển tới /orders/{id} (Trang xác nhận);
-  |Hệ thống NestJS (API & Services)|
-  :Đơn hàng chuyển cho Barista pha chế\n(PAID -> PREPARING -> READY -> COMPLETED);
+  :Điều hướng sang trang /orders/{id} (Order Success);
+  
+  |Nhân viên pha chế (Barista)|
+  :Nhận đơn trên Barista Board (PAID);
+  :Chuyển trạng thái: PREPARING -> READY;
+  
   |Khách hàng (Customer)|
-  :Nhận đồ uống tại quầy;
+  :Nhận thông báo "Đồ uống đã sẵn sàng" & Lấy đồ tại quầy;
+  
+  |Nhân viên pha chế (Barista)|
+  :Xác nhận hoàn thành đơn: COMPLETED;
   stop
-else (Thất bại / Khách hủy)
-  :Ghi Payment FAILED;
-  :Chuyển trạng thái đơn sang PAYMENT_FAILED;
-  |Giao diện Next.js (Web/PWA)|
-  :Giữ nguyên giỏ, hiển thị lý do lỗi;
+else (Thất bại / Hết hạn / Khách hủy)
+  :Ghi nhận Payment FAILED;
+  :Cập nhật trạng thái Order -> PAYMENT_FAILED;
+  |Giao diện Next.js (Web Frontend)|
+  :Giữ nguyên giỏ hàng, thông báo lý do thất bại;
+  
   |Khách hàng (Customer)|
-  if (Thử thanh toán lại?) then (Có)
-    :Đổi phương thức hoặc giữ nguyên;
-    |Giao diện Next.js (Web/PWA)|
-    :Gửi key mới sau khi bị từ chối;
+  if (Khách hàng muốn thử thanh toán lại?) then (Thử lại)
+    :Đổi phương thức thanh toán hoặc thử lại;
+    |Giao diện Next.js (Web Frontend)|
+    :Tạo Idempotency-Key mới gửi POST /payments;
     note right
-      Nếu timeout hoặc mất kết nối,
-      gửi lại cùng key và cùng payload.
+      Nếu timeout/mất mạng: gửi lại cùng Key.
+      Nếu bị ngân hàng từ chối: gửi Key mới.
     end note
+    ' Luồng lặp lại thanh toán
     |Hệ thống NestJS (API & Services)|
-    :POST /payments;
-    if (Thanh toán thành công?) then (Có)
-      :Ghi Payment SUCCEEDED;
-      :Chuyển đơn sang PAID;
-      :Kích hoạt Loyalty Hook cộng điểm thưởng;
-      |Cơ sở dữ liệu (PostgreSQL)|
-      :Cập nhật User.loyaltyPoints;
-      |Giao diện Next.js (Web/PWA)|
-      :Xóa giỏ và mở trang xác nhận /orders/{id};
-      stop
-    else (Thất bại)
-      |Khách hàng (Customer)|
-      :Hiển thị lý do, tiếp tục thử lại;
-      stop
-    endif
-  else (Không / Hủy bỏ đơn hàng)
-    |Giao diện Next.js (Web/PWA)|
-    :Gửi yêu cầu hủy đơn hàng;
+    :Xử lý lại yêu cầu thanh toán;
+    stop
+  else (Hủy đơn hàng)
+    |Giao diện Next.js (Web Frontend)|
+    :Gửi yêu cầu hủy đơn hàng (POST /orders/{id}/cancel);
     |Hệ thống NestJS (API & Services)|
     :Chuyển trạng thái Order sang CANCELLED;
-    :Kích hoạt StockService.release hoàn lại số lượng tồn kho;
+    :Gọi StockService.release(orderId) hoàn trả tồn kho;
     |Cơ sở dữ liệu (PostgreSQL)|
-    :UPDATE "Product" SET stock = stock + qty;
+    :UPDATE "Product" SET stock = stock + qty, version = version + 1;
+    |Giao diện Next.js (Web Frontend)|
+    :Hiển thị thông báo "Đơn hàng đã được hủy, kho đã được hoàn lại";
     |Khách hàng (Customer)|
     stop
   endif
 endif
+
 @enduml

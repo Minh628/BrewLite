@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { cancelOrder, getOrderById } from '@/lib/api';
+import { cancelOrder, createVnpayPaymentUrl, getOrderById } from '@/lib/api';
 import { formatVND } from '@/lib/format';
 import type { OrderDetail } from '@/lib/types';
 import { useAuth } from '@/store/auth';
@@ -40,20 +40,21 @@ export default function OrderConfirmationPage() {
   const rawId = params?.id;
   const orderId = Number(rawId);
 
-  const { isAuthenticated, accessToken } = useAuth();
+  const { isAuthenticated, accessToken, hasHydrated } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
+  const [isRetryingPayment, setIsRetryingPayment] = useState(false);
 
   // Đảm bảo chỉ render logic client sau khi store đã rehydrate hoàn toàn, chống lỗi hydration
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Kiểm tra quyền đăng nhập, nếu chưa xác thực chuyển hướng về màn hình đăng nhập
+  // Kiểm tra quyền đăng nhập sau khi Zustand đã hydrate xong
   useEffect(() => {
-    if (isMounted && !isAuthenticated) {
+    if (isMounted && hasHydrated && !isAuthenticated) {
       router.push(`/login?returnUrl=${encodeURIComponent(`/orders/${rawId}`)}`);
     }
-  }, [isMounted, isAuthenticated, router, rawId]);
+  }, [isMounted, hasHydrated, isAuthenticated, router, rawId]);
 
   // Truy vấn dữ liệu chi tiết đơn hàng qua TanStack Query
   const {
@@ -176,7 +177,21 @@ export default function OrderConfirmationPage() {
   const isReady = order.status === 'READY';
   const isCancelled = order.status === 'CANCELLED';
   const isPaymentFailed = order.status === 'PAYMENT_FAILED';
+  const canPay = ['PENDING', 'PAYMENT_FAILED'].includes(order.status);
   const canCancel = ['PENDING', 'PAYMENT_FAILED', 'PAID'].includes(order.status);
+
+  /**
+   * Khởi tạo liên kết thanh toán VNPay cho đơn hàng đang chờ hoặc bị lỗi thanh toán
+   */
+  const handleRetryVnpay = async () => {
+    try {
+      setIsRetryingPayment(true);
+      const { paymentUrl } = await createVnpayPaymentUrl(order.orderId, 'CARD');
+      window.location.href = paymentUrl;
+    } catch {
+      setIsRetryingPayment(false);
+    }
+  };
 
   return (
     <main className="flex-1 py-8 px-4 bg-crema/20 min-h-screen">
@@ -393,14 +408,26 @@ export default function OrderConfirmationPage() {
         </section>
 
         {/* Nút hành động & Điều hướng */}
-        <section className="pt-2 flex flex-col sm:flex-row gap-3">
+        <section className="pt-2 flex flex-col sm:flex-row gap-3 flex-wrap">
+          {canPay && (
+            <Button
+              variant="primary"
+              size="lg"
+              loading={isRetryingPayment}
+              disabled={isRetryingPayment}
+              onClick={handleRetryVnpay}
+              className="w-full sm:flex-1 bg-caramel hover:bg-caramel-strong text-white font-bold"
+            >
+              {isPaymentFailed ? 'Thử thanh toán lại qua VNPay' : 'Thanh toán ngay qua VNPay'}
+            </Button>
+          )}
           <Link href="/" className="flex-1">
             <Button variant="outline" size="lg" className="w-full">
               Về trang chủ
             </Button>
           </Link>
           <Link href="/orders" className="flex-1">
-            <Button variant="primary" size="lg" className="w-full">
+            <Button variant={canPay ? 'outline' : 'primary'} size="lg" className="w-full">
               Xem đơn của tôi
             </Button>
           </Link>

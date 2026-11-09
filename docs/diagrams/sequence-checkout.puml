@@ -1,26 +1,35 @@
 @startuml
 autonumber
-title Sequence Diagram - Use Case Checkout & Payment Flow (BrewLite)
+title Sequence Diagram - Use Case Checkout & VNPay Payment Flow (BrewLite)
 skinparam BoxPadding 10
-skinparam ParticipantPadding 10
+<style>
+participant {
+  Padding 8
+}
+</style>
 
 actor "Customer" as User
 boundary "Next.js UI\n(/checkout)" as FE
-control "OrdersController /\nPaymentsController" as API
-entity "OrdersService /\nStockService" as OS
+control "OrdersController" as OC
+control "PaymentsController" as PC
+entity "OrdersService" as OS
+entity "StockService" as SS
+entity "OrderStatusService" as OStS
+entity "VnpayService" as VS
 database "PostgreSQL\n(Prisma ORM)" as DB
 boundary "VNPay Gateway\n(Sandbox v2.1.0)" as Gateway
 
-== 1. Khởi tạo đơn hàng & Kiểm soát tồn kho đồng thời ==
+== 1. Khởi tạo đơn hàng & Kiểm soát tồn kho đồng thời (OCC) ==
 
 User -> FE: Nhấn "Thanh toán ngay"
+activate User
 activate FE
 
-FE -> API: POST /orders\nHeader: Authorization: Bearer <JWT>\nHeader: Idempotency-Key: <key-uuid>\nBody: { items, promoCode }
-activate API
+FE -> OC: POST /orders\nHeader: Authorization: Bearer <JWT>\nHeader: Idempotency-Key: <key-uuid>\nBody: { items, promoCode }
+activate OC
 
-API -> API: JwtAuthGuard: Giải mã JWT lấy userId
-API -> OS: create(userId, dto, { idempotencyKey })
+OC -> OC: JwtAuthGuard: Giải mã JWT lấy userId
+OC -> OS: create(userId, dto, { idempotencyKey })
 activate OS
 
 OS -> DB: findUnique(Order where { userId_idempotencyKey })
@@ -31,91 +40,128 @@ deactivate DB
 OS -> DB: Mở $transaction
 activate DB
 
-OS -> OS: StockService.reserve(tx, items)
-note over OS, DB
-  Optimistic Locking:
+OS -> SS: reserve(tx, items)
+activate SS
+note over SS, DB
+  Optimistic Locking (OCC):
   UPDATE "Product"
   SET stock = stock - qty, version = version + 1
   WHERE id = ? AND version = ? AND stock >= qty
 end note
 
-OS -> DB: updateMany(Product where version, stock >= qty)
+SS -> DB: updateMany(Product where version, stock >= qty)
 alt #LightPink Không đủ tồn kho hoặc xung đột phiên bản (Affected Rows = 0)
-    DB --> OS: count = 0
+    DB --> SS: count = 0
+    SS --> OS: throw ConflictException({ code: 'OUT_OF_STOCK', productId })
+    deactivate SS
     OS -> DB: Rollback transaction
-    OS --> API: throw ConflictException({ code: 'OUT_OF_STOCK', productId })
-    API --> FE: 409 Conflict { code: "OUT_OF_STOCK", productId }
+    OS --> OC: throw ConflictException
+    deactivate OS
+    OC --> FE: 409 Conflict { code: "OUT_OF_STOCK", productId }
+    deactivate OC
     FE --> User: Báo hết hàng trên giao diện, giữ nguyên giỏ hàng
 else #LightGreen Trừ tồn kho thành công (Affected Rows > 0)
-    DB --> OS: count = 1
+    DB --> SS: count = 1
+    SS --> OS: reserve success
+    deactivate SS
+    activate OS
+    activate OC
     OS -> DB: Áp mã Promotion (nếu có) & Tạo Order (status = PENDING)
     DB --> OS: Trả về bản ghi Order mới (#orderId: 1001)
     OS -> DB: Commit transaction
     deactivate DB
-    OS --> API: CreateOrderResult ({ orderId: 1001, status: PENDING, total: 45000, ... })
+    OS --> OC: CreateOrderResult ({ orderId: 1001, status: PENDING, total: 45000 })
     deactivate OS
-    API --> FE: 201 Created { orderId: 1001, status: "PENDING", total: 45000 }
-    deactivate API
+    OC --> FE: 201 Created { orderId: 1001, status: "PENDING", total: 45000 }
+    deactivate OC
 end
 
 == 2. Khởi tạo URL Thanh toán VNPay Sandbox ==
 
-FE -> API: POST /payments/vnpay/create-url\nHeader: Bearer <JWT>\nBody: { orderId: 1001, method: "WALLET" }
-activate API
+FE -> PC: POST /payments/vnpay/create-url\nHeader: Bearer <JWT>\nBody: { orderId: 1001, method: "WALLET" }
+activate PC
 
-API -> API: VnpayService.createPaymentUrl({ orderId, amount, method, ipAddr })\n- Mã tham chiếu: txnRef = 1001XWALLETX...\n- vnp_ExpireDate: +15 phút (GMT+7)\n- Ký số HMAC-SHA512
-API --> FE: 200 OK { paymentUrl: "https://sandbox.vnpayment.vn/..." }
-deactivate API
+PC -> VS: createPaymentUrl({ orderId, amount, method, ipAddr })
+activate VS
+note over VS
+  Chuẩn hóa GMT+7 & hạn 15 phút:
+  vnp_TxnRef = 1001XWALLETX...
+  Ký số HMAC-SHA512 với VNP_HASH_SECRET
+end note
+VS --> PC: paymentUrl ("https://sandbox.vnpayment.vn/...")
+deactivate VS
+
+PC --> FE: 200 OK { paymentUrl }
+deactivate PC
 
 FE -> User: window.location.href = paymentUrl (Chuyển hướng trình duyệt)
 deactivate FE
+deactivate User
 
 User -> Gateway: Xác thực thanh toán (Quét VNPAY-QR / Thẻ NCB OTP)
+activate User
 activate Gateway
 
 == 3. Nhận thông báo IPN (Server-to-Server) & Hoàn tất đơn hàng ==
 
-Gateway -> API: GET /payments/vnpay/ipn (Server-to-Server ngầm)\n?vnp_ResponseCode=00&vnp_TxnRef=1001...&vnp_SecureHash=...
-activate API
+Gateway -> PC: GET /payments/vnpay/ipn (Server-to-Server ngầm)\n?vnp_ResponseCode=00&vnp_TxnRef=1001...&vnp_SecureHash=...
+activate PC
 
-API -> API: VnpayService.verifyCallback(query)\n(Kiểm tra toàn vẹn chữ ký Checksum)
+PC -> VS: verifyCallback(query)
+activate VS
+VS --> PC: { isValid: true, isSuccess: true, orderId: 1001, amount: 45000 }
+deactivate VS
 
 alt #LightGreen Chữ ký hợp lệ & Giao dịch thành công (ResponseCode = '00')
-    API -> DB: $transaction: OrderStatusService.transition(tx, 1001, PAID)
+    PC -> DB: Mở $transaction (khóa FOR UPDATE)
     activate DB
-    DB --> API: Order status đổi thành PAID
-    API -> DB: Payment.create(status: SUCCEEDED, method: "WALLET")
-    API -> DB: LoyaltyHooksService.onPaid() -> User.loyaltyPoints += points
-    DB --> API: Commit transaction
+    PC -> OStS: transition(tx, 1001, PAID)
+    activate OStS
+    OStS -> DB: Update Order status = PAID
+    OStS --> PC: order updated
+    deactivate OStS
+    PC -> DB: Payment.create(status: SUCCEEDED, method: "WALLET", UUID, SHA-256)
+    PC -> DB: LoyaltyHooksService.onPaid() -> User.points += points
+    DB --> PC: Commit transaction
     deactivate DB
-    API --> Gateway: 200 OK { RspCode: "00", Message: "success" }
-    deactivate API
+    PC --> Gateway: 200 OK { RspCode: "00", Message: "success" }
+    deactivate PC
 
     Gateway --> FE: Redirect trình duyệt khách về /orders/vnpay-return?...
     activate FE
-    FE -> API: GET /payments/vnpay/return?vnp_...
-    activate API
-    API --> FE: 200 OK { isValid: true, isSuccess: true, orderId: 1001 }
-    deactivate API
-    FE -> FE: Xóa giỏ hàng (useCart.clear())
+    FE -> PC: GET /payments/vnpay/return?vnp_...
+    activate PC
+    PC -> VS: verifyCallback(query)
+    activate VS
+    VS --> PC: { isValid: true, isSuccess: true, orderId: 1001 }
+    deactivate VS
+    PC --> FE: 200 OK { isValid: true, isSuccess: true, orderId: 1001 }
+    deactivate PC
+    FE -> FE: Xóa giỏ hàng (useCart.clear()) & dọn session
     FE --> User: Hiển thị màn hình đặt hàng thành công (#1001 - PAID)
     deactivate FE
+    deactivate User
 else #LightPink Giao dịch thất bại hoặc khách hủy (ResponseCode != '00')
-    activate API
-    API -> DB: $transaction: OrderStatusService.transition(tx, 1001, PAYMENT_FAILED)
+    activate PC
+    PC -> DB: Mở $transaction
     activate DB
-    API -> DB: Payment.create(status: FAILED, failureReason)
-    DB --> API: Commit transaction
+    PC -> OStS: transition(tx, 1001, PAYMENT_FAILED)
+    activate OStS
+    OStS -> DB: Update Order status = PAYMENT_FAILED
+    OStS --> PC: order updated
+    deactivate OStS
+    PC -> DB: Payment.create(status: FAILED, failureReason)
+    DB --> PC: Commit transaction
     deactivate DB
-    API --> Gateway: 200 OK { RspCode: "00", Message: "success" }
-    deactivate API
+    PC --> Gateway: 200 OK { RspCode: "00", Message: "success" }
+    deactivate PC
 
     Gateway --> FE: Redirect về /orders/vnpay-return?...
     activate FE
     FE --> User: Hiển thị lỗi thanh toán, cho phép chọn "Thử lại" hoặc "Hủy đơn"
     deactivate FE
+    deactivate User
 end
 
 deactivate Gateway
 @enduml
-

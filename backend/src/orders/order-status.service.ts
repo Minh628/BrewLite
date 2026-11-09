@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Order, OrderStatus, Prisma } from '@prisma/client';
+import { Order, OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { assertTransition } from './order-state-machine';
 
 export interface TransitionOptions {
@@ -81,6 +81,16 @@ export class OrderStatusService {
     if (toStatus === OrderStatus.PAID) {
       await this.handlePaidHook(tx, updatedOrder);
     } else if (toStatus === OrderStatus.CANCELLED) {
+      // Nếu đơn đã thanh toán (PAID) bị hủy, đánh dấu các bản ghi Payment SUCCEEDED sang REFUNDED
+      if (
+        currentOrder.status === OrderStatus.PAID &&
+        typeof (tx as Prisma.TransactionClient)?.payment?.updateMany === 'function'
+      ) {
+        await tx.payment.updateMany({
+          where: { orderId, status: PaymentStatus.SUCCEEDED },
+          data: { status: PaymentStatus.REFUNDED },
+        });
+      }
       await this.handleCancelledHook(tx, updatedOrder, options?.reason);
     }
 

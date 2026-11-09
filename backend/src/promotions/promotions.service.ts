@@ -111,8 +111,16 @@ export class PromotionsService {
 
   /**
    * Hoàn lượt khi đơn bị CANCELLED (Mục 11.4: "hoàn lượt khi CANCELLED").
+   * Kiểm tra trước usedCount > 0 để không bao giờ giảm âm làm vi phạm CHECK ("usedCount" >= 0).
    */
   async releaseUsage(tx: Pick<PrismaService, 'promotion'>, code: string): Promise<void> {
+    if (typeof tx.promotion.findUnique === 'function') {
+      const existing = await tx.promotion.findUnique({ where: { code } });
+      if (!existing || existing.usedCount <= 0) {
+        return;
+      }
+    }
+
     await tx.promotion.update({
       where: { code },
       data: { usedCount: { decrement: 1 } },

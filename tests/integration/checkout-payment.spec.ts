@@ -2,7 +2,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
-import { OrderStatus, PaymentStatus } from '@prisma/client';
+import { OrderStatus, PaymentMethod, PaymentStatus, Size } from '@prisma/client';
 import request from 'supertest';
 import { AppModule } from '../../backend/src/app.module';
 import { HttpExceptionFilter } from '../../backend/src/common/filters/http-exception.filter';
@@ -72,9 +72,9 @@ describe('T5.2-b: Checkout & Payment Integration Tests', () => {
           categoryId: category.id,
           sizes: {
             create: [
-              { size: 'S', extraPrice: 0 },
-              { size: 'M', extraPrice: 5000 },
-              { size: 'L', extraPrice: 10000 },
+              { size: Size.S, extraPrice: 0 },
+              { size: Size.M, extraPrice: 5000 },
+              { size: Size.L, extraPrice: 10000 },
             ],
           },
         },
@@ -118,7 +118,7 @@ describe('T5.2-b: Checkout & Payment Integration Tests', () => {
       .set('Idempotency-Key', `pay_${idempotencyKey}`)
       .send({
         orderId,
-        method: 'CARD',
+        method: PaymentMethod.CARD,
         cardNumber: '4242 4242 4242 4242',
       })
       .expect(201);

@@ -1,3 +1,5 @@
+import { Size } from '@prisma/client';
+
 /**
  * Dữ liệu sản phẩm mẫu dùng chung cho test đơn hàng.
  * Khớp ví dụ trong docs/api-contract.md v2: 2 × Cappuccino L + 2 topping (67.000) + 1 × Trà đào M (44.000) = 178.000
@@ -8,10 +10,11 @@ const toppings = {
   retired: { id: 9, name: 'Thạch ngừng bán', price: 3000, isActive: false },
 };
 
+// Sử dụng enum Size từ Prisma Client để khớp với ràng buộc kiểu của ProductSize
 const sizes = (productId: number) => [
-  { productId, size: 'S', extraPrice: 0 },
-  { productId, size: 'M', extraPrice: 5000 },
-  { productId, size: 'L', extraPrice: 10000 },
+  { productId, size: Size.S, extraPrice: 0 },
+  { productId, size: Size.M, extraPrice: 5000 },
+  { productId, size: Size.L, extraPrice: 10000 },
 ];
 
 export const productFixtures = [

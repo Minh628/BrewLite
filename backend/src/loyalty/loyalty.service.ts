@@ -88,6 +88,26 @@ export class LoyaltyService {
       return 0;
     }
 
+    // Nếu có thể kiểm tra trước thông tin user, đảm bảo không bao giờ trừ điểm xuống dưới 0
+    // để tránh vi phạm CHECK ("loyaltyPoints" >= 0) trên PostgreSQL
+    if (typeof (tx.user as PrismaService['user'])?.findUnique === 'function') {
+      const currentUser = await tx.user.findUnique({
+        where: { id: order.userId },
+        select: { loyaltyPoints: true },
+      });
+      const safeDecrypt = currentUser
+        ? Math.min(pointsToRevoke, Math.max(0, currentUser.loyaltyPoints))
+        : pointsToRevoke;
+
+      if (safeDecrypt > 0) {
+        await tx.user.update({
+          where: { id: order.userId },
+          data: { loyaltyPoints: { decrement: safeDecrypt } },
+        });
+      }
+      return safeDecrypt;
+    }
+
     await tx.user.update({
       where: { id: order.userId },
       data: { loyaltyPoints: { decrement: pointsToRevoke } },

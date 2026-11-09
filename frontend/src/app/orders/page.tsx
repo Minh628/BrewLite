@@ -29,7 +29,7 @@ function formatOrderDate(dateString: string): string {
 
 export default function MyOrdersPage() {
   const router = useRouter();
-  const { isAuthenticated, accessToken } = useAuth();
+  const { isAuthenticated, accessToken, hasHydrated } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -39,10 +39,11 @@ export default function MyOrdersPage() {
   }, []);
 
   useEffect(() => {
-    if (isMounted && !isAuthenticated) {
+    // Chỉ chuyển hướng khi Zustand đã nạp xong trạng thái xác thực từ localStorage
+    if (isMounted && hasHydrated && !isAuthenticated) {
       router.push('/login?returnUrl=/orders');
     }
-  }, [isMounted, isAuthenticated, router]);
+  }, [isMounted, hasHydrated, isAuthenticated, router]);
 
   const { data, isLoading, error } = useQuery<PaginatedOrders, Error>({
     queryKey: ['myOrders', page, accessToken],

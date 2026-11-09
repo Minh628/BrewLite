@@ -1,7 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Size as PrismaSize } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-export type Size = 'S' | 'M' | 'L';
+// Đồng bộ kiểu Size với enum Size trong Prisma Schema ('S' | 'M' | 'L')
+export type Size = `${PrismaSize}`;
 
 export type AvailableSize = {
   size: Size;

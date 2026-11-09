@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus, PaymentMethod, Size } from '@prisma/client';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
@@ -80,8 +80,8 @@ export class OrderItemDetailDto {
   @ApiProperty({ example: 'Cappuccino' })
   productName!: string;
 
-  @ApiProperty({ enum: ['S', 'M', 'L'], example: 'L' })
-  size!: string;
+  @ApiProperty({ enum: Size, example: Size.L })
+  size!: Size;
 
   @ApiProperty({ example: 2 })
   qty!: number;
@@ -98,8 +98,8 @@ export class OrderItemDetailDto {
 
 /** Thông tin thanh toán gần nhất. */
 export class OrderPaymentInfoDto {
-  @ApiProperty({ example: 'CARD' })
-  method!: string;
+  @ApiProperty({ enum: PaymentMethod, example: PaymentMethod.CARD })
+  method!: PaymentMethod;
 
   @ApiPropertyOptional({ example: '4242', nullable: true })
   cardLast4?: string | null;

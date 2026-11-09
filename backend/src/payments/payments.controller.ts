@@ -28,7 +28,7 @@ import {
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -91,6 +91,12 @@ export class PaymentsController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'Không tìm thấy đơn hàng' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'Chuyển trạng thái không hợp lệ' })
   async simulate(@Body() dto: SimulatePaymentDto): Promise<SimulatePaymentResponseDto> {
+    // Chặn tuyệt đối endpoint mô phỏng trên môi trường production để bảo vệ an toàn thanh toán
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException(
+        'Endpoint mô phỏng thanh toán không khả dụng trên môi trường production',
+      );
+    }
     return this.paymentsService.simulate(dto);
   }
 
@@ -194,15 +200,19 @@ export class PaymentsController {
       return { RspCode: '04', Message: 'Invalid amount' };
     }
 
-    // 4. Kiểm tra đơn hàng đã được xác nhận trước đó chưa (tránh xử lý trùng lặp)
-    if (order.status === OrderStatus.PAID || order.status === OrderStatus.COMPLETED) {
+    // 4. Kiểm tra đơn hàng còn ở trạng thái cho phép xử lý thanh toán hay không.
+    // Nếu đã PAID, PREPARING, READY, COMPLETED hoặc CANCELLED thì trả mã '02' để VNPay dừng gọi lại.
+    if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.PAYMENT_FAILED) {
       return { RspCode: '02', Message: 'Order already confirmed' };
     }
 
-    // 5. Cập nhật trạng thái đơn hàng và lưu lịch sử thanh toán trong transaction an toàn
+    // 5. Cập nhật trạng thái đơn hàng và lưu lịch sử thanh toán trong transaction an toàn.
+    // Dùng khóa idempotencyKey tất định theo giao dịch VNPay để chống tạo đúp bản ghi Payment
+    // khi Return URL và IPN Webhook cùng gọi đồng thời (kể cả khi giao dịch thất bại).
+    const rawTxnRef = String(query['vnp_TxnRef'] || order.id);
     const txNo =
-      verify.transactionNo && verify.transactionNo !== '0' ? verify.transactionNo : `${Date.now()}`;
-    const idempotencyKey = randomUUID();
+      verify.transactionNo && verify.transactionNo !== '0' ? verify.transactionNo : rawTxnRef;
+    const idempotencyKey = `vnpay_${order.id}_${txNo}_${verify.responseCode}`.slice(0, 128);
     const requestHash = createHash('sha256')
       .update(`vnpay|${order.id}|${verify.method}|${txNo}|${verify.responseCode}`)
       .digest('hex');
@@ -213,9 +223,26 @@ export class PaymentsController {
         const locked = await tx.$queryRaw<Array<{ id: number; status: OrderStatus }>>`
           SELECT id, status FROM "Order" WHERE id = ${order.id} FOR UPDATE
         `;
-        if (!locked.length || locked[0].status === OrderStatus.PAID) {
+        if (
+          !locked.length ||
+          (locked[0].status !== OrderStatus.PENDING &&
+            locked[0].status !== OrderStatus.PAYMENT_FAILED)
+        ) {
           return;
         }
+
+        // Nếu callback này đã được xử lý trước đó (trùng idempotencyKey) thì bỏ qua, không ghi trùng
+        const existingPayment = await tx.payment.findUnique({
+          where: { idempotencyKey },
+        });
+        if (existingPayment) {
+          return;
+        }
+
+        // Chỉ trích xuất 4 chữ số cuối nếu tham số thực sự là chuỗi số thẻ (tránh lưu mã ngân hàng 'NCB')
+        const rawCardNum = query['vnp_CardNumber'] ? String(query['vnp_CardNumber']) : '';
+        const digitsOnly = rawCardNum.replace(/\D/g, '');
+        const cardLast4 = digitsOnly.length >= 4 ? digitsOnly.slice(-4) : null;
 
         if (verify.isSuccess) {
           await this.orderStatusService.transition(tx, order.id, OrderStatus.PAID);
@@ -227,7 +254,7 @@ export class PaymentsController {
               method: verify.method, // Lưu đúng PaymentMethod.CARD hoặc PaymentMethod.WALLET
               status: PaymentStatus.SUCCEEDED,
               requestHash,
-              cardLast4: query['vnp_BankCode'] ? String(query['vnp_BankCode']).slice(-4) : null,
+              cardLast4,
             },
           });
         } else {
@@ -246,6 +273,7 @@ export class PaymentsController {
               status: PaymentStatus.FAILED,
               failureReason,
               requestHash,
+              cardLast4,
             },
           });
         }

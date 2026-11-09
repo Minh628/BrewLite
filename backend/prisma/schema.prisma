@@ -76,9 +76,10 @@ model Product {
 
 model ProductSize {
   productId  Int
-  size       String
+  size       Size
   extraPrice Int     @default(0)
-  product    Product @relation(fields: [productId], references: [id])
+  // Xóa sản phẩm tự động xóa luôn các cấu hình size đi kèm (Composition)
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@id([productId, size])
 }
@@ -97,8 +98,9 @@ model Topping {
 model ProductTopping {
   productId Int
   toppingId Int
-  product   Product @relation(fields: [productId], references: [id])
-  topping   Topping @relation(fields: [toppingId], references: [id])
+  // Bảng trung gian phụ thuộc hoàn toàn vào Product và Topping
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  topping   Topping @relation(fields: [toppingId], references: [id], onDelete: Cascade)
 
   @@id([productId, toppingId])
   @@index([toppingId])
@@ -132,6 +134,8 @@ model Order {
 
   @@unique([userId, idempotencyKey])
   @@index([userId, createdAt])
+  // Chỉ mục phục vụ truy vấn hàng đợi pha chế FIFO (GET /orders/queue)
+  @@index([status, createdAt])
 }
 
 model Promotion {
@@ -146,19 +150,27 @@ model Promotion {
   usageLimit  Int?
   usedCount   Int          @default(0)
   isActive    Boolean      @default(true)
+
+  // Chỉ mục kiểm tra nhanh hiệu lực của mã khuyến mãi
+  @@index([isActive, startsAt, endsAt])
 }
 
 model OrderItem {
   id        Int                @id @default(autoincrement())
   orderId   Int
-  order     Order              @relation(fields: [orderId], references: [id])
+  // Xóa đơn hàng tự động dọn dẹp các dòng món thuộc đơn đó
+  order     Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId Int
+  // Giữ Restrict mặc định để không làm mất lịch sử sản phẩm trong các đơn đã tạo
   product   Product            @relation(fields: [productId], references: [id])
   size      Size
   qty       Int
   unitPrice Int
   lineTotal Int
   toppings  OrderItemTopping[]
+
+  @@index([orderId])
+  @@index([productId])
 }
 
 model OrderItemTopping {
@@ -174,12 +186,15 @@ model OrderItemTopping {
 model Payment {
   idempotencyKey String        @id
   orderId        Int
+  // Giữ Restrict mặc định để bảo toàn chứng từ thanh toán đối soát tài chính
   order          Order         @relation(fields: [orderId], references: [id])
   amount         Int
-  method         String // "CARD" | "WALLET"
+  method         PaymentMethod // CARD | WALLET
   status         PaymentStatus
   requestHash    String // sha256(orderId|method|cardLast4)
   cardLast4      String?
   failureReason  String?
   createdAt      DateTime      @default(now())
+
+  @@index([orderId])
 }
