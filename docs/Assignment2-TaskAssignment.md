@@ -222,9 +222,9 @@ Assignment 2 nối tiếp đề tài BrewLite (Assignment 1) và yêu cầu nhó
 
 ### Task 2 — Kiện Minh
 
-- [ ] T2.1 Activity diagram (PR: ___)
-- [ ] T2.2 Sequence diagram Checkout (PR: ___)
-- [ ] T2.3 Class diagram domain (PR: ___)
+- [x] T2.1 Activity diagram (`docs/diagrams/activity-e2e.puml`, `docs/diagrams/activity-e2e.svg`)
+- [x] T2.2 Sequence diagram Checkout (`docs/diagrams/sequence-checkout.puml`, `docs/diagrams/sequence-checkout.svg`)
+- [x] T2.3 Class diagram domain (`docs/diagrams/class-domain.puml`, `docs/diagrams/class-domain.svg`)
 
 ### Task 3 — Hoàng Tịnh
 
@@ -245,12 +245,12 @@ Assignment 2 nối tiếp đề tài BrewLite (Assignment 1) và yêu cầu nhó
 ### Task 5 — cả nhóm
 
 - [ ] T5.1-a Auth JWT (PR: ___)
-- [ ] T5.1-b Payment mock (PR: ___)
+- [x] T5.1-b Payment mock (`backend/src/payments/mock-payment.gateway.ts`)
 - [ ] T5.1-c Order flow (PR: ___)
 - [ ] T5.1-e Product detail (size/topping) (PR: ___)
 - [ ] T5.1-f Cart (PR: ___)
 - [ ] T5.1-g Auth + checkout + order history FE (PR: ___)
-- [ ] T5.2-a Unit + integration test BE (PR: ___)
+- [x] T5.2-a Unit + integration test BE (`tests/integration/checkout-payment.spec.ts`)
 - [ ] T5.2-c `GET /health` (PR: ___)
 - [ ] T5.2-d E2E test checkout (PR: ___)
 - [ ] T5.2 `docker-compose.yml` chạy web + api + db (PR: ___)
