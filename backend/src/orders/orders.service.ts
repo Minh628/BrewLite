@@ -1,4 +1,3 @@
-﻿
 import {
   BadRequestException,
   ConflictException,
@@ -19,23 +18,23 @@ import { CreatedOrderDto } from './dto/order-response.dto';
 import { OrderStatusService } from './order-status.service';
 
 /**
- * MÃ£ Ä‘Æ¡n hiá»ƒn thá»‹ cho khÃ¡ch, vÃ­ dá»¥ Ä‘Æ¡n id 1001 â†’ "#1001"
+ * Mã đơn hiển thị cho khách, ví dụ đơn id 1001 → "#1001"
  */
 export function formatOrderCode(orderId: number): string {
   return `#${orderId}`;
 }
 
-/** KhÃ³a chá»‘ng táº¡o trÃ¹ng Ä‘Æ¡n do client gá»­i qua header Idempotency-Key. */
+/** Khóa chống tạo trùng đơn do client gửi qua header Idempotency-Key. */
 export interface CreateOrderOptions {
   idempotencyKey?: string | null;
 }
 
 export interface CreateOrderResult extends CreatedOrderDto {
-  /** true khi tráº£ láº¡i Ä‘Æ¡n Ä‘Ã£ táº¡o trÆ°á»›c Ä‘Ã³ báº±ng cÃ¹ng Idempotency-Key (HTTP 200) */
+  /** true khi trả lại đơn đã tạo trước đó bằng cùng Idempotency-Key (HTTP 200) */
   replayed: boolean;
 }
 
-/** Báº£n ghi Order tá»‘i thiá»ƒu cáº§n Ä‘á»ƒ dá»±ng response; `items` cÃ³ thá»ƒ chÆ°a náº¡p khi vá»«a táº¡o. */
+/** Bản ghi Order tối thiểu cần để dựng response; `items` có thể chưa nạp khi vừa tạo. */
 type OrderRecord = Prisma.OrderGetPayload<object> & {
   items: Array<
     Pick<
@@ -56,13 +55,13 @@ export class OrdersService {
   ) {}
 
   /**
-   * Táº¡o Ä‘Æ¡n hÃ ng tráº¡ng thÃ¡i PENDING tá»« giá» hÃ ng cá»§a ngÆ°á»i dÃ¹ng.
+   * Tạo đơn hàng trạng thái PENDING từ giỏ hàng của người dùng.
    *
-   * Sub-task 6.2/6.3 (Sprint 2): giÃ¡ do PricingService tÃ­nh tá»« DB, client price bá»‹ bá» qua.
-   * Sub-task 10.4b (Sprint 3): Ã¡p mÃ£ giáº£m giÃ¡, lÆ°u subtotal/discount/promoCode, tÄƒng usedCount
-   *                            cÃ³ Ä‘iá»u kiá»‡n trong CÃ™NG transaction.
-   * Sub-task 10.2b (Sprint 3): Idempotency-Key â€” cÃ¹ng user + cÃ¹ng key chá»‰ táº¡o 1 Ä‘Æ¡n; náº¿u
-   *                            request trÆ°á»›c Ä‘Ã£ táº¡o thÃ¬ tráº£ láº¡i Ä‘Æ¡n Ä‘Ã³ vá»›i `replayed = true`.
+   * Sub-task 6.2/6.3 (Sprint 2): giá do PricingService tính từ DB, client price bị bỏ qua.
+   * Sub-task 10.4b (Sprint 3): áp mã giảm giá, lưu subtotal/discount/promoCode, tăng usedCount
+   *                            có điều kiện trong CÙNG transaction.
+   * Sub-task 10.2b (Sprint 3): Idempotency-Key — cùng user + cùng key chỉ tạo 1 đơn; nếu
+   *                            request trước đã tạo thì trả lại đơn đó với `replayed = true`.
    */
   async create(
     userId: number,
@@ -71,7 +70,7 @@ export class OrdersService {
   ): Promise<CreateOrderResult> {
     const idempotencyKey = normalizeIdempotencyKey(options.idempotencyKey);
 
-    // 1. Fast path: náº¿u Ä‘Ã£ cÃ³ Ä‘Æ¡n vá»›i cÃ¹ng key thÃ¬ tráº£ láº¡i ngay, khÃ´ng tÃ­nh giÃ¡ láº¡i
+    // 1. Fast path: nếu đã có đơn với cùng key thì trả lại ngay, không tính giá lại
     if (idempotencyKey) {
       const existing = await this.findExistingByKey(userId, idempotencyKey);
       if (existing) {
@@ -79,7 +78,7 @@ export class OrdersService {
       }
     }
 
-    // 2. TÃ­nh giÃ¡ tá»« DB (bá» qua má»i giÃ¡ client gá»­i)
+    // 2. Tính giá từ DB (bỏ qua mọi giá client gửi)
     const pricing = await this.priceItems(
       dto.items.map((item) => ({
         productId: item.productId,
@@ -89,7 +88,7 @@ export class OrdersService {
       })),
     );
 
-    // 3. Ãp mÃ£ giáº£m giÃ¡ (náº¿u cÃ³) â€” kiá»ƒm tra quy táº¯c trÆ°á»›c khi má»Ÿ transaction
+    // 3. Áp mã giảm giá (nếu có) — kiểm tra quy tắc trước khi mở transaction
     const promotion = dto.promoCode
       ? await this.promotionsService.findPromotion(dto.promoCode)
       : null;
@@ -133,13 +132,13 @@ export class OrdersService {
           });
         }
 
-        // Giá»¯ tá»“n kho (optimistic locking) â€” 409 OUT_OF_STOCK náº¿u khÃ´ng Ä‘á»§ hÃ ng
+        // Giữ tồn kho (optimistic locking) — 409 OUT_OF_STOCK nếu không đủ hàng (10.3b)
         await this.stockService.reserve(
           tx,
           pricing.items.map((item) => ({ productId: item.productId, qty: item.qty })),
         );
 
-        // TÄƒng lÆ°á»£t dÃ¹ng mÃ£ cÃ³ Ä‘iá»u kiá»‡n trong cÃ¹ng transaction
+        // Tăng lượt dùng mã có điều kiện trong cùng transaction: hết lượt → rollback cả đơn
         if (promotion) {
           await this.promotionsService.consumeUsage(tx, promotion);
         }
@@ -147,24 +146,23 @@ export class OrdersService {
         return created;
       });
 
-      // PhÃ¡t sá»± kiá»‡n sau khi transaction Ä‘Ã£ commit thÃ nh cÃ´ng.
-      // KhÃ´ng tá»± Ä‘á»™ng thá»±c hiá»‡n thanh toÃ¡n táº¡i Ä‘Ã¢y.
+      // Phát sự kiện sau khi transaction đã commit thành công.
+      // Không tự động thực hiện thanh toán tại đây.
       orderEvents.emit('order.payment.pending', {
         orderId: order.id,
         userId,
-        amount: total,
-        currency: 'VND',
+        total: order.total,
       });
 
       return this.toResult({ ...order, items: pricing.items }, false, pricing);
     } catch (error) {
-      // Äua idempotency: request song song cÃ¹ng key, má»™t bÃªn Ä‘Ã£ commit trÆ°á»›c
+      // Đua idempotency: request song song cùng key, một bên đã commit trước → trả lại đơn đó
       if (idempotencyKey && isUniqueViolation(error)) {
         const existing = await this.findExistingByKey(userId, idempotencyKey);
         if (existing) {
           return this.toResult(existing, true);
         }
-        throw new ConflictException('ÄÆ¡n hÃ ng Ä‘Ã£ Ä‘Æ°á»£c táº¡o, vui lÃ²ng táº£i láº¡i trang');
+        throw new ConflictException('Đơn hàng đã được tạo, vui lòng tải lại trang');
       }
 
       throw this.mapPrismaError(error);
@@ -172,7 +170,7 @@ export class OrdersService {
   }
 
   /**
-   * Láº¥y danh sÃ¡ch Ä‘Æ¡n hÃ ng cá»§a ngÆ°á»i dÃ¹ng (phÃ¢n trang, má»›i nháº¥t trÆ°á»›c) â€” Sub-task 9.1.
+   * Lấy danh sách đơn hàng của người dùng (phân trang, mới nhất trước) — Sub-task 9.1.
    */
   async findMyOrders(userId: number, page: number, limit: number): Promise<PaginatedOrdersDto> {
     const skip = (page - 1) * limit;
@@ -211,8 +209,8 @@ export class OrdersService {
   }
 
   /**
-   * Láº¥y chi tiáº¿t Ä‘Æ¡n hÃ ng theo ID, kiá»ƒm tra quyá»n sá»Ÿ há»¯u â€” Sub-task 9.1.
-   * Tráº£ 404 náº¿u Ä‘Æ¡n khÃ´ng tá»“n táº¡i hoáº·c khÃ´ng thuá»™c user.
+   * Lấy chi tiết đơn hàng theo ID, kiểm tra quyền sở hữu — Sub-task 9.1.
+   * Trả 404 nếu đơn không tồn tại hoặc không thuộc user.
    */
   async findById(userId: number, orderId: number): Promise<OrderDetailDto> {
     const order = await this.prisma.order.findFirst({
@@ -234,7 +232,7 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException(`KhÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n hÃ ng #${orderId}`);
+      throw new NotFoundException(`Không tìm thấy đơn hàng #${orderId}`);
     }
 
     const latestPayment = order.payments[0] ?? null;
@@ -273,7 +271,9 @@ export class OrdersService {
   }
 
   /**
-   * HÃ ng Ä‘á»£i quáº§y pha cháº¿ (BARISTA/ADMIN) â€” PB-32a.
+   * Hàng đợi quầy pha chế (BARISTA/ADMIN) — PB-32a.
+   * Trả tất cả đơn đang ở PAID/PREPARING/READY, cũ nhất trước (FIFO).
+   * FE nhóm theo status để dựng Kanban 3 cột.
    */
   async getQueue(): Promise<OrderDetailDto[]> {
     const orders = await this.prisma.order.findMany({
@@ -327,7 +327,8 @@ export class OrdersService {
   }
 
   /**
-   * Chuyá»ƒn tráº¡ng thÃ¡i Ä‘Æ¡n hÃ ng (BARISTA/ADMIN) â€” Sub-task 10.1c.
+   * Chuyển trạng thái đơn hàng (BARISTA/ADMIN) — Sub-task 10.1c.
+   * Dùng OrderStatusService.transition() bên trong transaction để đảm bảo State Machine.
    */
   async updateStatus(orderId: number, toStatus: BaristaStatus): Promise<UpdatedOrderStatusDto> {
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -342,7 +343,12 @@ export class OrdersService {
   }
 
   /**
-   * Há»§y Ä‘Æ¡n hÃ ng â€” NgÆ°á»i dÃ¹ng (chá»§ Ä‘Æ¡n) hoáº·c Barista/Admin.
+   * Hủy đơn hàng — Người dùng (chủ đơn) hoặc Barista/Admin (Task 10 & F&B workflow).
+   * Kiểm tra quyền sở hữu đơn hàng trước khi cho phép hủy.
+   * State machine chỉ cho phép hủy khi đơn ở PENDING, PAYMENT_FAILED hoặc PAID.
+   * Nếu đơn đã sang PREPARING/READY/COMPLETED/CANCELLED -> transition sẽ ném 409 INVALID_TRANSITION.
+   * Khi hủy đơn có mã giảm giá -> hoàn trả lượt dùng (releaseUsage).
+   * Khi hủy đơn PAID -> hook onCancelled sẽ tự động thu hồi điểm loyalty.
    */
   async cancel(
     userId: number,
@@ -356,13 +362,14 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException(`ÄÆ¡n hÃ ng #${orderId} khÃ´ng tá»“n táº¡i`);
+      throw new NotFoundException(`Đơn hàng #${orderId} không tồn tại`);
     }
 
+    // Kiểm tra quyền: chỉ chủ đơn hàng hoặc nhân viên (BARISTA/ADMIN) mới có quyền hủy
     const isOwner = order.userId === userId;
     const isStaff = role === Role.BARISTA || role === Role.ADMIN;
     if (!isOwner && !isStaff) {
-      throw new ForbiddenException('Báº¡n khÃ´ng cÃ³ quyá»n há»§y Ä‘Æ¡n hÃ ng nÃ y');
+      throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này');
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -373,6 +380,7 @@ export class OrdersService {
         { reason },
       );
 
+      // Nếu đơn có áp dụng voucher, hoàn trả 1 lượt sử dụng cho hệ thống
       if (order.promoCode) {
         await this.promotionsService.releaseUsage(tx, order.promoCode);
       }
@@ -387,7 +395,7 @@ export class OrdersService {
     };
   }
 
-  /** Tra cá»©u Ä‘Æ¡n Ä‘Ã£ táº¡o báº±ng (userId, idempotencyKey). */
+  /** Tra cứu đơn đã tạo bằng (userId, idempotencyKey). */
   private async findExistingByKey(
     userId: number,
     idempotencyKey: string,
@@ -399,7 +407,8 @@ export class OrdersService {
   }
 
   /**
-   * Chuyá»ƒn báº£n ghi Order (kÃ¨m items) sang response contract v3.
+   * Chuyển bản ghi Order (kèm items) sang response contract v3.
+   * Với đơn đã tạo trước đó, tính lại subtotal từ các dòng nếu DB chưa có.
    */
   private toResult(
     order: OrderRecord,
@@ -432,7 +441,7 @@ export class OrdersService {
   }
 
   /**
-   * Gá»i PricingService; sáº£n pháº©m khÃ´ng tá»“n táº¡i / ngá»«ng bÃ¡n tráº£ 400 theo contract v2.
+   * Gọi PricingService; sản phẩm không tồn tại / ngừng bán trả 400 theo contract v2 thay vì 404
    */
   private async priceItems(
     items: Parameters<PricingService['calculateOrderPricing']>[0],
@@ -448,16 +457,19 @@ export class OrdersService {
   }
 
   /**
-   * Ãnh xáº¡ lá»—i Prisma sang HTTP.
+   * Ánh xạ lỗi Prisma sang HTTP:
+   * - P2002 (vi phạm unique) → 409 Conflict
+   * - P2003 (vi phạm khóa ngoại, ví dụ sản phẩm/topping/user bị xóa giữa chừng) → 400 Bad Request
+   * Các lỗi khác giữ nguyên để HttpExceptionFilter trả 500.
    */
   private mapPrismaError(error: unknown): unknown {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
-        return new ConflictException('ÄÆ¡n hÃ ng bá»‹ trÃ¹ng dá»¯ liá»‡u, vui lÃ²ng thá»­ láº¡i');
+        return new ConflictException('Đơn hàng bị trùng dữ liệu, vui lòng thử lại');
       }
       if (error.code === 'P2003') {
         return new BadRequestException(
-          'Sáº£n pháº©m, topping hoáº·c tÃ i khoáº£n trong Ä‘Æ¡n hÃ ng khÃ´ng cÃ²n tá»“n táº¡i',
+          'Sản phẩm, topping hoặc tài khoản trong đơn hàng không còn tồn tại',
         );
       }
     }
@@ -466,7 +478,8 @@ export class OrdersService {
 }
 
 /**
- * Chuáº©n hÃ³a header: rá»—ng/toÃ n khoáº£ng tráº¯ng coi nhÆ° khÃ´ng gá»­i; giá»›i háº¡n 128 kÃ½ tá»±.
+ * Chuẩn hóa header: rỗng/toàn khoảng trắng coi như không gửi; giới hạn 128 ký tự để
+ * không lưu giá trị bất thường vào cột unique.
  */
 function normalizeIdempotencyKey(key: string | null | undefined): string | undefined {
   if (typeof key !== 'string') return undefined;
@@ -478,4 +491,3 @@ function normalizeIdempotencyKey(key: string | null | undefined): string | undef
 function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
 }
-
