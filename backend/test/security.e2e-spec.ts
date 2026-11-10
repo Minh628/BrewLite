@@ -17,11 +17,12 @@ describe('API Security (e2e)', () => {
   let app: INestApplication;
 
   const prismaMock = {
-    user: {
-      findUnique: jest.fn().mockResolvedValue(null),
-      create: jest.fn(),
-    },
-  };
+  user: {
+    findUnique: jest.fn().mockResolvedValue(null),
+    create: jest.fn(),
+  },
+  $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+};
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
