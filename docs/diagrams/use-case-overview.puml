@@ -1,0 +1,107 @@
+@startuml BrewLite — Use-case diagram tổng quát (T1.2)
+
+skinparam monochrome false
+skinparam shadowing false
+skinparam defaultFontName Inter, Helvetica, sans-serif
+skinparam ArrowColor #555
+skinparam ActorBackgroundColor #FEF3E7
+skinparam UsecaseBackgroundColor #FFFDF7
+skinparam UsecaseBorderColor #B6855C
+skinparam PackageBackgroundColor #F6EFE4
+skinparam PackageBorderColor #B6855C
+left to right direction
+
+title BrewLite — Use-case diagram tổng quát (MVP)\nNguồn: FR-01..FR-28 trong docs/requirements/srs.md
+
+actor "Khách hàng\n(Customer)" as Customer
+actor "Nhân viên quầy\n(Barista)" as Barista
+actor "Quản lý\n(Admin)" as Admin
+
+Admin --|> Barista : kế thừa quyền
+
+rectangle "BrewLite System" as System {
+
+  package "Khám phá sản phẩm" as PkgBrowse {
+    usecase "UC-01 Xem menu" as UC01
+    usecase "UC-02 Lọc / Tìm" as UC02
+    usecase "UC-03 Xem chi tiết sản phẩm" as UC03
+  }
+
+  package "Giỏ & Checkout" as PkgCart {
+    usecase "UC-04 Quản lý giỏ hàng" as UC04
+    usecase "UC-05 Áp mã giảm giá" as UC05
+    usecase "UC-06 Đặt và thanh toán đơn hàng\n(**use-case trọng tâm**)" as UC06
+  }
+
+  package "Xác thực" as PkgAuth {
+    usecase "UC-07 Đăng ký" as UC07
+    usecase "UC-08 Đăng nhập" as UC08
+    usecase "UC-09 Xem profile /auth/me" as UC09
+  }
+
+  package "Đơn của khách" as PkgOrders {
+    usecase "UC-10 Xem lịch sử đơn" as UC10
+    usecase "UC-11 Theo dõi trạng thái đơn" as UC11
+    usecase "UC-12 Hủy đơn (PENDING)" as UC12
+  }
+
+  package "Quầy pha chế" as PkgBarista {
+    usecase "UC-13 Xem hàng đợi quầy" as UC13
+    usecase "UC-14 Chuyển trạng thái đơn" as UC14
+    usecase "UC-15 Hủy đơn (PAID+)" as UC15
+  }
+
+  package "Quản lý dữ liệu\n(ngoài UI — qua Adminer / prisma studio)" as PkgAdmin {
+    usecase "UC-16 Xem / sửa dữ liệu\n(menu, promotion, tồn kho)" as UC16
+  }
+}
+
+actor "Mock Payment Gateway\n(external)" as Gateway
+
+' Customer relationships
+Customer --> UC01
+Customer --> UC02
+Customer --> UC03
+Customer --> UC04
+Customer --> UC05
+Customer --> UC06
+Customer --> UC07
+Customer --> UC08
+Customer --> UC09
+Customer --> UC10
+Customer --> UC11
+Customer --> UC12
+
+' Barista relationships (Admin inherits)
+Barista --> UC08
+Barista --> UC13
+Barista --> UC14
+Barista --> UC15
+
+' Admin-only
+Admin --> UC16
+
+' UC-level includes / extends
+UC06 ..> UC08 : <<include>>\n(bắt buộc login)
+UC06 ..> UC05 : <<extend>>\n(nếu có promoCode)
+UC12 ..> UC08 : <<include>>
+UC11 ..> UC08 : <<include>>
+UC10 ..> UC08 : <<include>>
+UC13 ..> UC08 : <<include>>\n(JWT role BARISTA/ADMIN)
+UC14 ..> UC08 : <<include>>
+UC15 ..> UC08 : <<include>>
+
+' External actor
+UC06 --> Gateway : POST /payments
+
+note bottom of UC06
+  Luồng chính: FR-13..FR-20
+  Chi tiết tại docs/requirements/uc-checkout.md (T1.3)
+end note
+
+note top of PkgAdmin
+  Theo BrewLite-Sprint3.md mục 3.2: Admin KHÔNG có UI riêng.
+  Dùng Adminer (:8080) hoặc `npx prisma studio`.
+end note
+
+@enduml
