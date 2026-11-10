@@ -1,0 +1,129 @@
+@startuml
+title Deployment Diagram - BrewLite (Production target: Vercel + Render + Neon + GHCR)
+
+' ============================================================
+' Nguồn sự thật cho sơ đồ này:
+'   - backend/Dockerfile          (multi-stage, ENTRYPOINT docker-entrypoint.sh, EXPOSE 3001)
+'   - frontend/Dockerfile         (Next.js standalone, EXPOSE 3000)
+'   - backend/docker-entrypoint.sh (prisma migrate deploy -> db seed -> node dist/main.js)
+'   - docker-compose.yml          (4 service + healthcheck, dùng cho local/CI)
+'   - docs/architecture/overview.md §4 (triển khai)
+'   - GET /health                 (app.controller.ts)
+' Phương án nền tảng là ĐỀ XUẤT, cập nhật khi nhóm chốt platform khác.
+' ============================================================
+
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam roundcorner 6
+skinparam ArrowColor #2C3E50
+skinparam nodeBorderColor #2C3E50
+skinparam componentBorderColor #2C3E50
+skinparam databaseBorderColor #2C3E50
+
+' ---------- Tác nhân & ranh giới môi trường ----------
+
+actor "Khách hàng\n(trình duyệt / PWA)" as user
+actor "Nhân viên pha chế\n(/barista)" as barista
+actor "Giảng viên / Dev\n(kiểm tra)" as dev
+
+node "Lập trình viên (máy local)" as local {
+  node "Docker Desktop" as localDocker {
+    component "docker compose up --build\n(postgres + adminer +\nbackend + frontend)" as localStack
+  }
+}
+
+cloud "Internet / HTTPS" as internet
+
+node "GitHub" as github {
+  component "Repository\nmain / feature/*" as repo
+  component "GitHub Actions\nci.yml (CI)\ncd.yml (CD)" as actions
+  component "GHCR\nghcr.io/<org>/brewlite-api\nghcr.io/<org>/brewlite-web" as ghcr
+}
+
+' ---------- Production ----------
+
+node "Vercel (Edge + Serverless)" as vercel {
+  component "Next.js 15 — Web/PWA\nnext build (standalone)\nHTTPS + CDN\nEnv: NEXT_PUBLIC_API_URL" as web
+}
+
+node "Render (Docker Runtime)" as render {
+  component "NestJS API container\nimage: ghcr.io/<org>/brewlite-api:<sha>\nENTRYPOINT docker-entrypoint.sh\nmigrate deploy → seed → node dist/main.js\nPORT 3001 (chỉ nhận traffic HTTPS từ Render proxy)" as api
+  component "GET /health\n→ 200 {status, uptime, service}" as health
+}
+
+node "Neon (Managed PostgreSQL 16)" as neon {
+  database "PostgreSQL 16\nschema: public\nSSL bắt buộc\nKhông public ra Internet,\nchỉ API nối bằng DATABASE_URL" as db
+  database "pgbouncer\n(connection pool)" as pool
+}
+
+node "Secret / Env của platform" as secrets {
+  artifact "JWT_SECRET\nDATABASE_URL\nCORS_ORIGIN\nTHROTTLE_TTL / THROTTLE_LIMIT" as envs
+}
+
+' ---------- Luồng ----------
+
+user --> web : HTTPS 443
+barista --> web : HTTPS 443
+dev --> web : kiểm tra URL prod
+dev --> api : /api-docs, /health
+
+localStack ..> repo : git pull
+
+repo --> actions : push / pull_request / tag
+actions --> ghcr : build & push image (tag = commit SHA)
+actions --> api : deploy hook (Render)
+actions --> web : deploy hook (Vercel)
+actions ..> health : smoke test sau deploy
+
+web --> api : HTTPS\nfetch JSON + Bearer JWT\nNEXT_PUBLIC_API_URL
+api --> db : TCP 5432 (TLS)\nPrisma Client
+db -down- pool : pool kết nối
+
+envs --> api : nạp khi khởi động
+envs --> web : build-time NEXT_PUBLIC_*
+
+api --> health : healthcheck 30s
+
+note right of api
+  Không mở port 5432 ra ngoài.
+  CORS_ORIGIN chỉ chứa domain Vercel.
+  Mọi lỗi trả JSON chuẩn + X-Request-Id.
+end note
+
+note bottom of ghcr
+  Tag: <commit-sha> (nguồn sự thật để rollback)
+  Rollback = deploy lại image của SHA trước
+  hoặc "Redeploy" bản release trước đó trên Render.
+end note
+
+note bottom of actions
+  CI (ci.yml): lint → test → build (đã có)
+  CD (cd.yml): build image → push GHCR
+             → trigger deploy (staging → prod)
+             → smoke test /health
+end note
+
+' ---------- Ranh giới môi trường ----------
+
+package "Môi trường" {
+  node "Local" as envLocal
+  node "CI (GitHub Actions runner)" as envCI
+  node "Production" as envProd
+}
+
+envLocal ..> localStack : Docker
+envCI ..> actions
+envProd ..> render
+envProd ..> vercel
+envProd ..> neon
+
+legend right
+  | Thành phần | Nền tảng đề xuất | Ghi chú |
+  | Web (PWA) | Vercel | HTTPS + CDN tự động, Next.js native |
+  | API | Render Web Service (Docker) | Image từ GHCR, health check /health |
+  | DB | Neon PostgreSQL 16 | Serverless, free tier, SSL bắt buộc |
+  | Registry | GHCR | Miễn phí, dùng GITHUB_TOKEN |
+  | Secret | Env của platform | Không commit, không log |
+endlegend
+
+@enduml

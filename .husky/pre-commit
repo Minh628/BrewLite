@@ -1,1 +1,24 @@
 npx lint-staged
+
+# Chặn commit có secret (Assignment 2 — T4.1, mục 8 "Secret bị commit").
+# Bỏ qua an toàn khi máy chưa cài gitleaks để không chặn cả nhóm;
+# quét gitleaks vẫn chạy trong CI và khi reviewer kiểm tra.
+GITLEAKS_BIN=""
+if command -v gitleaks >/dev/null 2>&1; then
+  GITLEAKS_BIN="gitleaks"
+else
+  # winget trên Windows không thêm vào PATH — dò trong thư mục Packages
+  WINGET_GITLEAKS=$(ls -1 "$LOCALAPPDATA/Microsoft/WinGet/Packages/" 2>/dev/null \
+    | grep -i '^Gitleaks' | head -n1)
+  if [ -n "$WINGET_GITLEAKS" ]; then
+    CANDIDATE="$LOCALAPPDATA/Microsoft/WinGet/Packages/$WINGET_GITLEAKS/gitleaks.exe"
+    [ -x "$CANDIDATE" ] && GITLEAKS_BIN="$CANDIDATE"
+  fi
+fi
+
+if [ -n "$GITLEAKS_BIN" ]; then
+  "$GITLEAKS_BIN" protect --staged --redact --no-banner --config .gitleaks.toml
+else
+  echo "[pre-commit] gitleaks chưa được cài - bỏ qua quét secret."
+  echo "            Cài: winget install gitleaks | scoop install gitleaks | brew install gitleaks"
+fi

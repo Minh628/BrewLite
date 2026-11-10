@@ -1,0 +1,21 @@
+# Cấu hình gitleaks cho BrewLite (Assignment 2 — T4.1)
+# Dùng bởi: .husky/pre-commit và gitleaks detect trong CI.
+#
+# Lưu ý: gitleaks dùng engine RE2 — KHÔNG hỗ trợ lookahead/lookbehind `(?!...)`.
+
+title = "BrewLite secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Tệp chỉ chứa giá trị mẫu, không phải secret thật"
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)docs/''',
+  '''(^|/)README\.md$''',
+  '''(^|/)node_modules/''',
+  '''package-lock\.json$''',
+  '''(^|/)\.gitleaks\.toml$''',
+  '''backend/prisma/seed\.ts$''',
+]

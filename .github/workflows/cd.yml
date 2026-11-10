@@ -1,0 +1,206 @@
+name: BrewLite CD
+
+# Pipeline phát hành (Assignment 2 — T5.3).
+# Giai đoạn 1 (đang bật): build image API + Web và đẩy lên GHCR, gắn tag theo commit SHA.
+# Giai đoạn 2 (bật khi nhóm chốt platform): trigger deploy (Render) và smoke test /health.
+#
+# Kích hoạt: tag semver (v1.2.3) hoặc chạy tay từ tab Actions.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy lên môi trường production sau khi push image'
+        required: false
+        default: false
+        type: boolean
+
+# Chỉ cần đọc source + ghi package (GHCR)
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  # ==========================================
+  # 1. Kiểm tra chất lượng trước khi phát hành
+  #    Dùng lại CI nhưng tối giản: build + test backend là đủ để chặn image lỗi.
+  # ==========================================
+  verify:
+    name: Verify (backend)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: brewlite
+          POSTGRES_PASSWORD: brewlite_password
+          POSTGRES_DB: brewlite_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://brewlite:brewlite_password@localhost:5432/brewlite_test?schema=public
+      JWT_SECRET: ci-only-secret-not-used-in-production
+    steps:
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Cài đặt Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Cài đặt dependencies
+        working-directory: .
+        run: npm ci
+
+      - name: Khởi tạo Prisma Client
+        run: npx prisma generate
+
+      - name: Áp migration vào DB test
+        run: npx prisma migrate deploy
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit test
+        run: npm run test
+
+  # ==========================================
+  # 2. Build & push image lên GHCR
+  #    Tag: <commit-sha> + semver (nếu là tag vX.Y.Z)
+  # ==========================================
+  images:
+    name: Build & push image (${{ matrix.app }})
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: api
+            context: ./backend
+          - app: web
+            context: ./frontend
+    steps:
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Thiết lập Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Đăng nhập GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sinh tag & label cho image
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          labels: |
+            org.opencontainers.image.title=BrewLite ${{ matrix.app }}
+            org.opencontainers.image.description=Sprint 3 delivery
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # NEXT_PUBLIC_API_URL nhúng lúc build → truyền từ repository variable
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:3001' }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+      - name: Ghi chú image đã đẩy
+        run: |
+          echo "### Image ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================
+  # 3. Deploy + smoke test
+  #    Chỉ chạy khi:
+  #      - Có secret RENDER_DEPLOY_HOOK (bật deploy thật), hoặc
+  #      - Chạy tay với input deploy = true
+  #    Nếu chưa cấu hình secret, job tự bỏ qua để pipeline không đỏ.
+  # ==========================================
+  deploy:
+    name: Deploy & smoke test
+    needs: images
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy == true || startsWith(github.ref, 'refs/tags/v') }}
+    steps:
+      - name: Kiểm tra đã cấu hình deploy chưa
+        id: guard
+        env:
+          RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          API_URL: ${{ vars.PRODUCTION_API_URL }}
+        run: |
+          if [ -n "$RENDER_HOOK" ] && [ -n "$API_URL" ]; then
+            echo "ready=true" >> $GITHUB_OUTPUT
+          else
+            echo "ready=false" >> $GITHUB_OUTPUT
+            echo "::notice::Chưa cấu hình RENDER_DEPLOY_HOOK / vars.PRODUCTION_API_URL - bỏ qua deploy."
+          fi
+
+      - name: Trigger deploy (Render)
+        if: steps.guard.outputs.ready == 'true'
+        env:
+          RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          # Render deploy hook trả 200/202 khi nhận yêu cầu
+          curl -fsS -X POST "$RENDER_HOOK"
+
+      - name: Smoke test GET /health
+        if: steps.guard.outputs.ready == 'true'
+        env:
+          API_URL: ${{ vars.PRODUCTION_API_URL }}
+        run: |
+          # Chờ tối đa 5 phút cho container khởi động + migrate xong
+          for i in $(seq 1 30); do
+            CODE=$(curl -s -o /tmp/health.json -w '%{http_code}' "$API_URL/health" || true)
+            if [ "$CODE" = "200" ]; then
+              echo "Health OK sau ${i} lần thử (~$((i * 10))s)"
+              cat /tmp/health.json
+              exit 0
+            fi
+            echo "Lần $i: HTTP $CODE - chờ 10s"
+            sleep 10
+          done
+          echo "::error::Smoke test thất bại: $API_URL/health không trả 200 trong 5 phút"
+          exit 1
+
+      - name: Ghi kết quả
+        if: steps.guard.outputs.ready == 'true'
+        run: echo "Deploy + smoke test hoàn tất cho $GITHUB_REF_NAME" >> $GITHUB_STEP_SUMMARY

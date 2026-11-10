@@ -44,9 +44,15 @@ BrewLite/
 
 ## Tài liệu dự án
 
+- **Đóng góp & quy ước làm việc:** [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md) (branch strategy, Conventional Commits, Definition of Done, PR checklist)
 - **Kiến trúc hệ thống (Architecture):** [`docs/architecture.md`](./docs/architecture.md) (Sơ đồ 3 lớp, ADR-001 đến 005, cấu trúc module)
+- **Kiến trúc tổng quan + chỉ mục ADR:** [`docs/architecture/overview.md`](./docs/architecture/overview.md) · [`docs/architecture/adr/README.md`](./docs/architecture/adr/README.md)
 - **Thiết kế CSDL (ERD):** [`docs/erd/erd.md`](./docs/erd/erd.md)
 - **Quy ước API (API Conventions):** [`docs/api-conventions.md`](./docs/api-conventions.md)
+- **Hợp đồng API:** [`docs/api-contract.md`](./docs/api-contract.md)
+- **Sơ đồ UML:** [`docs/diagrams/`](./docs/diagrams/) (Activity, Sequence, Class, **Deployment**)
+- **Triển khai (Deployment):** [`docs/deployment.md`](./docs/deployment.md) (môi trường, biến, thứ tự deploy, rollback)
+- **Kịch bản demo & phát hành:** [`docs/demo-script.md`](./docs/demo-script.md) · [`docs/release-notes.md`](./docs/release-notes.md)
 
 ## Giao diện quầy pha chế & tài khoản test
 

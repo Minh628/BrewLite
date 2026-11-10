@@ -200,17 +200,21 @@ docker compose up --build
 
 Healthcheck: Postgres `pg_isready` → backend `GET /health` → frontend `GET /`.
 
-### 4.2. Production (dự kiến)
+### 4.2. Production
 
-| Thành phần | Nền tảng dự kiến                    | Ghi chú                                           |
-| ---------- | ----------------------------------- | ------------------------------------------------- |
-| Web        | PaaS hỗ trợ Next.js (Render/Vercel) | HTTPS, `NEXT_PUBLIC_API_URL` trỏ API prod         |
-| API        | Container từ `backend/Dockerfile`   | HTTPS, `GET /health` 200, migrate trước khi start |
-| DB         | Managed Postgres                    | **Không** public port; chỉ nhận connection từ API |
-| Secret     | Env của platform / secret manager   | `JWT_SECRET`, `DATABASE_URL`                      |
-| Registry   | GHCR                                | Ảnh gắn tag commit SHA                            |
+Chi tiết đầy đủ (biến môi trường, thứ tự deploy, health check, rollback, checklist nộp): **[`docs/deployment.md`](../deployment.md)**. Sơ đồ: [`deployment.puml`](../diagrams/deployment.puml) / [`deployment.svg`](../diagrams/deployment.svg).
 
-> Nền tảng cuối cùng cần nhóm chốt trước 07/11 để hoàn tất `deployment.puml`, `docs/deployment.md` và `cd.yml` (T3.2/T5.3).
+| Thành phần | Nền tảng                    | Ghi chú                                                        |
+| ---------- | --------------------------- | -------------------------------------------------------------- |
+| Web (PWA)  | Vercel                      | HTTPS + CDN tự động; `NEXT_PUBLIC_API_URL` nhúng lúc **build** |
+| API        | Render Web Service (Docker) | Image từ GHCR; `GET /health` 200; migrate trước khi start      |
+| DB         | Neon PostgreSQL 16          | SSL bắt buộc; **không** public IP; chỉ API kết nối             |
+| Secret     | Env của platform            | `JWT_SECRET`, `DATABASE_URL`, `CORS_ORIGIN`                    |
+| Registry   | GHCR                        | Tag = commit SHA (+ semver) → nguồn sự thật để rollback        |
+
+Luồng CD (`.github/workflows/cd.yml`): `tag v*.*.*` → verify → build 2 image → push GHCR → trigger deploy → smoke test `/health`.
+
+> Phương án nền tảng là **đề xuất** để không chặn Task 3; nếu nhóm chốt platform khác, chỉ sửa nhãn node trong `.puml` + bảng trên, cấu trúc luồng không đổi.
 
 ---
 

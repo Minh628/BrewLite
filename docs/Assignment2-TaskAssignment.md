@@ -230,11 +230,11 @@ Assignment 2 nối tiếp đề tài BrewLite (Assignment 1) và yêu cầu nhó
 
 - [x] T3.1 Architecture overview (PR: ___)
 - [x] T3.1-b ADR ≥ 3 file (PR: ___)
-- [ ] T3.2 Deployment diagram + `docs/deployment.md` (PR: ___)
+- [x] T3.2 Deployment diagram + `docs/deployment.md` (PR: ___)
 
 ### Task 4 — Hoàng Tịnh + Trung Hiếu + Hải Lý
 
-- [ ] T4.1 Repo chuẩn + README + `.env.example` (PR: ___)
+- [x] T4.1 Repo chuẩn + README + `.env.example` (PR: ___)
 - [ ] T4.2 Toàn bộ docs Task 1–3 đã trong `docs/` qua PR (PR: ___)
 - [ ] T4.3-a BE `GET /products` + seed (PR: ___)
 - [ ] T4.3-b Unit test BE products (PR: ___)
@@ -254,7 +254,7 @@ Assignment 2 nối tiếp đề tài BrewLite (Assignment 1) và yêu cầu nhó
 - [ ] T5.2-c `GET /health` (PR: ___)
 - [ ] T5.2-d E2E test checkout (PR: ___)
 - [ ] T5.2 `docker-compose.yml` chạy web + api + db (PR: ___)
-- [ ] T5.3 CD pipeline đầy đủ (PR: ___)
+- [ ] T5.3 CD pipeline đầy đủ (PR: ___) — _đã có `cd.yml`: verify → build 2 image → push GHCR → deploy + smoke test; còn chờ platform + secret để bật deploy thật_
 - [ ] T5.4 Deploy production + URL HTTPS + release notes (PR: ___)
 - [ ] T5.4 Video demo end-to-end (link: ___)
 - [ ] T5.4 Sprint Review + Retrospective (PR: ___)

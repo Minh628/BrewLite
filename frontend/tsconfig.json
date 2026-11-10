@@ -29,5 +29,5 @@
     "next-env.d.ts",
     ".next-barista/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "e2e", "playwright.config.ts"]
 }
