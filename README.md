@@ -231,14 +231,15 @@ npm run perf:orders     # POST /orders có Bearer token
 
 Biến tùy chọn: `PERF_BASE_URL`, `PERF_DURATION` (giây, mặc định 20), `PERF_CONNECTIONS` (mặc định 10), `PERF_OUT` (ghi JSON kết quả). Script thoát mã 1 nếu p95 ≥ 500 ms hoặc có response không phải 2xx. Kết quả đo: [`docs/perf-report.md`](./docs/perf-report.md).
 
-## Chạy local (không Docker)
+## Chạy local
 
-Yêu cầu: Node.js 20+, npm 10+, Docker Desktop.
+Yêu cầu: Node.js 20+, npm 10+, PostgreSQL 16+ (cài local hoặc chạy bằng Docker Desktop).
 
 ```bash
 cp .env.example .env
 cp backend/.env.example backend/.env
-npm install
+npm ci
+# Nếu dùng Docker Desktop thay cho PostgreSQL cài local:
 npm run dev:db        # Postgres :5433 + Adminer :8080
 npm run db:generate
 npm run db:migrate
@@ -261,8 +262,11 @@ Thanh toán mock dùng thẻ `4242 4242 4242 4242` để thành công và
 Chạy kiểm thử giao diện đầu-cuối (cần database đã migrate/seed và Chromium của Playwright):
 
 ```powershell
+npx playwright install chromium
 npm run test:e2e --workspace @brewlite/frontend
 ```
+
+Playwright chạy checkout ở viewport mobile 375 × 667, giả lập phản hồi thanh toán thành công qua API nội bộ để không phụ thuộc VNPay Sandbox. Báo cáo HTML, ảnh chụp và video được lưu trong `frontend/playwright-report/` và `frontend/test-results/`. CI cũng chạy E2E và lưu các tệp này thành artifact.
 
 ## Chạy bằng Docker (dev)
 

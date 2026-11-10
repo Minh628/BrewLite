@@ -23,7 +23,7 @@ const eslintConfig = [
   },
   {
     // Bỏ qua các thư mục build và bộ nhớ tạm
-    ignores: ['.next/**', 'node_modules/**', 'dist/**'],
+    ignores: ['.next/**', 'node_modules/**', 'dist/**', 'playwright-report/**', 'test-results/**'],
   },
 ];
 

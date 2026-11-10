@@ -167,7 +167,7 @@ Assignment 2 nối tiếp đề tài BrewLite (Assignment 1) và yêu cầu nhó
 | T5.1-f | Giỏ hàng: thêm/sửa/xóa item, tính tổng, lưu `localStorage`, UI trống + đầy                                                                  | **10/11** | `apps/web/src/app/cart/*`                                 |
 | T5.1-g | Luồng auth + checkout: đăng ký, đăng nhập, lưu token an toàn (httpOnly nếu dùng cookie), form thanh toán mock, trang xác nhận + lịch sử đơn | **11/11** | `apps/web/src/app/(auth)/*`, `apps/web/src/app/orders/*`  |
 | T5.1-h | Validate & xử lý lỗi FE: hiện lỗi API, timeout, mất mạng, retry tay                                                                         | **12/11** | PR cập nhật `apps/web`                                    |
-| T5.2-d | **Ít nhất 1 test end-to-end (Playwright/Cypress)** cho luồng Menu → Chi tiết → Giỏ hàng → Đặt đơn → Xác nhận                                | **12/11** | `tests/e2e/checkout.spec.ts` + screenshot/video           |
+| T5.2-d | **Ít nhất 1 test end-to-end (Playwright/Cypress)** cho luồng Menu → Chi tiết → Giỏ hàng → Đặt đơn → Xác nhận                                | **12/11** | `frontend/e2e/checkout.spec.ts` + screenshot/video        |
 | T-Supp | Vẽ nháp Activity diagram theo luồng FE để Kiện Minh tinh chỉnh T2.1                                                                         | **06/11** | Nháp trong PR của Task 2.1                                |
 
 #### Tiêu chí nghiệm thu
@@ -252,7 +252,7 @@ Assignment 2 nối tiếp đề tài BrewLite (Assignment 1) và yêu cầu nhó
 - [ ] T5.1-g Auth + checkout + order history FE (PR: ___)
 - [ ] T5.2-a Unit + integration test BE (PR: ___)
 - [ ] T5.2-c `GET /health` (PR: ___)
-- [ ] T5.2-d E2E test checkout (PR: ___)
+- [x] T5.2-d E2E test checkout (PR: ___)
 - [ ] T5.2 `docker-compose.yml` chạy web + api + db (PR: ___)
 - [ ] T5.3 CD pipeline đầy đủ (PR: ___)
 - [ ] T5.4 Deploy production + URL HTTPS + release notes (PR: ___)
