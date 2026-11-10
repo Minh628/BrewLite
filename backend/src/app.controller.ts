@@ -1,25 +1,27 @@
-import { Controller, Get } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Res,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
+import { PrismaService } from './prisma/prisma.service';
 
 @ApiTags('Health')
 @Controller()
 export class AppController {
-  /**
-   * Endpoint gốc xác nhận backend đang chạy bình thường theo yêu cầu Task 1.2
-   */
+  constructor(private readonly prisma: PrismaService) {}
+
   @Get()
-  @ApiOperation({ summary: 'Kiểm tra backend đang chạy' })
-  @ApiOkResponse({ schema: { type: 'string', example: 'Hello BrewLite' } })
-  getHello(): string {
+  getHello() {
     return 'Hello BrewLite';
   }
 
-  /**
-   * Health check endpoint theo Sub-task 14.3
-   * Trả về HTTP 200 kèm thông tin trạng thái hoạt động của backend
-   */
   @Get('health')
-  @ApiOperation({ summary: 'Health check: trạng thái và uptime' })
+  @ApiOperation({
+    summary: 'Health check: backend, database và build version',
+  })
   @ApiOkResponse({
     schema: {
       example: {
@@ -27,15 +29,33 @@ export class AppController {
         timestamp: '2026-10-24T10:00:00.000Z',
         uptime: 123.45,
         service: 'brewlite-backend',
+        database: 'connected',
+        version: '1.0.0',
       },
     },
   })
-  getHealth() {
+  async getHealth(@Res({ passthrough: true }) response: Response) {
+    let database: 'connected' | 'disconnected' = 'connected';
+
+    try {
+      await this.prisma.$queryRaw<unknown[]>`SELECT 1`;
+    } catch {
+      database = 'disconnected';
+    }
+
+    const status = database === 'connected' ? 'ok' : 'error';
+
+    if (database === 'disconnected') {
+      response.status(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
     return {
-      status: 'ok',
+      status,
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       service: 'brewlite-backend',
+      database,
+      version: process.env.BUILD_VERSION || '1.0.0',
     };
   }
 }

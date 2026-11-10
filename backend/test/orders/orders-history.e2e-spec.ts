@@ -1,3 +1,4 @@
+
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { OrderStatus, Role } from '@prisma/client';
@@ -5,10 +6,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { HttpExceptionFilter } from '../../src/common/filters/http-exception.filter';
+import { OrdersService } from '../../src/orders/orders.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 
 /**
- * Test Task 9.2: GET /orders/me, GET /orders/:id, PATCH /orders/:id/status
+ * Test Task 9.2: GET /orders/me, GET /orders/:id,
+ * PATCH /orders/:id/status, GET /orders/queue,
+ * POST /orders/:id/cancel.
+ *
  * Dùng Prisma mock, không cần DB thật.
  */
 
@@ -100,20 +105,36 @@ describe('Orders history API (e2e) — Task 9.2', () => {
     await app.init();
 
     jwtService = app.get<JwtService>(JwtService);
-    customerToken = jwtService.sign({ sub: 7, email: 'customer@test.com', role: Role.CUSTOMER });
-    baristaToken = jwtService.sign({ sub: 99, email: 'barista@test.com', role: Role.BARISTA });
-    otherUserToken = jwtService.sign({ sub: 8, email: 'other@test.com', role: Role.CUSTOMER });
+    customerToken = jwtService.sign({
+      sub: 7,
+      email: 'customer@test.com',
+      role: Role.CUSTOMER,
+    });
+    baristaToken = jwtService.sign({
+      sub: 99,
+      email: 'barista@test.com',
+      role: Role.BARISTA,
+    });
+    otherUserToken = jwtService.sign({
+      sub: 8,
+      email: 'other@test.com',
+      role: Role.CUSTOMER,
+    });
   });
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   afterAll(async () => {
     await app.close();
   });
 
-  // ─── GET /orders/me ─────────────────────────────────────────────────────────
+  // ─── GET /orders/me ────────────────────────────────────────────────────────
 
   describe('GET /orders/me', () => {
     it('401 khi không có token', async () => {
@@ -196,16 +217,20 @@ describe('Orders history API (e2e) — Task 9.2', () => {
         .set('Authorization', `Bearer ${customerToken}`)
         .expect(200);
 
-      expect(res.body).toMatchObject({ page: 2, limit: 1, totalItems: 3, totalPages: 3 });
+      expect(res.body).toMatchObject({
+        page: 2,
+        limit: 1,
+        totalItems: 3,
+        totalPages: 3,
+      });
 
-      // Kiểm tra findMany được gọi với skip/take đúng
       expect(prismaMock.order.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ skip: 1, take: 1 }),
       );
     });
   });
 
-  // ─── GET /orders/:id ─────────────────────────────────────────────────────────
+  // ─── GET /orders/:id ───────────────────────────────────────────────────────
 
   describe('GET /orders/:id', () => {
     it('401 khi không có token', async () => {
@@ -272,7 +297,7 @@ describe('Orders history API (e2e) — Task 9.2', () => {
     });
   });
 
-  // ─── PATCH /orders/:id/status ────────────────────────────────────────────────
+  // ─── PATCH /orders/:id/status ──────────────────────────────────────────────
 
   describe('PATCH /orders/:id/status', () => {
     it('401 khi không có token', async () => {
@@ -301,20 +326,27 @@ describe('Orders history API (e2e) — Task 9.2', () => {
     });
 
     it('200 khi BARISTA chuyển PAID → PREPARING', async () => {
-      prismaMock.$transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
-        const tx = {
-          $queryRaw: jest
-            .fn()
-            .mockResolvedValue([{ id: 1002, status: OrderStatus.PAID, userId: 7, total: 178000 }]),
-          order: {
-            update: jest.fn().mockResolvedValue({
-              ...ORDER_PAID,
-              status: OrderStatus.PREPARING,
-            }),
-          },
-        };
-        return cb(tx);
-      });
+      prismaMock.$transaction.mockImplementation(
+        async (cb: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            $queryRaw: jest.fn().mockResolvedValue([
+              {
+                id: 1002,
+                status: OrderStatus.PAID,
+                userId: 7,
+                total: 178000,
+              },
+            ]),
+            order: {
+              update: jest.fn().mockResolvedValue({
+                ...ORDER_PAID,
+                status: OrderStatus.PREPARING,
+              }),
+            },
+          };
+          return cb(tx);
+        },
+      );
 
       const res = await request(app.getHttpServer())
         .patch('/orders/1002/status')
@@ -330,17 +362,22 @@ describe('Orders history API (e2e) — Task 9.2', () => {
     });
 
     it('409 INVALID_TRANSITION khi chuyển trạng thái không hợp lệ (PENDING → READY)', async () => {
-      prismaMock.$transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
-        const tx = {
-          $queryRaw: jest
-            .fn()
-            .mockResolvedValue([
-              { id: 1001, status: OrderStatus.PENDING, userId: 7, total: 178000 },
+      prismaMock.$transaction.mockImplementation(
+        async (cb: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            $queryRaw: jest.fn().mockResolvedValue([
+              {
+                id: 1001,
+                status: OrderStatus.PENDING,
+                userId: 7,
+                total: 178000,
+              },
             ]),
-          order: { update: jest.fn() },
-        };
-        return cb(tx);
-      });
+            order: { update: jest.fn() },
+          };
+          return cb(tx);
+        },
+      );
 
       const res = await request(app.getHttpServer())
         .patch('/orders/1001/status')
@@ -349,6 +386,77 @@ describe('Orders history API (e2e) — Task 9.2', () => {
         .expect(409);
 
       expect(res.body.error).toBe('INVALID_TRANSITION');
+    });
+  });
+
+  // ─── GET /orders/queue ─────────────────────────────────────────────────────
+
+  describe('GET /orders/queue', () => {
+    it('401 khi không có token', async () => {
+      await request(app.getHttpServer())
+        .get('/orders/queue')
+        .expect(401);
+    });
+
+    it('403 khi CUSTOMER truy cập hàng đợi pha chế', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/orders/queue')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .expect(403);
+
+      expect(res.body.code).toBe('FORBIDDEN_ROLE');
+    });
+
+    it('200 khi BARISTA truy cập hàng đợi pha chế', async () => {
+      const ordersService = app.get(OrdersService);
+      const spy = jest.spyOn(ordersService, 'getQueue').mockResolvedValue([]);
+
+      const res = await request(app.getHttpServer())
+        .get('/orders/queue')
+        .set('Authorization', `Bearer ${baristaToken}`)
+        .expect(200);
+
+      expect(res.body).toEqual([]);
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
+  // ─── POST /orders/:id/cancel ───────────────────────────────────────────────
+
+  describe('POST /orders/:id/cancel', () => {
+    it('401 khi không có token', async () => {
+      await request(app.getHttpServer())
+        .post('/orders/1001/cancel')
+        .send({ reason: 'Customer request' })
+        .expect(401);
+    });
+
+    it('201 khi chủ đơn hủy đơn thành công', async () => {
+      const ordersService = app.get(OrdersService);
+      const spy = jest.spyOn(ordersService, 'cancel').mockResolvedValue({
+        orderId: 1001,
+        code: '#1001',
+        status: OrderStatus.CANCELLED,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/orders/1001/cancel')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({ reason: 'Customer request' })
+        .expect(201);
+
+      expect(res.body).toMatchObject({
+        orderId: 1001,
+        code: '#1001',
+        status: OrderStatus.CANCELLED,
+      });
+
+      expect(spy).toHaveBeenCalledWith(
+        7,
+        Role.CUSTOMER,
+        1001,
+        'Customer request',
+      );
     });
   });
 });
