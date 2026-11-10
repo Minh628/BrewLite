@@ -163,3 +163,82 @@ curl -X POST http://localhost:3001/orders \
 - `docs/deployment.md` — biến môi trường, Adminer (M5)
 - `docs/demo-script.md` — kịch bản demo cuối
 - `docs/erd/erd_v2.md` — ERD
+
+---
+
+# BrewLite — Release Notes v1.1.0 (post-Sprint 3)
+
+> **Người viết:** M1 (Thanh Tùng) — sub-task T5.4-a. **Ngày lập:** 2026-11-07. **Trạng thái:** dự thảo, cập nhật lần cuối 14/11.
+
+## A. Highlights
+
+Tiếp nối v1.0.0, đợt post-Sprint-3 bổ sung các cải tiến hướng tới bàn giao Assignment 2 (deadline 14/11):
+
+| Nhóm           | Thay đổi mới so với v1.0.0                                                                                           |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| UI quầy        | **Thêm `/barista`** — Kanban 3 cột Chờ pha / Đang pha / Sẵn sàng, polling 10 s, nút chuyển trạng thái                |
+| API quầy       | **Thêm `GET /orders/queue`** — trả đơn PAID/PREPARING/READY FIFO, RolesGuard BARISTA/ADMIN                           |
+| Auth response  | `/auth/login` + `/auth/register` trả thêm `user.role` để FE route guard                                              |
+| FE Header      | Hiện nút **"Quầy pha chế"** khi user là BARISTA/ADMIN; dropdown profile hiện role tiếng Việt                         |
+| Dev setup      | **Script `npm run dev:barista`** chạy FE instance thứ 2 trên port `3002` (tách localStorage với khách `:3000`)       |
+| Fix hooks      | **`OrderStatusService.registerHooks`** đổi sang mảng handler — sửa lỗi silent khi nhiều hook cùng slot `onCancelled` |
+| Fix DTO        | **`MAX_QTY` khôi phục 20** (JSDoc + test đã khớp lại)                                                                |
+| Fix middleware | Gỡ bỏ chặn `/login` khi đã login — cho phép switch customer ↔ barista account                                        |
+
+## B. Bug fixes quan trọng
+
+| Commit    | Mô tả                                                                                                 |
+| --------- | ----------------------------------------------------------------------------------------------------- |
+| `d24fd82` | fix(test): đồng bộ unit/e2e specs với thay đổi Sprint3 M5 (inStock, orders/queue, loyalty.db guard)   |
+| `e85f59a` | fix: compose hooks + thêm `inStock` vào payload add-to-cart (root cause CI loyalty.db PAID→CANCELLED) |
+| `9225c0d` | fix(orders): khôi phục `MAX_QTY = 20`                                                                 |
+| `70461ed` | feat(dev): dev:barista chạy FE riêng port 3002                                                        |
+| `31a28ab` | fix(barista): dùng returnUrl thay vì next để khớp login page                                          |
+| `9fabc4e` | fix(login): fallback returnUrl /checkout → /menu                                                      |
+| `f31d9fb` | fix(middleware): cho phép user đã login vẫn vào /login                                                |
+| `817a12e` | feat(ui): thêm nút chuyển giữa /barista và /menu cho nhân viên                                        |
+| `a195818` | docs(readme): cập nhật UI quầy, dev:barista, tài khoản test, endpoint                                 |
+
+## C. Tài liệu Task 1 mới (T1.1–T1.3, T-Trace, T5.4-a)
+
+| File                                            | Nội dung                                                                 |
+| ----------------------------------------------- | ------------------------------------------------------------------------ |
+| `docs/requirements/context-and-scope.md`        | 7 stakeholder, in/out-scope, 8 giả định, 8 ràng buộc, 8 rủi ro           |
+| `docs/requirements/srs.md`                      | 28 FR + 17 NFR, MoSCoW, tiêu chí test được, trích file:line thực tế      |
+| `docs/requirements/uc-checkout.md`              | UC-06 chi tiết: 13 bước main + 4 nhánh alt + 11 exception                |
+| `docs/diagrams/use-case-overview.puml` + `.svg` | Use-case diagram tổng quát (16 UC, 3 actor + external gateway)           |
+| `docs/diagrams/uc-checkout.puml` + `.svg`       | Zoom UC-06 (include/extend)                                              |
+| `docs/traceability-matrix.md`                   | FR/NFR ↔ UC ↔ Diagram ↔ Code/API ↔ Test — 303 backend + 59 frontend test |
+| `docs/sprint-review.md`                         | Biên bản review Sprint 3 (02-05/11)                                      |
+| `docs/sprint-retro.md`                          | Retrospective Sprint 3 với 8 action items                                |
+
+## D. Test & benchmark (không đổi so với v1.0.0)
+
+- **303/303 backend tests pass** (27 suite) tại commit `a195818`
+- **59/59 frontend tests pass** (5 integration skip vì cần `API_E2E_URL`)
+- Benchmark p95: `GET /products` 7.2 ms (10 conn), `POST /orders` 16.0 ms (10 conn)
+
+## E. Known limitations trong v1.1.0
+
+- `docs/deployment.md` (31.2) chưa tồn tại — chờ M5
+- Migration drift `backend/prisma/migrations/20261107035437_init/` chưa được clean up
+- CD pipeline + deploy production (T5.3, T5.4-b) chưa hoàn thành — kế hoạch 12-13/11
+- Playwright E2E (T5.2-d) chưa có — kế hoạch 12/11
+- UI nhập mã giảm giá ở checkout (PB-27) chưa có — chuyển "Sau MVP"
+
+## F. Upgrade guide
+
+Chạy sau khi pull:
+
+```bash
+# Cập nhật backend/.env (gitignored) thêm CORS_ORIGIN cho port 3002 nếu chưa có
+# Dòng mới:
+CORS_ORIGIN=http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002
+
+# Chạy 3 terminal:
+npm run dev:db        # Postgres :5433 + Adminer :8080
+npm run dev           # BE :3001 + FE khách :3000
+npm run dev:barista   # FE quầy :3002
+
+# Login barista@brewlite.vn / matkhau123 để test /barista
+```
