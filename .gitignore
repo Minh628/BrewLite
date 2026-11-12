@@ -14,5 +14,10 @@ prisma/*.db
 .vscode/
 .agents/
 /frontend/test-results/
+<<<<<<< HEAD
 graphify-out/
 .archify/
+=======
+/frontend/playwright-report/
+graphify-out/
+>>>>>>> origin/feature/t5.2-d-playwright-e2e

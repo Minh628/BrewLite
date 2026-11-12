@@ -1,0 +1,60 @@
+@startuml UC-06 Đặt và thanh toán đơn hàng (T1.3)
+
+skinparam monochrome false
+skinparam shadowing false
+skinparam defaultFontName Inter, Helvetica, sans-serif
+skinparam ArrowColor #555
+skinparam ActorBackgroundColor #FEF3E7
+skinparam UsecaseBackgroundColor #FFFDF7
+skinparam UsecaseBorderColor #B6855C
+skinparam PackageBackgroundColor #F6EFE4
+skinparam PackageBorderColor #B6855C
+left to right direction
+
+title UC-06 Đặt và thanh toán đơn hàng — zoom in\nFR-13..FR-20 · docs/requirements/uc-checkout.md
+
+actor "Khách hàng\n(Customer)" as Customer
+actor "Mock Payment Gateway\n(external)" as Gateway
+
+rectangle "BrewLite System (scope UC-06)" {
+  usecase "**UC-06**\nĐặt và thanh toán đơn hàng" as UC06
+  usecase "UC-05 Áp mã giảm giá\n(PromotionsService)" as UC05
+  usecase "UC-08 Đăng nhập\n(bắt buộc JWT)" as UC08
+  usecase "UC-04 Quản lý giỏ hàng\n(zustand + localStorage)" as UC04
+  usecase "UC-11 Theo dõi trạng thái đơn\n(polling 5s)" as UC11
+
+  usecase "E-OOS Xử lý OUT_OF_STOCK\n(StockService 409)" as E_OOS
+  usecase "E-PROMO Xử lý promo fail\n(EXHAUSTED/EXPIRED/MIN_ORDER)" as E_PROMO
+  usecase "E-PAYFAIL Xử lý thẻ bị từ chối\n(PAYMENT_FAILED + nút Thử lại)" as E_PAYFAIL
+  usecase "E-IDEM Xử lý retry cùng key\n(fast-path + unique constraint)" as E_IDEM
+}
+
+Customer --> UC06
+
+UC06 ..> UC08 : <<include>>\n(JWT bắt buộc)
+UC06 ..> UC04 : <<include>>\n(đọc cart.lines)
+UC06 ..> UC05 : <<extend>>\n(nếu có promoCode)
+UC06 ..> UC11 : <<include>>\n(sau khi PAID, mở trang xác nhận polling)
+
+UC06 ..> E_OOS : <<extend>>\n(exception E4)
+UC06 ..> E_PROMO : <<extend>>\n(exception E5)
+UC06 ..> E_PAYFAIL : <<extend>>\n(alt A1)
+UC06 ..> E_IDEM : <<extend>>\n(alt A2)
+
+UC06 --> Gateway : POST /payments\n(CARD/WALLET)
+
+note bottom of UC06
+  Chi tiết 13 bước main flow + 4 nhánh alt + 11 exception
+  tại docs/requirements/uc-checkout.md
+  Endpoints: POST /orders, POST /payments
+  Idempotency keys: orderKey (phiên) + paymentKey (mỗi lần thử)
+end note
+
+note bottom of Gateway
+  MockPaymentGateway (backend/src/payments/mock-payment.gateway.ts)
+  4242 4242 4242 4242 → SUCCEEDED
+  4000 0000 0000 0002 → FAILED
+  env MOCK_WALLET_FAIL=true → WALLET fail
+end note
+
+@enduml

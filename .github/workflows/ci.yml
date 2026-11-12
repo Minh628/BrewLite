@@ -93,9 +93,26 @@ jobs:
         # Tự động thực thi mọi lệnh bên trong thư mục frontend/
         working-directory: frontend
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: brewlite
+          POSTGRES_PASSWORD: brewlite_password
+          POSTGRES_DB: brewlite_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       CI: 'true'
       HUSKY: '0'
+      DATABASE_URL: postgresql://brewlite:brewlite_password@localhost:5432/brewlite_test?schema=public
+      JWT_SECRET: super-secret-key-for-test-environment-min-32-chars
 
     steps:
       - name: Checkout mã nguồn
@@ -121,3 +138,28 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001
+
+      - name: Khởi tạo Prisma Client và cơ sở dữ liệu E2E
+        run: |
+          npx prisma generate --schema ../backend/prisma/schema.prisma
+          npx prisma migrate deploy --schema ../backend/prisma/schema.prisma
+          npm --prefix .. run prisma:seed --workspace @brewlite/backend
+
+      - name: Cài Chromium cho Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Chạy E2E checkout
+        run: npm run test:e2e
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+
+      - name: Lưu báo cáo và media Playwright
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-checkout-${{ github.run_id }}
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

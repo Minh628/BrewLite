@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="1067px" preserveAspectRatio="none" style="width:1460px;height:1067px;" version="1.1" viewBox="0 0 1460 1067" width="1460px" zoomAndPan="magnify"><defs/><g><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="1412" x="5" y="17.8281">An error has occured : net.sourceforge.plantuml.vizjs.GraphvizJsRuntimeException: java.util.concurrent.ExecutionException: java.lang.NullPointerException: Cannot invoke "net.sourceforge.plantuml.vizjs.VizJsEngine.execute(String)" because "engine" is null</text><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="158" x="5" y="34.1722">Is this a non-zero-sum game?</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="0" x="8" y="50.5163"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="234" x="5" y="66.8604">Diagram size: 102 lines / 2845 characters.</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="0" x="8" y="83.2045"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="340" x="5" y="99.5487">PlantUML (1.2019.06) cannot parse result from dot/GraphViz.</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="312" x="5" y="115.8928">This version of PlantUML is 2726 days old, so you should</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="308" x="11" y="132.2369">consider upgrading from http://plantuml.com/download</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="0" x="8" y="148.581"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="432" x="5" y="164.9251">Please go to http://plantuml.com/graphviz-dot to check your GraphViz version.</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="0" x="8" y="181.2692"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="250" x="5" y="197.6133">Java Runtime: OpenJDK Runtime Environment</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="173" x="5" y="213.9575">JVM: OpenJDK 64-Bit Server VM</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="250" x="5" y="230.3016">Java Version: 21.0.13.0.3+1-1-26.04.1-Ubuntu</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="135" x="5" y="246.6457">Operating System: Linux</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="158" x="5" y="262.9898">OS Version: 7.0.0-42-generic</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="134" x="5" y="279.3339">Default Encoding: UTF-8</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="75" x="5" y="295.678">Language: en</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="66" x="5" y="312.0221">Country: US</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="94" x="5" y="328.3663">Machine: 4T-Dev</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="164" x="5" y="344.7104">PLANTUML_LIMIT_SIZE: 4096</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="82" x="5" y="361.0545">Processors: 14</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="159" x="5" y="377.3986">Max Memory: 3,875,536,896</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="153" x="5" y="393.7427">Total Memory: 245,366,784</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="150" x="5" y="410.0868">Free Memory: 137,312,232</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="154" x="5" y="426.4309">Used Memory: 108,054,552</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="126" x="5" y="442.7751">Thread Active Count: 2</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="0" x="8" y="459.1192"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="132" x="5" y="475.4633">This may be caused by :</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="108" x="8" y="491.8074">- a bug in PlantUML</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="131" x="8" y="508.1515">- a problem in GraphViz</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="0" x="8" y="524.4956"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="263" x="5" y="540.8397">You should send this diagram and this image to</text><text fill="#000000" font-family="sans-serif" font-size="12" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="130" x="271" y="540.8397">plantuml@gmail.com</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="12" x="404" y="540.8397">or</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="38" x="5" y="557.1839">post to</text><text fill="#000000" font-family="sans-serif" font-size="12" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="143" x="46" y="557.1839">http://plantuml.com/qa</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="101" x="192" y="557.1839">to solve this issue.</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="359" x="5" y="573.528">You can try to turn arround this issue by simplifing your diagram.</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="0" x="8" y="589.8721"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="1285" x="5" y="606.2162">net.sourceforge.plantuml.vizjs.GraphvizJsRuntimeException: java.util.concurrent.ExecutionException: java.lang.NullPointerException: Cannot invoke "net.sourceforge.plantuml.vizjs.VizJsEngine.execute(String)" because "engine" is null</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="405" x="11" y="622.5603">net.sourceforge.plantuml.vizjs.GraphvizJs.createFile3(GraphvizJs.java:96)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="459" x="11" y="638.9044">net.sourceforge.plantuml.svek.DotStringFactory.getSvg(DotStringFactory.java:315)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="538" x="11" y="655.2485">net.sourceforge.plantuml.svek.GeneralImageBuilder.buildImage(GeneralImageBuilder.java:199)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="648" x="11" y="671.5927">net.sourceforge.plantuml.svek.CucaDiagramFileMakerSvek.createFileInternal(CucaDiagramFileMakerSvek.java:105)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="597" x="11" y="687.9368">net.sourceforge.plantuml.svek.CucaDiagramFileMakerSvek.createFile(CucaDiagramFileMakerSvek.java:71)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="564" x="11" y="704.2809">net.sourceforge.plantuml.cucadiagram.CucaDiagram.exportDiagramInternal(CucaDiagram.java:379)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="459" x="11" y="720.625">net.sourceforge.plantuml.UmlDiagram.exportDiagramNow(UmlDiagram.java:202)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="480" x="11" y="736.9691">net.sourceforge.plantuml.AbstractPSystem.exportDiagram(AbstractPSystem.java:135)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="501" x="11" y="753.3132">net.sourceforge.plantuml.SourceStringReader.outputImage(SourceStringReader.java:154)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="323" x="11" y="769.6573">net.sourceforge.plantuml.Pipe.managePipe(Pipe.java:110)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="317" x="11" y="786.0015">net.sourceforge.plantuml.Run.managePipe(Run.java:359)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="275" x="11" y="802.3456">net.sourceforge.plantuml.Run.main(Run.java:166)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="0" x="11" y="818.6897"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="1010" x="5" y="835.0338">Caused by java.util.concurrent.ExecutionException: java.lang.NullPointerException: Cannot invoke "net.sourceforge.plantuml.vizjs.VizJsEngine.execute(String)" because "engine" is null</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="387" x="11" y="851.3779">java.base/java.util.concurrent.FutureTask.report(FutureTask.java:122)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="370" x="11" y="867.722">java.base/java.util.concurrent.FutureTask.get(FutureTask.java:191)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="405" x="11" y="884.0661">net.sourceforge.plantuml.vizjs.GraphvizJs.createFile3(GraphvizJs.java:91)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="459" x="11" y="900.4103">net.sourceforge.plantuml.svek.DotStringFactory.getSvg(DotStringFactory.java:315)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="538" x="11" y="916.7544">net.sourceforge.plantuml.svek.GeneralImageBuilder.buildImage(GeneralImageBuilder.java:199)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="648" x="11" y="933.0985">net.sourceforge.plantuml.svek.CucaDiagramFileMakerSvek.createFileInternal(CucaDiagramFileMakerSvek.java:105)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="597" x="11" y="949.4426">net.sourceforge.plantuml.svek.CucaDiagramFileMakerSvek.createFile(CucaDiagramFileMakerSvek.java:71)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="564" x="11" y="965.7867">net.sourceforge.plantuml.cucadiagram.CucaDiagram.exportDiagramInternal(CucaDiagram.java:379)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="459" x="11" y="982.1308">net.sourceforge.plantuml.UmlDiagram.exportDiagramNow(UmlDiagram.java:202)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="480" x="11" y="998.4749">net.sourceforge.plantuml.AbstractPSystem.exportDiagram(AbstractPSystem.java:135)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="501" x="11" y="1014.8191">net.sourceforge.plantuml.SourceStringReader.outputImage(SourceStringReader.java:154)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="323" x="11" y="1031.1632">net.sourceforge.plantuml.Pipe.managePipe(Pipe.java:110)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="317" x="11" y="1047.5073">net.sourceforge.plantuml.Run.managePipe(Run.java:359)</text><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="275" x="11" y="1063.8514">net.sourceforge.plantuml.Run.main(Run.java:166)</text><image height="43" width="44" x="1416" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAArCAYAAAADgWq5AAABuUlEQVR4Xu3XgVHDMAwFUI/ACB2lI7BCRsoIXaEjMAIjMEIWKOdghZ9fxZF8tpOD6u5fS6rYr8L0Sgj/uS6X94c84vN110kqwt5uYYbGR3yOb+DwEgwjtZ9PgWagBsUpH4pmlBb+DeA1Xq9p4cQYZE1XtEDv4zinFN4Fjdivj/sSgTNqK9LbFM1QbdIMy6UpGrGCm6ZpTumR6ILFyWLkOoNy6YLFCfNr1mMh9/JeVYpRe8mhq0FziwjYgsY/PkRboZaeBZRrzqHlOkI5vJ5WFsdcsSFuvNcomyOQkeE6PsLwubuWVlaHvTEVAhG5yvX3jfD9W2V2SCNPay8qlAPwvchxm9fOVWzAM/m0KQGW8GtbMfTi/nXBMV6wIUVg65EoAhuOhutImD5OQvqcLABb17Y6fiDGcqPTdHkdrax9rvKCmyA89QK3rhe4dXnBnk+JJuUGDwdOeYX9y+DDjkUxeDhgyk9YJ/ocYAW2mZ7HQsV60Km3K1hLFpyAWnj9qhU34P+U+Qv/Cg5Q7JeYv/OW1BZWBSSw657axZvzxpJlymm65ntqFm+cA8jE+B7u0+7hfYtLAK3D++bqG4XRuzBCc0hsAAAAAElFTkSuQmCC" y="6"/><!--
+@startuml BrewLite — Use-case diagram tổng quát (T1.2)
+
+skinparam monochrome false
+skinparam shadowing false
+skinparam defaultFontName Inter, Helvetica, sans-serif
+skinparam ArrowColor #555
+skinparam ActorBackgroundColor #FEF3E7
+skinparam UsecaseBackgroundColor #FFFDF7
+skinparam UsecaseBorderColor #B6855C
+skinparam PackageBackgroundColor #F6EFE4
+skinparam PackageBorderColor #B6855C
+left to right direction
+
+title BrewLite — Use-case diagram tổng quát (MVP)\nNguồn: FR-01..FR-28 trong docs/requirements/srs.md
+
+actor "Khách hàng\n(Customer)" as Customer
+actor "Nhân viên quầy\n(Barista)" as Barista
+actor "Quản lý\n(Admin)" as Admin
+
+Admin - -|> Barista : kế thừa quyền
+
+rectangle "BrewLite System" as System {
+
+  package "Khám phá sản phẩm" as PkgBrowse {
+    usecase "UC-01 Xem menu" as UC01
+    usecase "UC-02 Lọc / Tìm" as UC02
+    usecase "UC-03 Xem chi tiết sản phẩm" as UC03
+  }
+
+  package "Giỏ & Checkout" as PkgCart {
+    usecase "UC-04 Quản lý giỏ hàng" as UC04
+    usecase "UC-05 Áp mã giảm giá" as UC05
+    usecase "UC-06 Đặt và thanh toán đơn hàng\n(**use-case trọng tâm**)" as UC06
+  }
+
+  package "Xác thực" as PkgAuth {
+    usecase "UC-07 Đăng ký" as UC07
+    usecase "UC-08 Đăng nhập" as UC08
+    usecase "UC-09 Xem profile /auth/me" as UC09
+  }
+
+  package "Đơn của khách" as PkgOrders {
+    usecase "UC-10 Xem lịch sử đơn" as UC10
+    usecase "UC-11 Theo dõi trạng thái đơn" as UC11
+    usecase "UC-12 Hủy đơn (PENDING)" as UC12
+  }
+
+  package "Quầy pha chế" as PkgBarista {
+    usecase "UC-13 Xem hàng đợi quầy" as UC13
+    usecase "UC-14 Chuyển trạng thái đơn" as UC14
+    usecase "UC-15 Hủy đơn (PAID+)" as UC15
+  }
+
+  package "Quản lý dữ liệu\n(ngoài UI — qua Adminer / prisma studio)" as PkgAdmin {
+    usecase "UC-16 Xem / sửa dữ liệu\n(menu, promotion, tồn kho)" as UC16
+  }
+}
+
+actor "Mock Payment Gateway\n(external)" as Gateway
+
+Customer - -> UC01
+Customer - -> UC02
+Customer - -> UC03
+Customer - -> UC04
+Customer - -> UC05
+Customer - -> UC06
+Customer - -> UC07
+Customer - -> UC08
+Customer - -> UC09
+Customer - -> UC10
+Customer - -> UC11
+Customer - -> UC12
+
+Barista - -> UC08
+Barista - -> UC13
+Barista - -> UC14
+Barista - -> UC15
+
+Admin - -> UC16
+
+UC06 ..> UC08 : <<include>>\n(bắt buộc login)
+UC06 ..> UC05 : <<extend>>\n(nếu có promoCode)
+UC12 ..> UC08 : <<include>>
+UC11 ..> UC08 : <<include>>
+UC10 ..> UC08 : <<include>>
+UC13 ..> UC08 : <<include>>\n(JWT role BARISTA/ADMIN)
+UC14 ..> UC08 : <<include>>
+UC15 ..> UC08 : <<include>>
+
+UC06 - -> Gateway : POST /payments
+
+note bottom of UC06
+  Luồng chính: FR-13..FR-20
+  Chi tiết tại docs/requirements/uc-checkout.md (T1.3)
+end note
+
+note top of PkgAdmin
+  Theo BrewLite-Sprint3.md mục 3.2: Admin KHÔNG có UI riêng.
+  Dùng Adminer (:8080) hoặc `npx prisma studio`.
+end note
+
+@enduml
+
+PlantUML version 1.2019.06(Sat May 25 00:10:25 ICT 2019)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.13.0.3+1-1-26.04.1-Ubuntu
+Operating System: Linux
+OS Version: 7.0.0-42-generic
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
