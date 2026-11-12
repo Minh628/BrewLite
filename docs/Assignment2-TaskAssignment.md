@@ -215,10 +215,10 @@ Assignment 2 nối tiếp đề tài BrewLite (Assignment 1) và yêu cầu nhó
 
 ### Task 1 — Thanh Tùng
 
-- [ ] T1.1 `docs/requirements/context-and-scope.md` (PR: ___)
-- [ ] T1.2 SRS + use-case overview (PR: ___)
-- [ ] T1.3 Đặc tả UC-Checkout (PR: ___)
-- [ ] Traceability matrix v1 (PR: ___)
+- [x] T1.1 `docs/requirements/context-and-scope.md` (PR: ___)
+- [x] T1.2 SRS + use-case overview (PR: ___)
+- [x] T1.3 Đặc tả UC-Checkout (PR: ___)
+- [x] Traceability matrix v1 (PR: ___)
 
 ### Task 2 — Kiện Minh
 
@@ -235,29 +235,29 @@ Assignment 2 nối tiếp đề tài BrewLite (Assignment 1) và yêu cầu nhó
 ### Task 4 — Hoàng Tịnh + Trung Hiếu + Hải Lý
 
 - [x] T4.1 Repo chuẩn + README + `.env.example` (PR: ___)
-- [ ] T4.2 Toàn bộ docs Task 1–3 đã trong `docs/` qua PR (PR: ___)
-- [ ] T4.3-a BE `GET /products` + seed (PR: ___)
-- [ ] T4.3-b Unit test BE products (PR: ___)
-- [ ] T4.3-c FE `/menu` + loading/empty/error (PR: ___)
-- [ ] T4.3-d Component test FE (PR: ___)
+- [x] T4.2 Toàn bộ docs Task 1–3 đã trong `docs/` qua PR (PR: ___)
+- [x] T4.3-a BE `GET /products` + seed (PR: ___)
+- [ ] T4.3-b Unit test BE products (PR: ___) — _CHƯA: chưa có `products.service.spec.ts`, chỉ có e2e `backend/test/products`_
+- [x] T4.3-c FE `/menu` + loading/empty/error (PR: ___)
+- [ ] T4.3-d Component test FE (PR: ___) — _CHƯA đủ: mới có `ProductGrid.spec.tsx`, thiếu test cho `MenuList`_
 - [x] T4.4 CI xanh + screenshot CI đỏ chặn merge (PR: ___)
 
 ### Task 5 — cả nhóm
 
-- [ ] T5.1-a Auth JWT (PR: ___)
+- [x] T5.1-a Auth JWT (PR: ___)
 - [x] T5.1-b Payment mock (`backend/src/payments/mock-payment.gateway.ts`)
-- [ ] T5.1-c Order flow (PR: ___)
-- [ ] T5.1-e Product detail (size/topping) (PR: ___)
-- [ ] T5.1-f Cart (PR: ___)
-- [ ] T5.1-g Auth + checkout + order history FE (PR: ___)
+- [x] T5.1-c Order flow (PR: ___)
+- [x] T5.1-e Product detail (size/topping) (PR: ___)
+- [x] T5.1-f Cart (PR: ___)
+- [x] T5.1-g Auth + checkout + order history FE (PR: ___)
 - [x] T5.2-a Unit + integration test BE (`tests/integration/checkout-payment.spec.ts`)
-- [ ] T5.2-c `GET /health` (PR: ___)
+- [x] T5.2-c `GET /health` (PR: ___)
 - [x] T5.2-d E2E test checkout (PR: ___)
-- [ ] T5.2 `docker-compose.yml` chạy web + api + db (PR: ___)
-- [ ] T5.3 CD pipeline đầy đủ (PR: ___) — _đã có `cd.yml`: verify → build 2 image → push GHCR → deploy + smoke test; còn chờ platform + secret để bật deploy thật_
-- [ ] T5.4 Deploy production + URL HTTPS + release notes (PR: ___)
-- [ ] T5.4 Video demo end-to-end (link: ___)
-- [ ] T5.4 Sprint Review + Retrospective (PR: ___)
+- [x] T5.2 `docker-compose.yml` chạy web + api + db (PR: ___)
+- [ ] T5.3 CD pipeline đầy đủ + `docs/runbook-rollback.md` (PR: ___) — _đã có `cd.yml`: verify → build 2 image → push GHCR → deploy + smoke test; còn chờ platform + secret để bật deploy thật_
+- [ ] T5.4 Deploy production + URL HTTPS + release notes (PR: ___) — _CHƯA: cần chốt platform + URL; xem `docs/deployment.md` §8_
+- [ ] T5.4 Video demo end-to-end (link: ___) — _TODO: quay video, điền vào `docs/demo.md`_
+- [x] T5.4 Sprint Review + Retrospective (PR: ___)
 
 ---
 
