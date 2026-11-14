@@ -90,6 +90,10 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (response.status === 401) {
+    // Nếu đang ở API đăng nhập thì trả về thông báo sai tài khoản/mật khẩu thay vì báo hết hạn phiên
+    if (path.startsWith('/auth/login')) {
+      throw new ApiError('Tài khoản hoặc mật khẩu sai.', 401);
+    }
     // Chỉ xoá session khi request này THỰC SỰ ĐÃ GỬI TOKEN mà backend từ chối
     // Tránh việc xoá nhầm localStorage khi request vừa mount chưa kịp gắn token
     if (typeof window !== 'undefined' && token) {

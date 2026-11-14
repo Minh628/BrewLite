@@ -14,7 +14,7 @@
 | 2   | Seed lại DB để dữ liệu sạch (tồn kho, lượt mã, điểm = 0)                                                                    | M1        |
 | 3   | Mở sẵn 5 tab: (a) UI BrewLite, (b) Swagger `/api-docs`, (c) Adminer `:8080`, (d) terminal `npm test`, (e) trang lịch sử đơn | M1        |
 | 4   | Đăng nhập sẵn bằng `customer@brewlite.vn` / `Password123` ở tab UI                                                          | M4        |
-| 5   | Kiểm tra thẻ test `4000 0000 0000 0002` và mã `BREW10` còn lượt                                                             | M3        |
+| 5   | Kiểm tra cấu hình VNPay Sandbox (`TMN_CODE`, `HASH_SECRET`) và mã `BREW10` còn lượt                                         | M3        |
 
 **Tài khoản test**
 
@@ -27,13 +27,13 @@
 
 **Dữ liệu test**
 
-| Mục                   | Giá trị                                                            |
-| --------------------- | ------------------------------------------------------------------ |
-| Thẻ thành công        | `4242 4242 4242 4242`                                              |
-| Thẻ thất bại          | `4000 0000 0000 0002` (lý do "Thẻ bị từ chối")                     |
-| Mã giảm giá dùng được | `BREW10` (10%, trần 20.000đ) · `GIAM15K` (15.000đ, đơn ≥ 100.000đ) |
-| Mã giảm giá lỗi       | `HETHAN` (hết hạn → `PROMO_EXPIRED`)                               |
-| Món hết hàng          | "Bạc xỉu" (tồn kho 0)                                              |
+| Mục                   | Giá trị                                                                   |
+| --------------------- | ------------------------------------------------------------------------- |
+| VNPay thành công      | `vnp_ResponseCode=00` (qua `/payments/vnpay/create-url` → `vnpay-return`) |
+| VNPay thất bại / hủy  | `vnp_ResponseCode=24` (khách hủy) hoặc `99` → `PAYMENT_FAILED`            |
+| Mã giảm giá dùng được | `BREW10` (10%, trần 20.000đ) · `GIAM15K` (15.000đ, đơn ≥ 100.000đ)        |
+| Mã giảm giá lỗi       | `HETHAN` (hết hạn → `PROMO_EXPIRED`)                                      |
+| Món hết hàng          | "Bạc xỉu" (tồn kho 0)                                                     |
 
 **Bảng giá seed (dùng cho toàn bộ kịch bản)**
 
@@ -76,13 +76,13 @@
 
 ### (2 phút) Thanh toán thất bại → thử lại → thành công
 
-**M3** chọn **Thẻ**, nhập `4000 0000 0000 0002`, bấm Thanh toán → **PAYMENT_FAILED** "Thẻ bị từ chối".
+**M3** bấm **Thanh toán qua VNPay**, mô phỏng hủy/lỗi tại cổng VNPay (`vnp_ResponseCode=24`) → quay về **PAYMENT_FAILED**.
 
 **M4** (phần 24.2):
 
-- Nút Thanh toán có **loading**, bấm đúp **không** sinh request thứ hai.
-- Hiện lý do + nút **"Thử lại"**, **giỏ còn nguyên**.
-- Đổi sang **Ví** → Thử lại → **PAID** → chuyển trang xác nhận, giỏ được xóa. _(Task 8, PB-24)_
+- Nút Thanh toán có **loading**, bấm đúp **không** sinh request tạo đơn thứ hai.
+- Trang chi tiết đơn hiện trạng thái `PAYMENT_FAILED` cùng nút **"Thử thanh toán lại qua VNPay"**.
+- Bấm thử lại qua VNPay thành công (`vnp_ResponseCode=00`) → **PAID** → chuyển trang xác nhận, giỏ được xóa. _(Task 8, PB-24)_
 
 ### (3 phút) Mã giảm giá + điểm thưởng (phần M4)
 
@@ -98,7 +98,7 @@
      "promoCode":"BREW10" }
    ```
    → **201** `subtotal: 184000, discount: 18400, total: 165600, status: PENDING`.
-4. Thanh toán đơn đó bằng thẻ `4242…` → **`/auth/me`** cho thấy `loyaltyPoints: 16` (`floor(165600 / 10000)`).
+4. Thanh toán đơn đó qua **VNPay** (`vnp_ResponseCode=00`) → **`/auth/me`** cho thấy `loyaltyPoints: 16` (`floor(165600 / 10000)`).
 
 > Nếu đã làm stretch **PB-27** thì làm bước 1–3 này ngay trên UI `/checkout`.
 

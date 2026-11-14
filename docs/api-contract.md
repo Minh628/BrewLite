@@ -1,4 +1,4 @@
-﻿# BrewLite API Contract v3.0 (Sprint 3)
+# BrewLite API Contract v3.0 (Sprint 3)
 
 Tài liệu hợp đồng giao tiếp API giữa Backend (NestJS) và Frontend (Next.js) cho Sprint 3 (Thanh toán không tiền mặt, State Machine, Khuyến mãi, Lịch sử đơn hàng, Kiểm soát tồn kho đồng thời).
 
@@ -399,5 +399,5 @@ Mọi phản hồi lỗi (4xx, 5xx) đều tuân theo định dạng JSON thốn
   - 404 Not Found: Đơn không tồn tại hoặc không thuộc user hiện tại.
   - 409 Conflict: Mã lỗi `ORDER_NOT_PAYABLE` (đơn không ở trạng thái `PENDING` hoặc `PAYMENT_FAILED`).
   - 422 Unprocessable Entity: Mã lỗi `IDEMPOTENCY_KEY_REUSED` (sử dụng lại `Idempotency-Key` với payload khác).
-- **Mock Gateway**: `4242 4242 4242 4242` thành công; `4000 0000 0000 0002` bị từ chối; ví bị từ chối khi `MOCK_WALLET_FAIL=true`. Chỉ lưu bốn số cuối thẻ.
+- **Mock Gateway (Fallback test nội bộ)**: `POST /payments` dùng `MockPaymentGateway` cho automated test (ví dụ `cardLast4` chỉ lưu 4 chữ số cuối, ví fail khi `MOCK_WALLET_FAIL=true`). Trên giao diện thực tế, hệ thống sử dụng luồng **VNPay Sandbox** (`POST /payments/vnpay/create-url`, `GET /payments/vnpay/return`, `GET /payments/vnpay/ipn`).
 - **Kết quả**: `status` phản ánh trạng thái đơn (`PAID` hoặc `PAYMENT_FAILED`); `failureReason` có nội dung khi thanh toán thất bại.

@@ -80,7 +80,7 @@ Backend chỉ cần 1 instance — cả 2 FE gọi chung backend ở `:3001`. Đ
 
 ### Luồng demo end-to-end
 
-1. Khách `:3000/menu` → chọn món → cart → checkout → thanh toán (thẻ `4242 4242 4242 4242` thành công).
+1. Khách `:3000/menu` → chọn món → cart → checkout → thanh toán qua **VNPay** (`vnp_ResponseCode=00` thành công).
 2. Khách tự chuyển `/orders/{id}` — badge "Đã thanh toán - Mời tới quầy lấy nước".
 3. Quầy `:3002/barista` (login `barista@brewlite.vn`) — đơn xuất hiện cột **Chờ pha** trong ≤10 s → bấm **Nhận pha** → **Hoàn tất pha** → **Đã giao khách**.
 4. Khách thấy badge chuyển **Đang pha chế** → **Sẵn sàng** + banner "Đồ uống đã sẵn sàng!" trong ≤5 s.
@@ -261,9 +261,8 @@ npm run dev:barista   # FE quầy :3002 (chung backend/DB với :3000)
 - Swagger: http://localhost:3001/api-docs
 - Adminer (xem DB): http://localhost:8080 (server `postgres`, user/db `brewlite`)
 
-Thanh toán mock dùng thẻ `4242 4242 4242 4242` để thành công và
-`4000 0000 0000 0002` để kiểm tra nhánh bị từ chối. Có thể đặt
-`MOCK_WALLET_FAIL=true` để mô phỏng ví bị từ chối.
+Thanh toán trên giao diện sử dụng luồng **VNPay Sandbox** (`POST /payments/vnpay/create-url` → `vnpay-return` / `ipn`).
+Các bài test tự động nội bộ (`MockPaymentGateway`) hỗ trợ mô phỏng kết quả thanh toán xác định mà không phụ thuộc mạng ngoài.
 
 Chạy kiểm thử giao diện đầu-cuối (cần database đã migrate/seed và Chromium của Playwright):
 

@@ -256,7 +256,7 @@ Assignment 2 nối tiếp đề tài BrewLite (Assignment 1) và yêu cầu nhó
 - [x] T5.2 `docker-compose.yml` chạy web + api + db (PR: ___)
 - [ ] T5.3 CD pipeline đầy đủ + `docs/runbook-rollback.md` (PR: ___) — _đã có `cd.yml`: verify → build 2 image → push GHCR → deploy + smoke test; còn chờ platform + secret để bật deploy thật_
 - [ ] T5.4 Deploy production + URL HTTPS + release notes (PR: ___) — _CHƯA: cần chốt platform + URL; xem `docs/deployment.md` §8_
-- [ ] T5.4 Video demo end-to-end (link: ___) — _TODO: quay video, điền vào `docs/demo.md`_
+- [x] T5.4 Video demo end-to-end (`docs/evidence/brewlite-demo-desktop.mp4`, `docs/evidence/brewlite-demo-mobile.mp4`, chi tiết trong `docs/demo.md`)
 - [x] T5.4 Sprint Review + Retrospective (PR: ___)
 
 ---

@@ -24,7 +24,7 @@ Mỗi lần phát hành CD đẩy image gắn tag **commit SHA ngắn** và semv
    - **Nhanh nhất:** Render → service API → **Deploys** → chọn bản trước → **Redeploy**.
    - **Qua pipeline:** Actions → **BrewLite CD** → **Run workflow** trên tag/commit ổn định, bật `deploy = true`.
 3. Kiểm tra: `curl -fsS https://<api>/health` trả `200`.
-4. Chạy lại smoke test thủ công: đăng nhập → xem menu → tạo đơn → thanh toán mock (thẻ `4242 4242 4242 4242`).
+4. Chạy lại smoke test thủ công: đăng nhập → xem menu → tạo đơn → thanh toán qua **VNPay Sandbox** (hoặc kiểm tra luồng callback `vnpay-return`).
 
 ## 3. Rollback Web (Vercel)
 

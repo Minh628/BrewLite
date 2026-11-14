@@ -36,15 +36,15 @@ Phạm vi Assignment 2: **1 cửa hàng duy nhất**, **không có đa chi nhán
 
 ## 3. Mục tiêu và kỳ vọng từng stakeholder
 
-| Stakeholder        | Mục tiêu                                                                               | Kỳ vọng đo được                                                                     |
-| ------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| S1 Khách hàng      | Đặt + thanh toán 1 ly cà phê trong ≤ 2 phút trên điện thoại, biết đồ uống đã sẵn sàng. | Lighthouse Performance ≥ 70 trên mobile; `p95(POST /orders) < 500 ms` ở 10 conn.    |
-| S2 Nhân viên quầy  | Thấy danh sách đơn cần pha theo thứ tự FIFO, bấm 1 nút để chuyển trạng thái.           | Độ trễ chuyển trạng thái → khách nhìn thấy ≤ 10 s (polling 10 s + render ≤ 100 ms). |
-| S3 Quản lý         | Xem đơn, hoàn kho, thay đổi menu/promotion khi cần.                                    | Có Adminer `:8080` (dev) + `prisma studio` + API quản lý tồn kho.                   |
-| S4 Giảng viên      | Clone repo + đọc README là chạy được; có đủ tài liệu (SRS/UC/Diagram/ADR/Deployment).  | README 1 lệnh chạy; `docs/traceability-matrix.md` phủ hết FR ↔ test; 303/303 test.  |
-| S5 Nhóm            | Phân công rõ, CI chặn merge khi đỏ, tránh conflict.                                    | Có Product Backlog + Sprint plan + `Assignment2-TaskAssignment.md`; branch protect. |
-| S6 Payment Gateway | Trả về kết quả xác định (thành công / fail) để test deterministic.                     | Card `4242…` success, `4000…0002` fail; `MOCK_WALLET_FAIL=true` để test ví fail.    |
-| S7 DevOps          | Deploy 1 lệnh, rollback ≤ 5 phút, không lộ secret.                                     | CI pipeline Install→Lint→Test→Build xanh trên PR; `.env` gitignored.                |
+| Stakeholder        | Mục tiêu                                                                               | Kỳ vọng đo được                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| S1 Khách hàng      | Đặt + thanh toán 1 ly cà phê trong ≤ 2 phút trên điện thoại, biết đồ uống đã sẵn sàng. | Lighthouse Performance ≥ 70 trên mobile; `p95(POST /orders) < 500 ms` ở 10 conn.                      |
+| S2 Nhân viên quầy  | Thấy danh sách đơn cần pha theo thứ tự FIFO, bấm 1 nút để chuyển trạng thái.           | Độ trễ chuyển trạng thái → khách nhìn thấy ≤ 10 s (polling 10 s + render ≤ 100 ms).                   |
+| S3 Quản lý         | Xem đơn, hoàn kho, thay đổi menu/promotion khi cần.                                    | Có Adminer `:8080` (dev) + `prisma studio` + API quản lý tồn kho.                                     |
+| S4 Giảng viên      | Clone repo + đọc README là chạy được; có đủ tài liệu (SRS/UC/Diagram/ADR/Deployment).  | README 1 lệnh chạy; `docs/traceability-matrix.md` phủ hết FR ↔ test; 303/303 test.                    |
+| S5 Nhóm            | Phân công rõ, CI chặn merge khi đỏ, tránh conflict.                                    | Có Product Backlog + Sprint plan + `Assignment2-TaskAssignment.md`; branch protect.                   |
+| S6 Payment Gateway | Tích hợp VNPay Sandbox & trả về kết quả xác định để test deterministic.                | VNPay callback (`vnp_ResponseCode=00` pass, khác `00` fail); `MockPaymentGateway` cho automated test. |
+| S7 DevOps          | Deploy 1 lệnh, rollback ≤ 5 phút, không lộ secret.                                     | CI pipeline Install→Lint→Test→Build xanh trên PR; `.env` gitignored.                                  |
 
 ---
 
@@ -72,7 +72,7 @@ Xem menu → Lọc/Tìm → Chi tiết sản phẩm (chọn size + topping)
 | Giỏ hàng                   | ✅            | `frontend/src/store/cart.ts` (zustand persist)                                                       |
 | Xác thực JWT               | ✅            | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` + `JwtAuthGuard` + `RolesGuard`            |
 | Đặt đơn                    | ✅            | `POST /orders` với `Idempotency-Key` + stock reserve optimistic locking                              |
-| Thanh toán mock            | ✅            | `POST /payments` + `MockPaymentGateway` (card `4242…` pass, `4000…0002` fail)                        |
+| Thanh toán VNPay & mock    | ✅            | `/payments/vnpay/create-url`, `return`, `ipn` + `MockPaymentGateway` (cho automated test)            |
 | Mã giảm giá                | ✅            | `POST /promotions/validate` + `PromotionsService` (PERCENT/FIXED, minOrder, maxDiscount, usageLimit) |
 | Điểm thưởng (loyalty)      | ✅            | `LoyaltyService.award()` công thức `floor(total / 10 000)` khi vào PAID; revoke khi CANCELLED        |
 | Lịch sử đơn                | ✅            | `GET /orders/me` phân trang + `frontend/src/app/orders/page.tsx`                                     |
@@ -106,16 +106,16 @@ Xem menu → Lọc/Tìm → Chi tiết sản phẩm (chọn size + topping)
 
 ## 5. Giả định (Assumptions)
 
-| Mã  | Giả định                                                                                                               |
-| --- | ---------------------------------------------------------------------------------------------------------------------- |
-| A1  | Khách có smartphone ≥ iOS 14 / Android 10, Chrome / Safari phiên bản gần đây, mạng 4G/Wi-Fi ổn định tại cửa hàng.      |
-| A2  | Nhân viên quầy có laptop/tablet mở sẵn `/barista` trong ca làm việc (polling 10 s cần tab active).                     |
-| A3  | Giảng viên có Node.js 20+, npm 10+, Docker Desktop khi chấm bài; hoặc truy cập URL production qua browser.             |
-| A4  | Dữ liệu seed (`npm run db:seed`) là đủ để demo: 4 user (customer/barista/admin/an), danh mục, sản phẩm, 3 mã giảm giá. |
-| A5  | Thẻ test `4242 4242 4242 4242` thành công, `4000 0000 0000 0002` thất bại — client biết sẵn, hiển thị gợi ý ở UI.      |
-| A6  | VND là đơn vị tiền duy nhất; giá và loyalty points là số nguyên (không có lẻ đồng).                                    |
-| A7  | Nhóm dùng Postgres 16 (theo `docker-compose.dev.yml` image `postgres:16-alpine`) cho cả dev + prod.                    |
-| A8  | Không có SLA chính thức — mục tiêu nội bộ: uptime demo 99% trong tuần chấm (07-14/11).                                 |
+| Mã  | Giả định                                                                                                                                                                     |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | Khách có smartphone ≥ iOS 14 / Android 10, Chrome / Safari phiên bản gần đây, mạng 4G/Wi-Fi ổn định tại cửa hàng.                                                            |
+| A2  | Nhân viên quầy có laptop/tablet mở sẵn `/barista` trong ca làm việc (polling 10 s cần tab active).                                                                           |
+| A3  | Giảng viên có Node.js 20+, npm 10+, Docker Desktop khi chấm bài; hoặc truy cập URL production qua browser.                                                                   |
+| A4  | Dữ liệu seed (`npm run db:seed`) là đủ để demo: 4 user (customer/barista/admin/an), danh mục, sản phẩm, 3 mã giảm giá.                                                       |
+| A5  | Thanh toán thực tế trên UI dùng **VNPay Sandbox** (`vnp_ResponseCode=00` thành công, `24`/khác `00` thất bại); `MockPaymentGateway` chỉ giữ làm fallback cho automated test. |
+| A6  | VND là đơn vị tiền duy nhất; giá và loyalty points là số nguyên (không có lẻ đồng).                                                                                          |
+| A7  | Nhóm dùng Postgres 16 (theo `docker-compose.dev.yml` image `postgres:16-alpine`) cho cả dev + prod.                                                                          |
+| A8  | Không có SLA chính thức — mục tiêu nội bộ: uptime demo 99% trong tuần chấm (07-14/11).                                                                                       |
 
 ---
 
