@@ -293,6 +293,11 @@ async function runFullDemoFlow(page: Page, modeLabel: string) {
 }
 
 test.describe('Demo Video Recording', () => {
+  // Bỏ qua trên CI vì luồng demo kết nối trực tiếp VNPay Sandbox thật (không mock API)
+  test.skip(
+    !!process.env.CI,
+    'Script quay video demo chỉ chạy ở môi trường local có VNPay Sandbox.',
+  );
   test.setTimeout(180_000);
 
   test('demo-desktop', async ({ browser }) => {

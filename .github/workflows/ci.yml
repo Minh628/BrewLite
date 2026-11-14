@@ -149,7 +149,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Chạy E2E checkout
-        run: npm run test:e2e
+        run: npm run test:e2e -- e2e/checkout.spec.ts
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001
 
